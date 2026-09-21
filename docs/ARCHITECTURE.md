@@ -43,7 +43,7 @@ Header, controls, dialogs, results, streaks, best times, sharing, settings, the 
 
 ## The game frame
 
-`shared/ui/game-frame.tsx` is everything around a board: header, status line, the four controls (Undo, Hint, Reveal, Reset), the tutorial slot, settings, the reveal confirmation, the result dialog, the Z and H shortcuts and the moment the clock starts. A game plugs in through one interface:
+`shared/ui/game-frame.tsx` is everything around a board: header, status line, the controls (Undo, Hint, Reveal, Reset, and New in practice mode), the tutorial slot, settings, the reveal confirmation, the result dialog, the Z and H shortcuts and the moment the clock starts. A game plugs in through one interface:
 
 ```ts
 type GameSession = {
@@ -55,7 +55,9 @@ type GameSession = {
 };
 ```
 
-`usePatchesGame` and `useZipGame` both return it. When `summary` appears, the frame calls `buildResult`, which records the daily result, the streak and the best time (or only reads them, when `endedNow` is false) and opens the result dialog. `GameView` components are mounted with `key={puzzle.id}`, so a new puzzle always starts from a clean hook.
+The frame takes an optional `onNext`. Practice pages pass it, and the frame then shows New as a fifth control and "New game" next to "View result" on a solved board. It loads another board with a fresh seed, and since the view is keyed by puzzle id, the clock starts over with it. Daily pages do not pass it.
+
+`usePatchesGame` and `useZipGame` both return the session. When `summary` appears, the frame calls `buildResult`, which records the daily result, the streak and the best time (or only reads them, when `endedNow` is false) and opens the result dialog. `GameView` components are mounted with `key={puzzle.id}`, so a new puzzle always starts from a clean hook.
 
 ## Platform rules shared by every game
 

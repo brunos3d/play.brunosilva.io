@@ -23,7 +23,7 @@ Every game gets one new board per day, the same for every player, plus unlimited
   </tr>
   <tr>
     <td><img alt="Hub with both games, today's status, the streak and the countdown to the next boards" src="./.github/screenshots/hub.png" /></td>
-    <td><img alt="Zip board with the path drawn through the first three numbers" src="./.github/screenshots/zip.png" /></td>
+    <td><img alt="Zip board with blocked cells, a hidden number and the path drawn through the first four numbers" src="./.github/screenshots/zip.png" /></td>
     <td><img alt="Patches board with most of its patches placed" src="./.github/screenshots/patches.png" /></td>
   </tr>
 </table>
@@ -54,17 +54,19 @@ Old Zip links such as `/hard/42` redirect to the new practice route. The shortcu
 
 **Zip.** Press 1 and drag. The path moves to side neighbours, cannot cross itself or a wall, and must reach the numbers in order. The board is solved when the path covers every cell and ends on the last number. Drag backwards to rewind, or tap a cell on the path to cut it there. Boards go from 5x5 to 8x8.
 
-**Patches.** Press a clue and drag outward to draw its patch. A clue can give a cell count, a shape (square, tall, wide or any), both, or nothing. Patches cannot overlap and every cell must be covered. Tap a patch to remove it. Boards go from 5x5 to 10x10.
+Boards are themed by their seed. Walls form figures (a cross, a frame, a face, a pinwheel), some cells are blocked and the path goes around them, and the solution is often a drawing of its own: a spiral, a meander, or a path whose second half mirrors the first. Hard and expert boards hide some numbers behind a `?`. When a board is solved, walls and numbers fade out and only the path remains.
+
+**Patches.** Press a clue and drag outward to draw its patch. A clue can give a cell count, a shape (square, tall, wide or any), both, or nothing (it then shows `?`). Patches cannot overlap and every cell must be covered. A patch can be drawn in several strokes: a partial one stays on the board as unfinished, and another drag from the clue or from the patch adds to it. Tap a patch to remove it. Boards go from 5x5 to 10x10.
 
 Both games share the same controls and rules around the board:
 
-- **Undo**, **Hint**, **Reveal** and **Reset**. A hint acts: it removes a mistake if there is one, otherwise it plays the next forced move and says why. Reveal plays the whole solution piece by piece, and that puzzle then earns no streak and no best time.
+- **Undo**, **Hint**, **Reveal** and **Reset**, plus **New** in practice mode, which loads another board and restarts the clock. A hint acts: it removes a mistake if there is one, otherwise it plays the next forced move and says why. Reveal plays the whole solution piece by piece, and that puzzle then earns no streak and no best time.
 - **The clock** starts the first time you see the board and only stops when the puzzle ends. Closing the tab does not pause it.
 - **Daily puzzles** change at midnight Pacific Time and get harder from Monday to Sunday. Finishing one extends that game's streak.
 - **Sound and vibration** are on by default and can be turned off in the settings, which apply to every game.
 - Everything works with the keyboard, and the layout follows the system's light or dark theme and its reduced motion setting.
 
-Every generated puzzle has exactly one solution, proven by a solver before the board is shown, and Patches boards can always be solved by deduction alone.
+Every generated puzzle has exactly one solution, proven by a solver before the board is shown, and Patches boards can always be solved by deduction alone. Zip measures how hard a board is by counting the wrong turns that only fail many cells later, and each difficulty aims for its own score.
 
 ## Project structure
 

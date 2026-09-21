@@ -33,9 +33,12 @@ const settle = (page: Page) => page.waitForTimeout(700);
 async function shootGames(browser: Browser, colorScheme: "light" | "dark", suffix: string): Promise<void> {
   const page = await newPage(browser, colorScheme);
 
-  const zip = zipPuzzle("readme", "hard", 7);
+  const zip = zipPuzzle("readme-16", "hard", 7);
   await openZip(page, zip.url);
-  await drawCells(page, 7, zip.puzzle.solution.slice(0, 31));
+  // Stop just short of the last hidden number, so the shot shows a covered "?" and one that is still unknown.
+  const hidden = zip.puzzle.checkpoints.filter((checkpoint) => checkpoint.hidden);
+  const lastHidden = hidden[hidden.length - 1];
+  await drawCells(page, 7, zip.puzzle.solution.slice(0, zip.puzzle.solution.indexOf(lastHidden.row * 7 + lastHidden.column)));
   await settle(page);
   await page.screenshot({ path: resolve(OUT, `zip${suffix}.png`) });
 

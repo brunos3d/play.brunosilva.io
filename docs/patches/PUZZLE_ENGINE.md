@@ -74,8 +74,10 @@ Every function returns a new state and never mutates its input.
 | Function | Behaviour |
 |---|---|
 | `createGame(puzzleId)` | empty board |
-| `previewRect(puzzle, state, rect)` | `neutral` (no clue yet), `valid` or `invalid`, with errors |
-| `placeRegion(puzzle, state, rect)` | places if legal, otherwise returns the same state plus errors. A legal patch is placed even if it is not the one from the solution. If the clue already has a patch, the new one replaces it as a single `replace` action and counts one redraw. Drawing the identical patch again does nothing. Runs `validateState` to decide `solved` |
+| `previewRect(puzzle, state, rect)` | `valid`, `pending` or `invalid`, with errors |
+| `mergeWithOwnPatch(puzzle, state, rect)` | the rectangle a stroke really stands for: its union with the patch of the clue it contains, or with the single patch it touches. This is what lets a patch be drawn in several strokes |
+| `placeRegion(puzzle, state, rect)` | places a valid or pending rectangle, otherwise returns the same state plus errors. A legal patch is placed even if it is not the one from the solution. If the clue already has a patch, the merged one replaces it as a single `replace` action, which is not a redraw. Drawing the identical patch again does nothing. Runs `validateState` to decide `solved`, so a pending patch can never finish a board |
+| `pendingRegionIds(puzzle, state)` | the patches on the board that are not legal yet |
 | `removeRegionAt(state, cell)` | tap-to-remove. Counts one redraw |
 | `undo(state)` | pops the last action and applies its inverse. Undoing a placement or a replacement counts one redraw, undoing a removal does not. One undo reverts a replacement back to the earlier patch |
 | `resetGame(state)` | clears patches and history. Keeps puzzle id, moves, redraws and hints |
@@ -91,6 +93,14 @@ Reset keeps the counters and leaves the clock running. The original's behaviour 
 
 `engine/board/drag.ts` holds the drawing rule as pure functions, shared by the pointer and the keyboard: `startExtent(clueCell)`, `extendExtent(extent, cell)` and `extentRect(extent)`. The extent is the bounding rectangle of the clue cell and every visited cell. It only grows, so a clue can end up anywhere inside its patch, not just in a corner, and a fast pointer that skips cells gives the same result as a slow one.
 
+`extendExtentWithin(extent, cell, isFree)` is the version the board uses. It grows one row or column at a time, one side after the other, and only while `isFree` accepts the result. The board passes `isTakenByOthers`, so the extent stops at other clues and other patches while the pointer keeps moving.
+
+## Unfinished patches
+
+`validation/extendable.ts` decides whether a rectangle that is not legal yet is worth keeping. `canGrowIntoLegal(puzzle, others, clue, rect)` enumerates the rectangles that contain it and asks whether any of them satisfies the clue, stays on the board, holds no other clue and overlaps no other patch. It returns false at once when the rectangle already exceeds the clue's number. With a result of true the rectangle is `pending`, otherwise `invalid`.
+
+A saved board may contain pending patches. `fromSnapshot` accepts a stored patch only if it is a filled rectangle, holds exactly the clue it claims, does not repeat a clue, and is not `invalid` against the patches restored before it. A forged or outdated snapshot is dropped as a whole.
+
 ## Clock
 
 The clock is shared by every game and lives in `src/shared/engine/clock.ts`. See `docs/ARCHITECTURE.md`.
@@ -101,7 +111,7 @@ The clock is shared by every game and lives in `src/shared/engine/clock.ts`. See
 
 The UI acts on a hint: it removes a wrong patch, or places the proven one.
 
-- `wrong-region`: a placed patch that no solution contains. Checked first, because a deduction built on a wrong patch would mislead. Each patch is tested alone against the solver, then the board is rebuilt in play order to find the first patch that makes it unsolvable.
+- `wrong-region`: a placed patch that no solution contains, or an unfinished patch that reaches cells outside its solution rectangle. Unfinished patches that are still inside it are left alone and are not handed to the solver as fixed. Checked first, because a deduction built on a wrong patch would mislead. Each patch is tested alone against the solver, then the board is rebuilt in play order to find the first patch that makes it unsolvable.
 - `place-region`: the next patch the logic solver can prove, with its rectangle, the technique (`clue-single`, `cell-single` or `search`), an optional focus cell and a one-sentence reason.
 - `complete`.
 

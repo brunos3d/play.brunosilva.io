@@ -46,13 +46,28 @@ Each game builds its codec with `createSeedCodec({ prefix, currentVersion, suppo
 
 ## Versioning
 
-Each game has its own generator version (`GENERATOR_VERSION`, `ZIP_GENERATOR_VERSION`), both currently 1. When a generator change would alter the board a seed produces:
+Each game has its own generator version: `GENERATOR_VERSION` for Patches, currently 1, and `ZIP_GENERATOR_VERSION`, currently 2. When a generator change would alter the board a seed produces:
 
 1. Keep the old code path.
 2. Bump the version.
 3. Add the new number to the codec's `supportedVersions`.
 
 Old links and old dailies then keep their boards. A seed with an unsupported version throws, and the play page shows "This seed cannot be played".
+
+Zip went through this once. Version 2 builds themed boards (see `docs/zip/ZIP.md`). Version 1 moved to `engine/generator/v1.ts` untouched, with its own copy of the tier settings, and `supportedVersions` is `[1, 2]`. `ZIP:lucky:1:hard:8` still opens the board it always did, and new practice links carry version 2. A test pins one known board per version.
+
+Daily puzzles need one more step, because their version is part of the seed and a past day must never change. `DailyConfig` takes a list of upgrades:
+
+```ts
+export const ZIP_DAILY_CONFIG = {
+  epoch: "2025-03-18",
+  schedule: DEFAULT_WEEKLY_SCHEDULE,
+  generatorVersion: 1,
+  upgrades: [{ from: "2026-09-22", version: 2 }],
+};
+```
+
+`dailyGeneratorVersion(config, date)` returns the version of the last upgrade on or before the date. Days before 2026-09-22 keep version 1, so results and streaks already recorded still match their boards.
 
 ## Share URLs
 
