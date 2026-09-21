@@ -37,7 +37,7 @@ test("the hub follows a daily puzzle from running clock to solved, with the stre
   await page.goto("/");
   await expect(page.getByTestId("hub-today-zip")).toContainText("Clock running");
   await expect(page.getByTestId("hub-today-zip")).toContainText(/02:\d\d/);
-  await expect(page.getByTestId("hub-card-zip").getByRole("link", { name: /Continue today's puzzle/ })).toBeVisible();
+  await expect(page.getByTestId("hub-card-zip").getByRole("link", { name: /Continue playing/ })).toBeVisible();
 
   await openZip(page, "/zip");
   await drawCells(page, puzzle.width, puzzle.solution.slice(4));

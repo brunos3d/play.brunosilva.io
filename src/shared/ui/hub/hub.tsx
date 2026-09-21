@@ -96,7 +96,7 @@ function GameCard({ game, daily, data, now }: { game: GameMeta; daily: DailyInfo
 
       <div className="grid grid-cols-[1fr_auto] gap-2">
         <Link href={game.path} prefetch={false} className="mg-button justify-between" data-variant={done ? undefined : "primary"}>
-          {done ? "See today's result" : data?.today.state === "running" ? "Continue today's puzzle" : "Play today's puzzle"} <ArrowRightIcon />
+          {done ? "See today's result" : data?.today.state === "running" ? "Continue playing" : "Play today's puzzle"} <ArrowRightIcon />
         </Link>
         <Link href={`${game.path}/practice`} prefetch={false} className="mg-button">
           Practice
