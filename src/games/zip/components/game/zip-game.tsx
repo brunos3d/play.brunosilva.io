@@ -42,7 +42,9 @@ function GameView({ spec, puzzle, generationMs, daily, onNext }: ViewProps) {
   const colors = useMemo(() => pathColors(puzzle.id, cellCount), [puzzle.id, cellCount]);
 
   const filled = game.game.path.length;
-  const idleText = filled === 0 ? "Press 1 and drag to draw the path." : `${filled} of ${cellCount} cells. Next number: ${Math.min(nextNumber(game.topology, game.game.path), game.topology.lastNumber)}.`;
+  const hiddenCount = puzzle.checkpoints.filter((checkpoint) => checkpoint.hidden).length;
+  const startText = hiddenCount === 0 ? "Press 1 and drag to draw the path." : "Press 1 and drag. A ? is a number too, and working out which one is up to you.";
+  const idleText = filled === 0 ? startText : `${filled} of ${cellCount} cells. Next number: ${Math.min(nextNumber(game.topology, game.game.path), game.topology.lastNumber)}.`;
 
   return (
     <GameFrame

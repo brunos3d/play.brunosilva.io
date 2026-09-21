@@ -10,7 +10,7 @@ import { useZipGame } from "../../hooks/use-zip-game";
 import { pathColors } from "../board/path-colors";
 import { ZipBoard } from "../board/zip-board";
 
-/** Teaching board. It comes from the same generator as every other puzzle, under a fixed seed. */
+/** Teaching board. It comes from the same generator as every other puzzle, under a fixed seed and a fixed generator version, because the steps below describe this exact board. */
 export const ZIP_TUTORIAL_SEED = "tutorial-1";
 const TUTORIAL_SIZE = 5;
 
@@ -42,7 +42,7 @@ const STEPS: Step[] = [
 type Props = { open: boolean; settings: Settings; onClose: () => void };
 
 function TutorialBody({ settings, onClose }: Omit<Props, "open">) {
-  const puzzle = useMemo(() => generateZipPuzzle(ZIP_TUTORIAL_SEED, "easy", { size: TUTORIAL_SIZE }), []);
+  const puzzle = useMemo(() => generateZipPuzzle(ZIP_TUTORIAL_SEED, "easy", { size: TUTORIAL_SIZE, version: 1 }), []);
   const game = useZipGame({ puzzle, settings, persist: false });
   const colors = useMemo(() => pathColors(puzzle.id, puzzle.width * puzzle.height), [puzzle]);
   const numberTwo = useMemo(() => {
@@ -68,7 +68,7 @@ function TutorialBody({ settings, onClose }: Omit<Props, "open">) {
       <div aria-live="polite" className="min-h-[104px]">
         <h3 className="font-bold mb-1">{finished ? "That is the whole game" : `${stepIndex + 1}. ${step.title}`}</h3>
         <p className="text-sm leading-relaxed text-[var(--ink-soft)]">
-          {finished ? "One path, every cell, numbers in order. The clock starts when you first see a board and only stops when it is solved." : step.body}
+          {finished ? "One path, every cell, numbers in order. On hard and expert boards some numbers show a ? instead, and the path tells you which they are. The clock starts when you first see a board and only stops when it is solved." : step.body}
         </p>
       </div>
 

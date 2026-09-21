@@ -72,8 +72,10 @@ test("each game has its own practice setup, sizes and icon", async ({ page }) =>
   await page.getByRole("button", { name: "expert" }).click();
   await page.getByTestId("game-seed-input").fill("my seed");
   await page.getByTestId("game-start").click();
-  await expect(page).toHaveURL(/seed=ZIP%3Amy-seed%3A1%3Aexpert/);
-  await expect(page.getByRole("gridcell")).toHaveCount(64);
+  await expect(page).toHaveURL(/seed=ZIP%3Amy-seed%3A2%3Aexpert/);
+  // With automatic size, expert draws 7x7 or 8x8 from the seed.
+  await expect(page.getByTestId("zip-board")).toHaveAttribute("data-locked", "false");
+  expect([49, 64]).toContain(await page.getByRole("gridcell").count());
 
   await page.goto("/patches/practice");
   await expect(page.getByRole("button", { name: "10 by 10" })).toBeVisible();

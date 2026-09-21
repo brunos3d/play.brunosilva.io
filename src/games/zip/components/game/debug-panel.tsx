@@ -21,7 +21,7 @@ export default function ZipDebugPanel({ puzzle, generationMs, showSolution, onTo
     ["generator version", puzzle.version],
     ["board", `${puzzle.width}x${puzzle.height}`],
     ["difficulty", puzzle.difficulty],
-    ["numbers", puzzle.metadata.checkpointCount],
+    ["numbers", `${puzzle.metadata.checkpointCount} (${puzzle.metadata.hiddenCount} hidden)`],
     ["walls", puzzle.metadata.wallCount],
     ["solutions", solver.solutions],
     ["solver", `${solver.ms.toFixed(2)} ms, ${solver.nodes} nodes`],

@@ -38,7 +38,7 @@ test("the first visit opens the interactive tutorial, the clock waits for it, an
   await page.waitForTimeout(1_200);
   await expect(timer(page)).toHaveText("00:00");
 
-  const lesson = generateZipPuzzle("tutorial-1", "easy", { size: 5 });
+  const lesson = generateZipPuzzle("tutorial-1", "easy", { size: 5, version: 1 });
   const mini = tutorial.getByRole("grid");
   const drag = async (cells: number[]) => {
     const start = await cellPoint(mini, 5, cells[0]);

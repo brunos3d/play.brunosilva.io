@@ -1,27 +1,37 @@
 import { describe, expect, it } from "vitest";
+import { createRng } from "@/shared/engine/prng";
 import {
   DIFFICULTIES,
+  FIGURES,
   ZIP_TIERS,
   type ZipShape,
   type ZipState,
+  backbite,
+  buildFigure,
   buildTopology,
   canUndoZip,
   checkStep,
   commitGesture,
   createZipGame,
+  findHamiltonianPath,
   generateZipFromSpec,
   generateZipPuzzle,
   getZipDailyInfo,
   getZipDailyPuzzle,
   getZipHint,
+  isHamiltonianPath,
+  measureTraps,
+  nextNumber,
   resetZip,
   revealZipStep,
   solveZip,
   stepTo,
   truncateTo,
+  twinWall,
   undoZip,
   validatePath,
   validateZipPuzzle,
+  wallKey,
   zipSeeds,
 } from "@/games/zip/engine";
 
@@ -147,9 +157,10 @@ describe("generator", () => {
     expect(generateZipPuzzle("a", "medium", { size: 7 }).width).toBe(7);
   });
 
-  it("pins a known puzzle so generator changes require a version bump", () => {
-    const puzzle = generateZipPuzzle("example-seed", "medium");
+  it("pins a known version 1 puzzle: old seeds must keep their boards forever", () => {
+    const puzzle = generateZipPuzzle("example-seed", "medium", { version: 1 });
     expect(puzzle.seed).toBe("ZIP:example-seed:1:medium");
+    expect(puzzle.metadata.theme).toEqual({ figure: "none", path: "random" });
     expect({ size: puzzle.width, numbers: puzzle.checkpoints.length, walls: puzzle.walls.length, path: puzzle.solution.slice(0, 8) }).toMatchInlineSnapshot(`
       {
         "numbers": 4,
@@ -167,6 +178,39 @@ describe("generator", () => {
         "walls": 6,
       }
     `);
+  });
+
+  it("pins a known version 2 puzzle so generator changes require a version bump", () => {
+    const puzzle = generateZipPuzzle("example-seed", "medium");
+    expect(puzzle.seed).toBe("ZIP:example-seed:2:medium");
+    expect({ size: puzzle.width, theme: puzzle.metadata.theme, numbers: puzzle.checkpoints.length, walls: puzzle.walls.length, path: puzzle.solution.slice(0, 8) }).toMatchInlineSnapshot(`
+      {
+        "numbers": 8,
+        "path": [
+          3,
+          4,
+          5,
+          11,
+          17,
+          23,
+          29,
+          35,
+        ],
+        "size": 6,
+        "theme": {
+          "figure": "none",
+          "path": "snake",
+        },
+        "walls": 0,
+      }
+    `);
+  });
+
+  it("builds a different board per generator version, and both stay valid", () => {
+    const [one, two] = [1, 2].map((version) => generateZipPuzzle("versions", "hard", { size: 7, version }));
+    expect(one.solution).not.toEqual(two.solution);
+    expect(validateZipPuzzle(one).problems).toEqual([]);
+    expect(validateZipPuzzle(two).problems).toEqual([]);
   });
 
   it("rejects versions and sizes it cannot build", () => {
@@ -187,7 +231,7 @@ describe("generator", () => {
         expect(puzzle.solution[0], puzzle.seed).toBe(topology.start);
         expect(puzzle.solution.at(-1), puzzle.seed).toBe(topology.end);
         expect(puzzle.checkpoints.length, puzzle.seed).toBeGreaterThanOrEqual(3);
-        expect(puzzle.walls.length, puzzle.seed).toBeLessThanOrEqual(puzzle.width * puzzle.height * ZIP_TIERS[difficulty].maxWallShare);
+        expect(puzzle.checkpoints.length, puzzle.seed).toBeLessThanOrEqual(Math.max(3, Math.round(puzzle.width * puzzle.height * ZIP_TIERS[difficulty].maxCheckpointDensity)));
         // No wall may sit on the solution path.
         const onPath = new Set(puzzle.solution.slice(1).map((cell, index) => [Math.min(cell, puzzle.solution[index]), Math.max(cell, puzzle.solution[index])].join("-")));
         expect(puzzle.walls.filter((wall) => onPath.has(`${wall.a}-${wall.b}`)), puzzle.seed).toEqual([]);
@@ -205,6 +249,164 @@ describe("generator", () => {
         expect(validateZipPuzzle(puzzle).problems, puzzle.seed).toEqual([]);
       }
     }
+  });
+});
+
+describe("themes", () => {
+  const sample = (difficulty: (typeof DIFFICULTIES)[number], count: number) => Array.from({ length: count }, (_, i) => generateZipPuzzle(`theme-${i}`, difficulty));
+
+  it("varies with the seed: wall figures and drawn paths both show up", () => {
+    const themes = sample("medium", 40).map((puzzle) => puzzle.metadata.theme);
+    expect(new Set(themes.map((theme) => theme.figure)).size).toBeGreaterThanOrEqual(5);
+    expect(new Set(themes.filter((theme) => theme.figure === "none").map((theme) => theme.path)).size).toBeGreaterThanOrEqual(2);
+  });
+
+  it("every figure fits a board and leaves room for a path, at every size it supports", () => {
+    for (const name of FIGURES) {
+      for (let size = zipSeeds.minSize; size <= zipSeeds.maxSize; size++) {
+        const rng = createRng(`figure-${name}-${size}`);
+        const figure = buildFigure(name, size, rng);
+        if (figure.walls.length === 0) continue;
+        for (const wall of figure.walls) expect(buildTopology({ width: size, height: size, checkpoints: [], walls: [] }).neighbors[wall.a], `${name} ${size}`).toContain(wall.b);
+        const { neighbors } = buildTopology({ width: size, height: size, checkpoints: [], walls: figure.walls });
+        // Random mirrored walls can close off a cell. The generator just draws again. Every designed figure must work.
+        if (name !== "mirror") expect(findHamiltonianPath(rng, neighbors, size), `${name} ${size}x${size}`).not.toBeNull();
+      }
+    }
+  });
+
+  it("keeps the figure on the board and never walls off the solution", () => {
+    for (const puzzle of sample("medium", 40)) {
+      const onPath = new Set(puzzle.solution.slice(1).map((cell, index) => wallKey(cell, puzzle.solution[index])));
+      expect(puzzle.walls.filter((wall) => onPath.has(wallKey(wall.a, wall.b))), puzzle.seed).toEqual([]);
+    }
+  });
+
+  it("mirrors the walls of a symmetric figure wherever the solution allows it", () => {
+    const faces = sample("easy", 120).filter((puzzle) => puzzle.metadata.theme.figure === "face" || puzzle.metadata.theme.figure === "cross");
+    expect(faces.length).toBeGreaterThan(3);
+    let mirrored = 0;
+    let total = 0;
+    for (const puzzle of faces) {
+      const keys = new Set(puzzle.walls.map((wall) => wallKey(wall.a, wall.b)));
+      const symmetries = ["mirror-x", "mirror-y", "rotate"] as const;
+      // The figure was turned a random way, so take the symmetry that explains most of its walls.
+      const best = Math.max(...symmetries.map((symmetry) => puzzle.walls.filter((wall) => { const twin = twinWall(symmetry, puzzle.width, wall); return !twin || keys.has(wallKey(twin.a, twin.b)); }).length));
+      mirrored += best;
+      total += puzzle.walls.length;
+    }
+    expect(mirrored / total).toBeGreaterThan(0.7);
+  });
+
+  it("drawn paths keep their drawing: long straight runs survive the disturbance", () => {
+    const longestRun = (path: readonly number[]) => {
+      let [best, run] = [1, 1];
+      for (let i = 2; i < path.length; i++) {
+        run = path[i] - path[i - 1] === path[i - 1] - path[i - 2] ? run + 1 : 1;
+        best = Math.max(best, run);
+      }
+      return best + 1;
+    };
+    const drawn = sample("hard", 60).filter((puzzle) => ["spiral", "snake"].includes(puzzle.metadata.theme.path));
+    expect(drawn.length).toBeGreaterThan(3);
+    for (const puzzle of drawn) expect(longestRun(puzzle.solution), puzzle.seed).toBeGreaterThanOrEqual(puzzle.width - 1);
+  });
+
+  it("backbiting keeps a Hamiltonian path Hamiltonian, walls included", () => {
+    const figure = buildFigure("face", 8, createRng("bb"));
+    const { neighbors } = buildTopology({ width: 8, height: 8, checkpoints: [], walls: figure.walls });
+    const rng = createRng("bb-path");
+    const found = findHamiltonianPath(rng, neighbors, 8)!;
+    expect(isHamiltonianPath(backbite(rng, found, neighbors, 500), neighbors)).toBe(true);
+  });
+});
+
+describe("difficulty", () => {
+  const meanTraps = (difficulty: (typeof DIFFICULTIES)[number], version: number) => {
+    let total = 0;
+    for (let i = 0; i < 24; i++) total += generateZipPuzzle(`ladder-${i}`, difficulty, { size: 7, version }).metadata.trapScore;
+    return total / 24;
+  };
+
+  it("climbs from easy to expert on the same board size", () => {
+    const [easy, medium, hard, expert] = DIFFICULTIES.map((difficulty) => meanTraps(difficulty, 2));
+    expect(easy).toBeLessThan(medium);
+    expect(medium).toBeLessThan(hard);
+    expect(hard).toBeLessThan(expert);
+  });
+
+  it("makes expert harder and easy easier than version 1 did", () => {
+    expect(meanTraps("expert", 2)).toBeGreaterThan(meanTraps("expert", 1) * 1.15);
+    expect(meanTraps("easy", 2)).toBeLessThan(meanTraps("easy", 1));
+  });
+
+  it("scores a board whose wrong turns all die at once as trap free", () => {
+    // One lane, no choices: a 1-wide corridor in all but name.
+    const lane: ZipShape = { width: 3, height: 3, checkpoints: SNAKE.checkpoints, walls: [{ a: 0, b: 3 }, { a: 1, b: 4 }, { a: 4, b: 7 }, { a: 5, b: 8 }] };
+    const report = measureTraps(lane, buildTopology(lane), SNAKE_PATH);
+    expect(report).toMatchObject({ score: 0, deepTraps: 0, decisions: 0 });
+  });
+});
+
+describe("hidden numbers", () => {
+  // 1 . .      The 2 in the middle is hidden. A path may take it as any
+  // . ? .      numbered cell, but the visible 3 must still be the third.
+  // . . 3
+  const HIDDEN: ZipShape = { ...SNAKE, checkpoints: SNAKE.checkpoints.map((checkpoint) => (checkpoint.number === 2 ? { ...checkpoint, hidden: true } : checkpoint)) };
+
+  it("lets a hidden number take any place in the order, and still holds visible numbers to theirs", () => {
+    const twoHidden: ZipShape = {
+      width: 3,
+      height: 3,
+      checkpoints: [{ number: 1, row: 0, column: 0 }, { number: 2, row: 0, column: 2, hidden: true }, { number: 3, row: 0, column: 1 }, { number: 4, row: 2, column: 2 }],
+      walls: [],
+    };
+    const topology = buildTopology(twoHidden);
+    // Reading the numbers, 3 comes before 2 here. The player cannot see the 2, so the step onto 3 is judged by place: it is the second numbered cell, and it must be the third.
+    const refusal = checkStep(topology, [0], 1);
+    expect(refusal?.code).toBe("wrong-number");
+    expect(refusal?.message).toContain("third");
+    // A hidden cell is never refused for its number, whatever place it takes.
+    expect(checkStep(buildTopology(HIDDEN), [0, 1], 4)).toBeNull();
+    expect(checkStep(buildTopology(HIDDEN), [0, 3], 4)).toBeNull();
+  });
+
+  it("counts a covered hidden number towards the next one", () => {
+    const topology = buildTopology(HIDDEN);
+    expect(nextNumber(topology, [0, 1, 2, 5])).toBe(2);
+    expect(nextNumber(topology, [0, 1, 2, 5, 4])).toBe(3);
+  });
+
+  it("solver and rules agree: every solution of a board with hidden numbers validates, and hiding can only add solutions", () => {
+    const open = solveZip(SNAKE, { maxSolutions: 50 }).solutions.length;
+    const hidden = solveZip(HIDDEN, { maxSolutions: 50 });
+    expect(hidden.solutions.length).toBeGreaterThanOrEqual(open);
+    for (const path of hidden.solutions) expect(validatePath(buildTopology(HIDDEN), path).complete).toBe(true);
+  });
+
+  it("hides numbers on hard and expert only, never 1 or the last, never all in between, and stays unique", () => {
+    let hiddenBoards = 0;
+    for (const difficulty of DIFFICULTIES) {
+      for (let i = 0; i < 12; i++) {
+        const puzzle = generateZipPuzzle(`hidden-${i}`, difficulty);
+        const hidden = puzzle.checkpoints.filter((checkpoint) => checkpoint.hidden);
+        expect(puzzle.metadata.hiddenCount).toBe(hidden.length);
+        if (difficulty === "easy" || difficulty === "medium") expect(hidden).toHaveLength(0);
+        if (hidden.length === 0) continue;
+        hiddenBoards++;
+        expect(puzzle.checkpoints[0].hidden).toBeFalsy();
+        expect(puzzle.checkpoints[puzzle.checkpoints.length - 1].hidden).toBeFalsy();
+        expect(hidden.length).toBeLessThan(puzzle.checkpoints.length - 2);
+        const result = solveZip(puzzle, { maxSolutions: 2 });
+        expect(result.unique).toBe(true);
+        expect(result.solutions[0]).toEqual([...puzzle.solution]);
+      }
+    }
+    expect(hiddenBoards).toBeGreaterThan(12);
+  });
+
+  it("version 1 boards never hide a number", () => {
+    for (let i = 0; i < 6; i++) expect(generateZipPuzzle(`hidden-${i}`, "expert", { version: 1 }).metadata.hiddenCount).toBe(0);
   });
 });
 
@@ -327,7 +529,15 @@ describe("daily", () => {
   it("numbers puzzles from the original game's launch day", () => {
     expect(getZipDailyInfo("2025-03-18").number).toBe(1);
     expect(getZipDailyInfo("2026-09-21").number).toBe(553);
+  });
+
+  it("keeps the version 1 board for days already played and switches to themed boards the day after", () => {
     expect(getZipDailyInfo("2026-09-21").seed).toBe("ZIP:2026-09-21:1:easy");
+    expect(getZipDailyInfo("2026-09-22").spec.version).toBe(2);
+    expect(getZipDailyInfo("2027-01-01").spec.version).toBe(2);
+    expect(getZipDailyPuzzle("2026-09-21").puzzle.metadata.theme.path).toBe("random");
+    // The weekday draw is keyed by the first generator, so a generator upgrade never changes a day's difficulty.
+    expect(["easy", "medium"]).toContain(getZipDailyInfo("2026-09-22").difficulty);
   });
 
   it("gives every player the same puzzle for the same Pacific date", () => {

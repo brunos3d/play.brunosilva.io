@@ -1,14 +1,16 @@
 import * as daily from "@/shared/engine/daily";
 import { type DateKey, pacificDateKey } from "@/shared/engine/pacific-time";
 import { generateZipFromSpec } from "./generator";
-import { type PuzzleSpec, ZIP_GENERATOR_VERSION, zipSeeds } from "./seed";
+import { type PuzzleSpec, zipSeeds } from "./seed";
 import type { ZipPuzzle } from "./types";
 
 /** Puzzle #1 falls on 2025-03-18, the day the original Zip launched. */
 export const ZIP_DAILY_CONFIG: daily.DailyConfig = {
   epoch: "2025-03-18",
   schedule: daily.DEFAULT_WEEKLY_SCHEDULE,
-  generatorVersion: ZIP_GENERATOR_VERSION,
+  generatorVersion: 1,
+  // Themed boards (generator 2) start the day after they shipped. Dailies up to then keep their version 1 board.
+  upgrades: [{ from: "2026-09-22", version: 2 }],
 };
 
 export const getZipDailyInfo = (date: DateKey, config = ZIP_DAILY_CONFIG): daily.DailyInfo => daily.getDailyInfo(zipSeeds, config, date);

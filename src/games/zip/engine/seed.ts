@@ -6,7 +6,7 @@ export type { PuzzleSpec } from "@/shared/engine/seed-codec";
  * Bump this whenever a generator change would alter the puzzle a seed produces.
  * Keep the old code path and add the new number to the supported list.
  */
-export const ZIP_GENERATOR_VERSION = 1;
+export const ZIP_GENERATOR_VERSION = 2;
 export const ZIP_MIN_SIZE = 5;
 export const ZIP_MAX_SIZE = 8;
 
@@ -14,7 +14,8 @@ export const ZIP_MAX_SIZE = 8;
 export const zipSeeds = createSeedCodec({
   prefix: "ZIP",
   currentVersion: ZIP_GENERATOR_VERSION,
-  supportedVersions: [1],
+  // Version 1 stays supported, so links and dailies made with it keep their boards.
+  supportedVersions: [1, 2],
   minSize: ZIP_MIN_SIZE,
   maxSize: ZIP_MAX_SIZE,
 });

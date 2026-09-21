@@ -7,7 +7,7 @@ const SIZE = 6;
 // This seed was picked because its board has all three situations the tests below need: a wall next to
 // the solution path, a legal detour right after 2, and a last number that can be reached too early.
 // The tests assert that, so a generator change that breaks the assumption fails loudly and never skips.
-const { puzzle, url } = zipPuzzle("e2e-zip-10", "medium", SIZE);
+const { puzzle, url } = zipPuzzle("e2e-zip-1", "medium", SIZE);
 const solution = puzzle.solution;
 const topology = buildTopology(puzzle);
 
@@ -160,8 +160,13 @@ test("solving shows the result, locks the board and offers the next puzzle", asy
   await expect(result(page)).toContainText("Backtracks");
   await expect(result(page).getByRole("link", { name: /Play today's Patches/ })).toBeVisible();
 
+  // The solved board keeps only the answer: walls and numbers fade out and the line gets thicker.
+  await expect(board(page).locator(".zip-number").first()).toHaveCSS("opacity", "0");
+  if (puzzle.walls.length > 0) await expect(board(page).getByTestId("zip-wall").first()).toHaveCSS("opacity", "0");
+  await expect.poll(async () => Number.parseFloat(await board(page).getByTestId("zip-segment").first().evaluate((line) => getComputedStyle(line).strokeWidth))).toBeGreaterThan(0.4);
+
   await result(page).getByRole("button", { name: "Next puzzle" }).click();
-  await expect(page).toHaveURL(/seed=ZIP%3A[a-z0-9]{8}%3A1%3Amedium%3A6/);
+  await expect(page).toHaveURL(/seed=ZIP%3A[a-z0-9]{8}%3A2%3Amedium%3A6/);
   await expect(visited(page)).toHaveCount(0);
 });
 
@@ -221,4 +226,45 @@ test("the board sits on whole pixels", async ({ page }) => {
   expect(grid.width % SIZE).toBe(0);
   expect(grid.width).toBe(grid.height);
   expect(Number.isInteger(grid.x)).toBe(true);
+});
+
+test("practice has a New game control that loads another board and restarts the clock", async ({ page }) => {
+  await page.clock.install({ time: new Date("2026-09-21T18:00:00Z") });
+  await openZip(page, url);
+  await drawCells(page, SIZE, solution.slice(0, 6));
+  // Real time spent dragging counts too, so the clock shows at least the twenty seconds skipped here.
+  await page.clock.fastForward(20_000);
+  expect(seconds(await timer(page).innerText())).toBeGreaterThanOrEqual(20);
+
+  await page.getByTestId("game-new").click();
+  await expect(page).toHaveURL(/seed=ZIP%3A[a-z0-9]{8}%3A2%3Amedium%3A6/);
+  await expect(board(page)).toHaveAttribute("data-locked", "false");
+  await expect(visited(page)).toHaveCount(0);
+  expect(seconds(await timer(page).innerText())).toBeLessThan(3);
+});
+
+test("the daily puzzle has no New game control", async ({ page }) => {
+  await openZip(page, "/zip");
+  await expect(page.getByTestId("game-new")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Reset" })).toBeVisible();
+});
+
+test("expert boards hide some numbers behind a ?, and a covered ? shows the place it takes on the path", async ({ page }) => {
+  const hiddenBoard = zipPuzzle("e2e-zip-hidden", "expert", 7);
+  const hidden = hiddenBoard.puzzle.checkpoints.filter((checkpoint) => checkpoint.hidden);
+  expect(hidden.length).toBeGreaterThan(0);
+  expect(hidden.length).toBeLessThan(hiddenBoard.puzzle.checkpoints.length - 2);
+
+  await openZip(page, hiddenBoard.url);
+  const marks = board(page).getByTestId("zip-hidden-number");
+  await expect(marks).toHaveCount(hidden.length);
+  for (const text of await marks.allTextContents()) expect(text).toBe("?");
+  await expect(status(page)).toContainText("A ? is a number too");
+
+  // Draw the solution up to the first hidden number: it now shows its place, which is its real number on the right path.
+  const first = hidden[0];
+  const reach = hiddenBoard.puzzle.solution.indexOf(first.row * 7 + first.column);
+  await drawCells(page, 7, hiddenBoard.puzzle.solution.slice(0, reach + 1));
+  await expect(marks.filter({ hasText: String(first.number) })).toHaveCount(1);
+  await expect(marks.filter({ hasText: "?" })).toHaveCount(hidden.length - 1);
 });

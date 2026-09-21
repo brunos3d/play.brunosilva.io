@@ -4,20 +4,31 @@ export type MoveErrorCode = "start-at-one" | "not-adjacent" | "wall" | "revisit"
 
 export type MoveError = { code: MoveErrorCode; message: string };
 
-/** The number the path has to reach next, given the cells it already holds. */
+/**
+ * The number the path has to reach next: one more than the numbered cells it
+ * already holds. Counting cells, not reading numbers, is what makes hidden
+ * numbers work: a "?" on the path still counts as one.
+ */
 export function nextNumber(topology: Topology, path: readonly number[]): number {
-  let last = 0;
-  for (const cell of path) {
-    if (topology.numberAt[cell] > last) last = topology.numberAt[cell];
-  }
-  return last + 1;
+  let count = 0;
+  for (const cell of path) if (topology.numberAt[cell] !== 0) count++;
+  return count + 1;
 }
+
+const ORDINALS = ["", "first", "second", "third", "fourth", "fifth", "sixth", "seventh", "eighth", "ninth", "tenth"];
+const ordinal = (value: number): string => ORDINALS[value] ?? `${value}th`;
 
 /**
  * Can the path grow into `cell`? Returns null when it can, or the rule that
  * stops it. These are the rules of the game, in one place:
  * start on 1, move to a side neighbour, never through a wall, never onto the
  * path, and take the numbers in order.
+ *
+ * "In order" is checked by position: a visible number n must be the nth
+ * numbered cell on the path. A hidden number ("?") fits any position, because
+ * the player cannot know its number, and refusing the step would give it away.
+ * The generator only hides a number when the solution stays unique under this
+ * looser rule.
  */
 export function checkStep(topology: Topology, path: readonly number[], cell: number): MoveError | null {
   if (path.length === 0) {
@@ -32,9 +43,13 @@ export function checkStep(topology: Topology, path: readonly number[], cell: num
   if (path.includes(cell)) return { code: "revisit", message: "The path cannot cross itself." };
 
   const number = topology.numberAt[cell];
-  if (number !== 0) {
-    const expected = nextNumber(topology, path);
-    if (number !== expected) return { code: "wrong-number", message: `Reach ${expected} before ${number}.` };
+  if (number !== 0 && !topology.hiddenAt[cell]) {
+    const position = nextNumber(topology, path);
+    if (number !== position) {
+      const hasHidden = topology.hiddenAt.some((flag) => flag === 1);
+      const message = hasHidden ? `${number} has to be the ${ordinal(number)} numbered cell on the path. Here it would be the ${ordinal(position)}.` : `Reach ${position} before ${number}.`;
+      return { code: "wrong-number", message };
+    }
   }
   return null;
 }

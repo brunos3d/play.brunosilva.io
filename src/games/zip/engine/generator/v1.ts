@@ -1,11 +1,24 @@
+/**
+ * Generator version 1, frozen. Seeds with version 1 must keep producing the
+ * boards they always did, so nothing in this file may change, its tier table
+ * included. New work goes into v2.ts.
+ */
 import type { Difficulty } from "@/shared/engine/difficulty";
-import { type Rng, createRng, hashHex } from "@/shared/engine/prng";
-import { normalizeToken } from "@/shared/engine/seed-codec";
-import { MIN_CHECKPOINTS, ZIP_TIERS, type ZipTier } from "./config";
-import { buildTopology, cellAt, gridNeighbors, makeWall, wallKey } from "./grid";
-import { type PuzzleSpec, ZIP_GENERATOR_VERSION, zipSeeds } from "./seed";
-import { solveZip } from "./solver";
-import type { Checkpoint, Wall, ZipPuzzle, ZipShape } from "./types";
+import { type Rng, createRng } from "@/shared/engine/prng";
+import { cellAt, gridNeighbors, makeWall, wallKey } from "../grid";
+import { type PuzzleSpec, zipSeeds } from "../seed";
+import { solveZip } from "../solver";
+import type { Checkpoint, Wall, ZipShape } from "../types";
+import type { GeneratedBoard } from "./index";
+
+type ZipTier = { sizes: readonly number[]; checkpointDensity: readonly [number, number]; maxWallShare: number };
+const MIN_CHECKPOINTS = 3;
+const ZIP_TIERS: Record<Difficulty, ZipTier> = {
+  easy: { sizes: [5, 6], checkpointDensity: [0.16, 0.22], maxWallShare: 0.3 },
+  medium: { sizes: [6, 7], checkpointDensity: [0.12, 0.16], maxWallShare: 0.3 },
+  hard: { sizes: [7, 8], checkpointDensity: [0.09, 0.12], maxWallShare: 0.32 },
+  expert: { sizes: [8], checkpointDensity: [0.07, 0.095], maxWallShare: 0.34 },
+};
 
 const MAX_ATTEMPTS = 60;
 /** Backbite moves per cell. Enough to erase the starting snake on every supported size. */
@@ -105,15 +118,8 @@ function wallsForUniqueness(rng: Rng, shape: ZipShape, solution: readonly number
   return { walls, nodes };
 }
 
-/**
- * Builds the puzzle for a spec. The output depends only on the spec: the PRNG
- * is keyed by token, version, difficulty and size, each attempt has its own
- * stream, and the solver works on a node budget, never on a clock.
- */
-export function generateZipFromSpec(spec: PuzzleSpec): ZipPuzzle {
-  if (!zipSeeds.isSupportedVersion(spec.version)) throw new RangeError(`Generator version ${spec.version} is not available in this build.`);
-  if (spec.size !== undefined && !zipSeeds.isBoardSize(spec.size)) throw new RangeError(`Board size ${spec.size} is out of range.`);
-
+/** Version 1 boards: a fully shuffled path, evenly spaced numbers, and walls wherever they remove a wrong solution. */
+export function generateZipV1(spec: PuzzleSpec): GeneratedBoard {
   const tier = ZIP_TIERS[spec.difficulty];
   const key = zipSeeds.rngKey(spec);
   const size = spec.size ?? createRng(`${key}|size`).pick(tier.sizes);
@@ -126,48 +132,8 @@ export function generateZipFromSpec(spec: PuzzleSpec): ZipPuzzle {
     const shape: ZipShape = { width: size, height: size, checkpoints, walls: [] };
     const unique = wallsForUniqueness(rng, shape, solution, maxWalls);
     if (!unique) continue;
-
     const walls = [...unique.walls].sort((a, b) => a.a - b.a || a.b - b.b);
-    const shareSeed = zipSeeds.format({ ...spec, token: normalizeToken(spec.token) });
-    return {
-      id: zipPuzzleId(shareSeed),
-      seed: shareSeed,
-      version: spec.version,
-      width: size,
-      height: size,
-      difficulty: spec.difficulty,
-      checkpoints,
-      walls,
-      solution,
-      metadata: { generatorVersion: spec.version, shareSeed, attempts: attempt, solverNodes: unique.nodes, wallCount: walls.length, checkpointCount: checkpoints.length },
-    };
+    return { size, checkpoints, walls, solution, attempts: attempt, solverNodes: unique.nodes, theme: { figure: "none", path: "random" } };
   }
   throw new Error(`No uniquely solvable board found for seed ${zipSeeds.format(spec)}`);
-}
-
-/** Id of the puzzle a canonical seed builds. Lets the hub look up a saved board without generating it. */
-export const zipPuzzleId = (shareSeed: string): string => `zip-${hashHex(shareSeed).slice(0, 12)}`;
-
-/** `generateZipPuzzle("example-seed", "hard")` always returns the same puzzle. */
-export function generateZipPuzzle(seed: string | number, difficulty: Difficulty, options: { size?: number; version?: number } = {}): ZipPuzzle {
-  return generateZipFromSpec({
-    token: normalizeToken(seed),
-    version: options.version ?? ZIP_GENERATOR_VERSION,
-    difficulty,
-    ...(options.size !== undefined ? { size: options.size } : {}),
-  });
-}
-
-/** Independent audit of a finished puzzle: the stored path is legal and the solver agrees it is the only one. */
-export function validateZipPuzzle(puzzle: ZipPuzzle): { ok: boolean; problems: string[] } {
-  const problems: string[] = [];
-  const topology = buildTopology(puzzle);
-  if (topology.start < 0) problems.push("No cell is numbered 1.");
-  const numbers = puzzle.checkpoints.map((checkpoint) => checkpoint.number).sort((a, b) => a - b);
-  if (numbers.some((number, index) => number !== index + 1)) problems.push("Checkpoint numbers are not 1..n.");
-  const result = solveZip(puzzle, { maxSolutions: 2 }, topology);
-  if (!result.exhausted) problems.push("Solver ran out of budget.");
-  if (result.solutionCount !== 1) problems.push(`Solver finds ${result.solutionCount} solutions.`);
-  else if (result.solutions[0].some((cell, index) => cell !== puzzle.solution[index])) problems.push("Stored solution differs from the solver's.");
-  return { ok: problems.length === 0, problems };
 }

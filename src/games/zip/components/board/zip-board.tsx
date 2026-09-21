@@ -51,6 +51,14 @@ export function ZipBoard({ puzzle, topology, path, colors, locked, solved, shake
   const missing = useMemo(() => new Set(missingCells), [missingCells]);
   const head = path.length > 0 ? path[path.length - 1] : -1;
   const expected = nextNumber(topology, path);
+  // A hidden number shows "?" until the path covers it. Then it shows the place it takes on this path,
+  // which is its real number only if the path is right, so nothing is given away.
+  const placeOf = useMemo(() => {
+    const places = new Map<number, number>();
+    let count = 0;
+    for (const cell of path) if (topology.numberAt[cell] !== 0) places.set(cell, ++count);
+    return places;
+  }, [path, topology]);
   const center = (cell: number) => ({ x: (cell % width) + 0.5, y: Math.floor(cell / width) + 0.5 });
 
   useEffect(() => {
@@ -148,7 +156,7 @@ export function ZipBoard({ puzzle, topology, path, colors, locked, solved, shake
               const order = orderOf.get(cell);
               const number = topology.numberAt[cell];
               const parts = [`Row ${row + 1}, column ${column + 1}.`];
-              if (number) parts.push(`Number ${number}.`);
+              if (number) parts.push(topology.hiddenAt[cell] ? (placeOf.has(cell) ? `Hidden number, number ${placeOf.get(cell)} on this path.` : "Hidden number.") : `Number ${number}.`);
               parts.push(order === undefined ? "Empty." : cell === head ? `End of the path, step ${order + 1}.` : `On the path, step ${order + 1}.`);
               return (
                 <div
@@ -217,12 +225,15 @@ export function ZipBoard({ puzzle, topology, path, colors, locked, solved, shake
           {puzzle.checkpoints.map((checkpoint) => {
             const x = checkpoint.column + 0.5;
             const y = checkpoint.row + 0.5;
+            const place = placeOf.get(checkpoint.row * width + checkpoint.column);
+            const hidden = checkpoint.hidden === true;
             return (
-              <g key={checkpoint.number}>
-                {checkpoint.number === expected && !solved && !locked && <circle className="zip-number-ring" cx={x} cy={y} r={0.4} />}
-                <circle className="zip-number-disc" cx={x} cy={y} r={0.29} />
-                <text className="zip-number-text" x={x} y={y}>
-                  {checkpoint.number}
+              <g key={checkpoint.number} className="zip-number" data-testid={hidden ? "zip-hidden-number" : undefined}>
+                {/* The ring never marks a hidden number: it would say which "?" comes next. */}
+                {checkpoint.number === expected && !hidden && !solved && !locked && <circle className="zip-number-ring" cx={x} cy={y} r={0.4} />}
+                <circle className="zip-number-disc" data-hidden={hidden || undefined} cx={x} cy={y} r={hidden ? 0.27 : 0.29} />
+                <text className="zip-number-text" data-hidden={hidden || undefined} x={x} y={y}>
+                  {hidden ? (place ?? "?") : checkpoint.number}
                 </text>
               </g>
             );

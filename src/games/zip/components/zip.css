@@ -73,6 +73,26 @@
 .zip-stop { stop-color: var(--line); }
 .zip-joint { fill: var(--line); }
 
+/*
+ * A solved board keeps only its answer. Once the celebration wave has started,
+ * the walls and the numbers fade out and the line swells, so what stays is the
+ * drawing the path makes. The joints scale by the same factor as the stroke,
+ * or the corners would show a notch. A board that loads already solved has
+ * nothing to transition from and simply appears in this state.
+ */
+.zip-segment { transition: stroke-width 700ms cubic-bezier(0.3, 0.7, 0.3, 1) 650ms; }
+.zip-joint {
+  transform-box: fill-box;
+  transform-origin: center;
+  transition: transform 700ms cubic-bezier(0.3, 0.7, 0.3, 1) 650ms;
+}
+.zip-wall,
+.zip-number { transition: opacity 450ms ease 500ms; }
+.mg-board[data-solved="true"] .zip-segment { stroke-width: 0.45; }
+.mg-board[data-solved="true"] .zip-joint { transform: scale(1.5); }
+.mg-board[data-solved="true"] .zip-wall,
+.mg-board[data-solved="true"] .zip-number { opacity: 0; }
+
 .zip-wall {
   stroke: var(--ink);
   stroke-width: 0.11;
@@ -80,6 +100,15 @@
 }
 
 .zip-number-disc { fill: var(--ink); }
+/* A hidden number: a hollow, dashed disc, so it still reads as "unknown" once the path covers it and a place shows. */
+.zip-number-disc[data-hidden] {
+  fill: var(--surface);
+  stroke: var(--ink);
+  stroke-width: 0.05;
+  stroke-dasharray: 0.09 0.07;
+  stroke-linecap: round;
+}
+.zip-number-text[data-hidden] { fill: var(--ink); }
 .zip-number-text {
   fill: var(--linen);
   font-size: 0.34px;

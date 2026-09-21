@@ -33,6 +33,8 @@ export type Topology = {
   neighbors: number[][];
   /** Checkpoint number per cell, 0 for a plain cell. */
   numberAt: Int16Array;
+  /** 1 for a numbered cell that shows "?" to the player. */
+  hiddenAt: Uint8Array;
   lastNumber: number;
   /** Cell of number 1. -1 when the board has none. */
   start: number;
@@ -48,19 +50,21 @@ export function buildTopology(shape: ZipShape): Topology {
   const neighbors = Array.from({ length: cellCount }, (_, index) => gridNeighbors(width, height, index).filter((other) => !walls.has(wallKey(index, other))));
 
   const numberAt = new Int16Array(cellCount);
+  const hiddenAt = new Uint8Array(cellCount);
   let lastNumber = 0;
   let start = -1;
   let end = -1;
   for (const checkpoint of shape.checkpoints) {
     const index = cellIndex(width, checkpoint.row, checkpoint.column);
     numberAt[index] = checkpoint.number;
+    if (checkpoint.hidden) hiddenAt[index] = 1;
     if (checkpoint.number === 1) start = index;
     if (checkpoint.number > lastNumber) {
       lastNumber = checkpoint.number;
       end = index;
     }
   }
-  return { width, height, cellCount, neighbors, numberAt, lastNumber, start, end, walls };
+  return { width, height, cellCount, neighbors, numberAt, hiddenAt, lastNumber, start, end, walls };
 }
 
 export function areAdjacent(width: number, a: number, b: number): boolean {

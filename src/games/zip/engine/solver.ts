@@ -36,7 +36,7 @@ const DEFAULT_MAX_NODES = 400_000;
  */
 export function solveZip(shape: ZipShape, options: SolveOptions = {}, prebuilt?: Topology): SolveResult {
   const topology = prebuilt ?? buildTopology(shape);
-  const { cellCount, neighbors, numberAt, lastNumber, start, end } = topology;
+  const { cellCount, neighbors, numberAt, hiddenAt, lastNumber, start, end } = topology;
   const maxSolutions = options.maxSolutions ?? 2;
   const maxNodes = options.maxNodes ?? DEFAULT_MAX_NODES;
   const result: SolveResult = { solutions: [], solutionCount: 0, unique: false, nodes: 0, exhausted: true };
@@ -50,17 +50,20 @@ export function solveZip(shape: ZipShape, options: SolveOptions = {}, prebuilt?:
   let length = 0;
   let expected = 1;
 
+  // `expected` is the position the next numbered cell will have on the path. A visible number must match it.
+  // A hidden one fits any position, exactly as in rules.ts.
+  const fits = (cell: number): boolean => numberAt[cell] === 0 || hiddenAt[cell] === 1 || numberAt[cell] === expected;
   const enter = (cell: number): void => {
     visited[cell] = 1;
     path[length++] = cell;
-    if (numberAt[cell] !== 0) expected = numberAt[cell] + 1;
+    if (numberAt[cell] !== 0) expected++;
   };
 
   const prefix = options.prefix && options.prefix.length > 0 ? options.prefix : [start];
   for (let i = 0; i < prefix.length; i++) {
     const cell = prefix[i];
     const legalFirst = i === 0 && cell === start;
-    const legalNext = i > 0 && !visited[cell] && neighbors[prefix[i - 1]].includes(cell) && (numberAt[cell] === 0 || numberAt[cell] === expected);
+    const legalNext = i > 0 && !visited[cell] && neighbors[prefix[i - 1]].includes(cell) && fits(cell);
     if (!legalFirst && !legalNext) return result;
     enter(cell);
   }
@@ -118,9 +121,8 @@ export function solveZip(shape: ZipShape, options: SolveOptions = {}, prebuilt?:
     const options: number[] = [];
     for (const other of neighbors[head]) {
       if (visited[other]) continue;
-      const number = numberAt[other];
-      if (number !== 0 && number !== expected) continue;
-      if (number === lastNumber && length + 1 !== cellCount) continue;
+      if (!fits(other)) continue;
+      if (numberAt[other] === lastNumber && length + 1 !== cellCount) continue;
       options.push(other);
     }
     options.sort((a, b) => freeExits(a, -1) - freeExits(b, -1));
