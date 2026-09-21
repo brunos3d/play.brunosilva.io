@@ -6,9 +6,15 @@
  * was a scribble. Version 2 picks a theme from the seed:
  *
  * - a wall figure (cross, frame, corners, corridors, slash, face, pinwheel,
- *   mirrored walls) with the path grown around it, or
+ *   mirrored walls) with the path grown around it,
+ * - blocked cells (core, pillars, islands) that the path goes around and does
+ *   not have to cover, or
  * - a drawn path (spiral, snake, Hilbert curve) that is only lightly disturbed,
  *   so the finished board still shows the drawing.
+ *
+ * On a symmetric board the solution itself can be symmetric: its second half
+ * is the mirror image, or the half turn, of the first (see paths.ts). And a
+ * board can trade numbers for walls, so one tier offers both kinds.
  *
  * Walls added for uniqueness come with their mirror twin when the theme is
  * symmetric. The harder tiers then hide some numbers behind a "?". Several
@@ -22,9 +28,9 @@ import { type PuzzleSpec, zipSeeds } from "../seed";
 import { solveZip } from "../solver";
 import type { Checkpoint, Wall, ZipShape } from "../types";
 import { type TrapReport, measureTraps } from "./difficulty";
-import { FIGURES, type Figure, buildFigure, twinWall } from "./figures";
+import { FIGURES, type Figure, type Symmetry, buildFigure, twinWall } from "./figures";
 import type { GeneratedBoard } from "./index";
-import { PATH_STYLES, type PathStyle, backbite, basePath, findHamiltonianPath } from "./paths";
+import { type DrawnStyle, PATH_STYLES, type PathStyle, backbite, basePath, findHamiltonianPath, symmetricPath } from "./paths";
 
 const MAX_ATTEMPTS = 40;
 const UNIQUENESS_NODE_BUDGET = 40_000;
@@ -32,19 +38,34 @@ const MAX_PRUNE_CHECKS = 24;
 /** A path grown around a figure is mixed this much, in backbite moves per cell. Enough to hide the search order, not the figure. */
 const FIGURE_MIX = 6;
 const RANDOM_MIX = 40;
+/** A board that trades numbers for walls starts with this share of the tier's numbers. */
+const WALLS_FIRST_NUMBERS = 0.7;
+/**
+ * Backbite moves per pair applied to the first half of a symmetric path, [min, max]. Near 0 the half keeps the
+ * wall-hugging look of the search, which on an odd board reads as a spiral in and the same spiral out.
+ */
+const SYMMETRIC_MIX = [0, 2.5] as const;
 
-const openNeighbors = (size: number): number[][] => buildTopology({ width: size, height: size, checkpoints: [], walls: [] }).neighbors;
+type Themed = { path: number[]; style: PathStyle; symmetry?: Exclude<Symmetry, "none"> };
 
-/** A path for the theme: grown around the figure, or a disturbed drawing on the open board. */
-function themedPath(rng: Rng, size: number, tier: ZipTier, figure: Figure): { path: number[]; style: PathStyle } | null {
+/** A path for the theme: symmetric, grown around the figure, or a disturbed drawing on the open board. */
+function themedPath(rng: Rng, size: number, tier: ZipTier, figure: Figure): Themed | null {
   const cells = size * size;
-  if (figure.walls.length > 0) {
-    const { neighbors } = buildTopology({ width: size, height: size, checkpoints: [], walls: figure.walls });
-    const found = findHamiltonianPath(rng, neighbors, size);
+  const { neighbors, blockedAt } = buildTopology({ width: size, height: size, checkpoints: [], walls: figure.walls, blocked: figure.blocked });
+
+  if (rng.chance(tier.symmetricOdds)) {
+    const mix = SYMMETRIC_MIX[0] + rng.next() * (SYMMETRIC_MIX[1] - SYMMETRIC_MIX[0]);
+    for (const symmetry of size % 2 === 0 ? rng.shuffle(["mirror-x", "mirror-y"] as const) : (["rotate"] as const)) {
+      const path = symmetricPath(rng, neighbors, blockedAt, size, symmetry, mix);
+      if (path) return { path, style: "symmetric", symmetry };
+    }
+  }
+
+  if (figure.walls.length > 0 || figure.blocked.length > 0) {
+    const found = findHamiltonianPath(rng, neighbors, { skip: blockedAt });
     return found ? { path: backbite(rng, found, neighbors, cells * FIGURE_MIX), style: "hugging" } : null;
   }
-  const neighbors = openNeighbors(size);
-  const styles = PATH_STYLES.filter((style): style is Exclude<PathStyle, "hugging"> => style !== "hugging");
+  const styles = PATH_STYLES.filter((style): style is DrawnStyle => style !== "hugging" && style !== "symmetric");
   const style = rng.weighted(styles, styles.map((name) => tier.pathOdds[name]));
   if (style === "random") return { path: backbite(rng, basePath(rng, "snake", size, neighbors)!, neighbors, cells * RANDOM_MIX), style };
   const drawn = basePath(rng, style, size, neighbors);
@@ -54,9 +75,9 @@ function themedPath(rng: Rng, size: number, tier: ZipTier, figure: Figure): { pa
 }
 
 /** Numbers 1..n along the path. The stretches between them vary in length by `gapVariance`, so a board is not n equal chores. */
-function placeCheckpoints(rng: Rng, path: readonly number[], tier: ZipTier): number[] {
+function placeCheckpoints(rng: Rng, path: readonly number[], tier: ZipTier, scale: number): number[] {
   const [minDensity, maxDensity] = tier.checkpointDensity;
-  const count = Math.max(MIN_CHECKPOINTS, Math.round(path.length * (minDensity + rng.next() * (maxDensity - minDensity))));
+  const count = Math.max(MIN_CHECKPOINTS, Math.round(path.length * scale * (minDensity + rng.next() * (maxDensity - minDensity))));
   const weights = Array.from({ length: count - 1 }, () => 1 + (rng.next() * 2 - 1) * tier.gapVariance);
   const total = weights.reduce((sum, weight) => sum + weight, 0);
 
@@ -94,6 +115,7 @@ function makeUnique(
   startPicks: readonly number[],
   figure: Figure,
   tier: ZipTier,
+  uniqueness: ZipTier["uniqueness"],
 ): { walls: Wall[]; picks: number[]; nodes: number } | null {
   const cells = size * size;
   const maxExtraWalls = Math.floor(cells * tier.maxExtraWallShare);
@@ -105,7 +127,7 @@ function makeUnique(
   const present = new Set(figure.walls.map((wall) => wallKey(wall.a, wall.b)));
   const groups: Wall[][] = [];
   let picks = [...startPicks];
-  const shape = (walls: Wall[]): ZipShape => ({ width: size, height: size, checkpoints: toCheckpoints(picks, solution, size), walls });
+  const shape = (walls: Wall[]): ZipShape => ({ width: size, height: size, checkpoints: toCheckpoints(picks, solution, size), walls, blocked: figure.blocked });
   const allWalls = (): Wall[] => [...figure.walls, ...groups.flat()];
   let nodes = 0;
 
@@ -116,9 +138,9 @@ function makeUnique(
     const impostor = result.solutions.find((path) => !isSolution(path));
     if (!impostor) return null;
 
-    if (tier.uniqueness === "numbers-first" && picks.length < maxNumbers) {
+    if (uniqueness === "numbers-first" && picks.length < maxNumbers) {
       // Stretch of a cell = how many numbered cells come before it. A cell whose stretch differs between the two paths separates them.
-      const impostorIndex = new Int32Array(cells);
+      const impostorIndex = new Int32Array(cells).fill(-1);
       impostor.forEach((cell, index) => (impostorIndex[cell] = index));
       const numberedAt = picks.map((pathIndex) => impostorIndex[solution[pathIndex]]).sort((a, b) => a - b);
       const separating: number[] = [];
@@ -150,7 +172,7 @@ function makeUnique(
     const group = [wall];
     present.add(wallKey(wall.a, wall.b));
     const twin = twinWall(figure.symmetry, size, wall);
-    if (twin && !solutionEdges.has(wallKey(twin.a, twin.b)) && !present.has(wallKey(twin.a, twin.b))) {
+    if (twin && !figure.blocked.includes(twin.a) && !figure.blocked.includes(twin.b) && !solutionEdges.has(wallKey(twin.a, twin.b)) && !present.has(wallKey(twin.a, twin.b))) {
       group.push(twin);
       present.add(wallKey(twin.a, twin.b));
     }
@@ -201,24 +223,30 @@ function buildCandidate(key: string, attempt: number, size: number, tier: ZipTie
   // A symmetric theme without a figure still mirrors its extra walls, which is what makes a drawn-path board look composed.
   const figureName = rng.weighted(FIGURES, FIGURES.map((name) => tier.figureOdds[name] ?? 0));
   const built = buildFigure(figureName, size, rng);
-  const figure: Figure = built.walls.length > 0 ? built : { name: "none", symmetry: rng.pick(["mirror-x", "mirror-y", "rotate"] as const), walls: [] };
+  const drawn: Figure = built.walls.length > 0 || built.blocked.length > 0 ? built : { name: "none", symmetry: rng.pick(["mirror-x", "mirror-y", "rotate"] as const), walls: [], blocked: [] };
 
-  const themed = themedPath(rng, size, tier, figure);
+  const themed = themedPath(rng, size, tier, drawn);
   if (!themed) return null;
-  const unique = makeUnique(rng, size, themed.path, placeCheckpoints(rng, themed.path, tier), figure, tier);
+  // Extra walls follow the symmetry of the solution when it has one, or a wall could land on the path's own image.
+  const figure: Figure = themed.symmetry ? { ...drawn, symmetry: themed.symmetry } : drawn;
+  // Fewer numbers and more walls, or the tier's usual mix. The seed decides.
+  const wallsFirst = rng.chance(tier.wallsFirstOdds);
+  const picks = placeCheckpoints(rng, themed.path, tier, wallsFirst ? WALLS_FIRST_NUMBERS : 1);
+  const unique = makeUnique(rng, size, themed.path, picks, figure, tier, wallsFirst ? "walls" : tier.uniqueness);
   if (!unique) return null;
 
   const checkpoints = toCheckpoints(unique.picks, themed.path, size);
   const walls = [...unique.walls].sort((a, b) => a.a - b.a || a.b - b.b);
-  const shape: ZipShape = { width: size, height: size, checkpoints, walls };
+  const shape: ZipShape = { width: size, height: size, checkpoints, walls, blocked: figure.blocked };
   return {
     size,
     checkpoints,
     walls,
+    blocked: figure.blocked,
     solution: themed.path,
     attempts: attempt,
     solverNodes: unique.nodes,
-    theme: { figure: figure.name, path: themed.style },
+    theme: { figure: figure.name, path: themed.style, symmetric: themed.symmetry !== undefined },
     traps: measureTraps(shape, buildTopology(shape), themed.path),
     rng,
   };
@@ -241,7 +269,7 @@ export function generateZipV2(spec: PuzzleSpec): GeneratedBoard {
   const ranked = [...candidates].sort((a, b) => distance(a) - distance(b));
   // Numbers are hidden on the chosen board only. Every trial is a full uniqueness proof, too slow to run on boards that get thrown away.
   const { traps: openTraps, rng, ...board } = ranked[0];
-  const shape: ZipShape = { width: size, height: size, checkpoints: board.checkpoints, walls: board.walls };
+  const shape: ZipShape = { width: size, height: size, checkpoints: board.checkpoints, walls: board.walls, blocked: board.blocked };
   const hiding = hideNumbers(rng, shape, tier);
   if (hiding.checkpoints.every((checkpoint) => !checkpoint.hidden)) return { ...board, traps: openTraps };
   const hiddenShape = { ...shape, checkpoints: hiding.checkpoints };

@@ -157,7 +157,8 @@ export function ZipBoard({ puzzle, topology, path, colors, locked, solved, shake
               const number = topology.numberAt[cell];
               const parts = [`Row ${row + 1}, column ${column + 1}.`];
               if (number) parts.push(topology.hiddenAt[cell] ? (placeOf.has(cell) ? `Hidden number, number ${placeOf.get(cell)} on this path.` : "Hidden number.") : `Number ${number}.`);
-              parts.push(order === undefined ? "Empty." : cell === head ? `End of the path, step ${order + 1}.` : `On the path, step ${order + 1}.`);
+              if (topology.blockedAt[cell]) parts.push("Blocked.");
+              else parts.push(order === undefined ? "Empty." : cell === head ? `End of the path, step ${order + 1}.` : `On the path, step ${order + 1}.`);
               return (
                 <div
                   key={cell}
@@ -166,6 +167,7 @@ export function ZipBoard({ puzzle, topology, path, colors, locked, solved, shake
                   aria-label={parts.join(" ")}
                   aria-rowindex={row + 1}
                   aria-colindex={column + 1}
+                  data-blocked={topology.blockedAt[cell] ? "true" : undefined}
                   data-visited={order !== undefined ? "true" : undefined}
                   data-refused={cell === refusedCell ? "true" : undefined}
                   data-wrong={wrong.has(cell) ? "true" : undefined}

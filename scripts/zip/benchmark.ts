@@ -16,7 +16,7 @@ function runTier(difficulty: Difficulty): number {
   const sizes = new Map<number, number>();
   const themes = new Map<string, number>();
   const traps: number[] = [];
-  let invalid = 0, walls = 0, numbers = 0, hidden = 0, attempts = 0, turns = 0, cells = 0;
+  let invalid = 0, walls = 0, numbers = 0, hidden = 0, blocked = 0, withBlocks = 0, symmetric = 0, attempts = 0, turns = 0, cells = 0;
 
   for (let i = 0; i < count; i++) {
     const started = performance.now();
@@ -28,6 +28,9 @@ function runTier(difficulty: Difficulty): number {
     walls += puzzle.walls.length;
     numbers += puzzle.checkpoints.length;
     hidden += puzzle.metadata.hiddenCount;
+    blocked += puzzle.blocked.length;
+    if (puzzle.blocked.length > 0) withBlocks++;
+    if (puzzle.metadata.theme.symmetric) symmetric++;
     traps.push(puzzle.metadata.trapScore);
     const theme = puzzle.metadata.theme.figure === "none" ? puzzle.metadata.theme.path : puzzle.metadata.theme.figure;
     themes.set(theme, (themes.get(theme) ?? 0) + 1);
@@ -47,6 +50,7 @@ function runTier(difficulty: Difficulty): number {
   console.log(`  duplicates      ${count - paths.size}`);
   console.log(`  boards          ${[...sizes].sort().map(([n, c]) => `${n}x${n}: ${c}`).join(", ")}`);
   console.log(`  shape           numbers ${fmt(numbers / count)} (${fmt(hidden / count)} hidden)  walls ${fmt(walls / count)}  turns per cell ${fmt(turns / cells)}`);
+  console.log(`  variations      blocked cells on ${withBlocks} boards (${fmt(blocked / Math.max(1, withBlocks))} each)  symmetric solution on ${symmetric}`);
   console.log(`  trap score      mean ${fmt(traps.reduce((sum, value) => sum + value, 0) / count)}  p10 ${percentile(traps, 0.1)}  p50 ${percentile(traps, 0.5)}  p90 ${percentile(traps, 0.9)}`);
   console.log(`  themes          ${[...themes].sort((a, b) => b[1] - a[1]).map(([name, n]) => `${name}: ${n}`).join(", ")}`);
   return invalid;

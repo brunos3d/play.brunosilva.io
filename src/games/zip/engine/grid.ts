@@ -29,7 +29,11 @@ export type Topology = {
   width: number;
   height: number;
   cellCount: number;
-  /** Passable neighbours per cell. */
+  /** Cells the path has to cover: every cell that is not blocked. */
+  playableCount: number;
+  /** 1 for a blocked cell. The path cannot enter it and does not have to cover it. */
+  blockedAt: Uint8Array;
+  /** Passable neighbours per cell. A blocked cell has none, and is nobody's neighbour. */
   neighbors: number[][];
   /** Checkpoint number per cell, 0 for a plain cell. */
   numberAt: Int16Array;
@@ -47,7 +51,12 @@ export function buildTopology(shape: ZipShape): Topology {
   const { width, height } = shape;
   const cellCount = width * height;
   const walls = new Set(shape.walls.map((wall) => wallKey(wall.a, wall.b)));
-  const neighbors = Array.from({ length: cellCount }, (_, index) => gridNeighbors(width, height, index).filter((other) => !walls.has(wallKey(index, other))));
+  const blockedAt = new Uint8Array(cellCount);
+  for (const cell of shape.blocked ?? []) blockedAt[cell] = 1;
+  const playableCount = cellCount - blockedAt.reduce((sum, flag) => sum + flag, 0);
+  const neighbors = Array.from({ length: cellCount }, (_, index) =>
+    blockedAt[index] ? [] : gridNeighbors(width, height, index).filter((other) => !blockedAt[other] && !walls.has(wallKey(index, other))),
+  );
 
   const numberAt = new Int16Array(cellCount);
   const hiddenAt = new Uint8Array(cellCount);
@@ -64,7 +73,7 @@ export function buildTopology(shape: ZipShape): Topology {
       end = index;
     }
   }
-  return { width, height, cellCount, neighbors, numberAt, hiddenAt, lastNumber, start, end, walls };
+  return { width, height, cellCount, playableCount, blockedAt, neighbors, numberAt, hiddenAt, lastNumber, start, end, walls };
 }
 
 export function areAdjacent(width: number, a: number, b: number): boolean {

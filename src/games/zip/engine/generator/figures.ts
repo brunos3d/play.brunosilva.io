@@ -3,19 +3,26 @@ import { makeWall, wallKey } from "../grid";
 import type { Wall } from "../types";
 
 /**
- * Wall figures. Instead of scattering walls wherever they happen to remove a
+ * Figures made of walls or of blocked cells. Instead of scattering walls wherever they happen to remove a
  * wrong solution, a themed board starts from a drawing made of walls and grows
  * its path around it. Every figure leaves enough openings for a Hamiltonian
  * path to exist. A closed block with a single doorway, for example, can never
  * be part of one, because the path would enter and could not leave.
+ *
+ * Blocked cells have a rule of their own. The grid is a checkerboard and a path
+ * alternates colours, so the cells left to cover must split evenly between the
+ * two colours, give or take one. A domino always takes one of each. Single
+ * cells have to be picked by colour.
  */
-export const FIGURES = ["none", "cross", "frame", "corners", "corridors", "slash", "face", "pinwheel", "mirror"] as const;
+export const WALL_FIGURES = ["cross", "frame", "corners", "corridors", "slash", "face", "pinwheel", "mirror"] as const;
+export const BLOCK_FIGURES = ["core", "pillars", "islands"] as const;
+export const FIGURES = ["none", ...WALL_FIGURES, ...BLOCK_FIGURES] as const;
 export type FigureName = (typeof FIGURES)[number];
 
 /** How a figure maps onto itself. Extra walls are added together with their twin, so the board keeps looking designed. */
 export type Symmetry = "none" | "mirror-x" | "mirror-y" | "rotate";
 
-export type Figure = { name: FigureName; symmetry: Symmetry; walls: Wall[] };
+export type Figure = { name: FigureName; symmetry: Symmetry; walls: Wall[]; blocked: number[] };
 
 type Cell = readonly [row: number, column: number];
 type Edge = readonly [Cell, Cell];
@@ -26,7 +33,9 @@ const right = (row: number, column: number): Edge => [[row, column], [row, colum
 const under = (row: number, column: number): Edge => [[row, column], [row + 1, column]];
 const range = (from: number, to: number): number[] => Array.from({ length: Math.max(0, to - from + 1) }, (_, index) => from + index);
 
-function draw(name: Exclude<FigureName, "none">, size: number, rng: Rng): { symmetry: Symmetry; edges: Edge[] } | null {
+type Drawing = { symmetry: Symmetry; edges: Edge[]; cells?: Cell[] };
+
+function draw(name: Exclude<FigureName, "none">, size: number, rng: Rng): Drawing | null {
   const last = size - 1;
   const half = size / 2;
 
@@ -121,6 +130,53 @@ function draw(name: Exclude<FigureName, "none">, size: number, rng: Rng): { symm
       }
       return { symmetry: "mirror-x", edges };
     }
+    case "core": {
+      // The middle of the board is missing: a 2x2 block on even sizes, the centre cell on odd ones. The centre
+      // of an odd board has the majority colour, so taking it out leaves the two colours level.
+      if (size % 2 === 1) return { symmetry: "rotate", edges: [], cells: [[(size - 1) / 2, (size - 1) / 2]] };
+      return { symmetry: "mirror-x", edges: [], cells: [[half - 1, half - 1], [half - 1, half], [half, half - 1], [half, half]] };
+    }
+    case "pillars": {
+      // Single blocked cells, placed symmetrically. On an even size the four images of a cell are two of each
+      // colour. On an odd size they would all share one colour, so there it is a cell of the majority colour
+      // and its half turn: two cells, which leaves the minority one ahead, and that is still fine.
+      if (size % 2 === 0) {
+        if (size < 6) return null;
+        const spots = range(1, half - 1).flatMap((row) => range(1, half - 1).map((column): Cell => [row, column])).filter(([row, column]) => row !== half - 1 || column !== half - 1);
+        const [row, column] = rng.pick(spots);
+        return { symmetry: "mirror-x", edges: [], cells: [[row, column], [row, last - column], [last - row, column], [last - row, last - column]] };
+      }
+      const centre = (size - 1) / 2;
+      const spots = range(1, last - 1).flatMap((row) => range(1, last - 1).map((column): Cell => [row, column])).filter(([row, column]) => (row + column) % 2 === 0 && (row !== centre || column !== centre) && row <= centre);
+      const [row, column] = rng.pick(spots);
+      return { symmetry: "rotate", edges: [], cells: [[row, column], [last - row, last - column]] };
+    }
+    case "islands": {
+      // Dominoes, each with its image: a mirror image on even sizes, a half turn on odd ones. One pair of
+      // dominoes on small boards, up to two pairs from 7x7 on. Kept off the border, where a domino would wall in
+      // the cells behind it.
+      if (size < 6) return null;
+      const pairs = size >= 7 && rng.chance(0.5) ? 2 : 1;
+      const taken = new Set<string>();
+      const cells: Cell[] = [];
+      for (let pair = 0, tries = 0; pair < pairs && tries < 24; tries++) {
+        const upright = rng.chance(0.5);
+        const row = 1 + rng.int(size - (upright ? 3 : 2));
+        const column = 1 + rng.int(size - (upright ? 2 : 3));
+        const domino: Cell[] = [[row, column], upright ? [row + 1, column] : [row, column + 1]];
+        const twin = domino.map(([r, c]): Cell => (size % 2 === 0 ? [r, last - c] : [last - r, last - c]));
+        const all = [...domino, ...twin];
+        // The images must not overlap or touch each other or an earlier island, centre included.
+        const near = (a: Cell, b: Cell): boolean => Math.abs(a[0] - b[0]) + Math.abs(a[1] - b[1]) <= 1;
+        const centre = (size - 1) / 2;
+        if (domino.some((a) => twin.some((b) => near(a, b))) || all.some((a) => cells.some((b) => near(a, b))) || all.some(([r, c]) => r === centre && c === centre)) continue;
+        if (all.some(([r, c]) => taken.has(`${r},${c}`))) continue;
+        all.forEach(([r, c]) => taken.add(`${r},${c}`));
+        cells.push(...all);
+        pair++;
+      }
+      return cells.length === 0 ? null : { symmetry: size % 2 === 0 ? "mirror-x" : "rotate", edges: [], cells };
+    }
   }
 }
 
@@ -129,7 +185,7 @@ const inside = (size: number, [row, column]: Cell): boolean => row >= 0 && colum
 /** Builds a figure, turned a random way, as walls between cell indices. Returns the empty figure when it does not fit the size. */
 export function buildFigure(name: FigureName, size: number, rng: Rng): Figure {
   const drawn = name === "none" ? null : draw(name, size, rng);
-  if (!drawn) return { name: "none", symmetry: "none", walls: [] };
+  if (!drawn) return { name: "none", symmetry: "none", walls: [], blocked: [] };
 
   const [transpose, flipRows, flipColumns] = [rng.chance(0.5), rng.chance(0.5), rng.chance(0.5)];
   const move = ([row, column]: Cell): Cell => {
@@ -150,9 +206,10 @@ export function buildFigure(name: FigureName, size: number, rng: Rng): Figure {
       walls.push(wall);
     }
   }
+  const blocked = [...new Set((drawn.cells ?? []).map(move).filter((cell) => inside(size, cell)).map(([row, column]) => row * size + column))].sort((a, b) => a - b);
   // Transposing swaps the mirror axis. Flips and the half turn are unaffected.
   const symmetry: Symmetry = transpose && drawn.symmetry === "mirror-x" ? "mirror-y" : drawn.symmetry;
-  return { name, symmetry, walls };
+  return { name, symmetry, walls, blocked };
 }
 
 /** The wall a symmetry maps `wall` onto, or null when there is no symmetry or the wall is its own twin. */

@@ -38,7 +38,7 @@ function GameView({ spec, puzzle, generationMs, daily, onNext }: ViewProps) {
   const { settings } = useSettings();
   const [showSolution, setShowSolution] = useState(false);
   const game = useZipGame({ puzzle, settings });
-  const cellCount = puzzle.width * puzzle.height;
+  const cellCount = puzzle.width * puzzle.height - puzzle.blocked.length;
   const colors = useMemo(() => pathColors(puzzle.id, cellCount), [puzzle.id, cellCount]);
 
   const filled = game.game.path.length;

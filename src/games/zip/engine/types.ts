@@ -26,8 +26,13 @@ export type ZipMetadata = {
   checkpointCount: number;
   /** Numbers that show "?" instead of their value. */
   hiddenCount: number;
-  /** What the board was built around: a wall figure, a drawn path, or both "none" and "random" for version 1. */
-  theme: { figure: string; path: string };
+  blockedCount: number;
+  /**
+   * What the board was built around: a figure of walls or blocked cells, a drawn
+   * path, or both "none" and "random" for version 1. `symmetric` says the
+   * solution maps onto itself under a mirror or a half turn.
+   */
+  theme: { figure: string; path: string; symmetric: boolean };
   /** Weighted count of wrong turns that stay hidden for a while. See generator/difficulty.ts. */
   trapScore: number;
   deepTraps: number;
@@ -42,10 +47,12 @@ export type ZipPuzzle = {
   difficulty: Difficulty;
   checkpoints: Checkpoint[];
   walls: Wall[];
+  /** Blocked cells, as row-major indices. The path cannot enter them and does not have to cover them. */
+  blocked: number[];
   /** The one path that solves the board, as row-major cell indices. */
   solution: number[];
   metadata: ZipMetadata;
 };
 
 /** The parts of a puzzle the rules need. Lets tests and the tutorial build boards by hand. */
-export type ZipShape = Pick<ZipPuzzle, "width" | "height" | "checkpoints" | "walls">;
+export type ZipShape = Pick<ZipPuzzle, "width" | "height" | "checkpoints" | "walls"> & { blocked?: readonly number[] };

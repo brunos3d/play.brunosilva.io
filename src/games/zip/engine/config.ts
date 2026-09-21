@@ -1,6 +1,6 @@
 import type { Difficulty } from "@/shared/engine/difficulty";
 import type { FigureName } from "./generator/figures";
-import type { PathStyle } from "./generator/paths";
+import type { DrawnStyle } from "./generator/paths";
 
 /**
  * Tier settings of generator version 2. Version 1 keeps its own frozen copy in
@@ -48,7 +48,19 @@ export type ZipTier = {
    * shuffled path of version 1).
    */
   figureOdds: Partial<Record<FigureName, number>>;
-  pathOdds: Record<Exclude<PathStyle, "hugging">, number>;
+  pathOdds: Record<DrawnStyle, number>;
+  /**
+   * Chance that the solution is symmetric: its second half is the mirror image
+   * or the half turn of the first. Only boards whose walls and blocked cells
+   * are symmetric themselves can have one.
+   */
+  symmetricOdds: number;
+  /**
+   * Chance that a board trades numbers for walls: it starts with fewer numbers
+   * and is made unique with walls alone. The seed decides, so one tier offers
+   * both kinds of board.
+   */
+  wallsFirstOdds: number;
 };
 
 export const MIN_CHECKPOINTS = 3;
@@ -65,8 +77,10 @@ export const ZIP_TIERS: Record<Difficulty, ZipTier> = {
     candidates: 2,
     targetTraps: 0,
     hiddenNumbers: [0, 0],
-    figureOdds: { none: 2, corridors: 3, pinwheel: 2, cross: 2, face: 2, corners: 1, slash: 1, frame: 1, mirror: 1 },
+    figureOdds: { none: 2, corridors: 3, pinwheel: 2, cross: 2, face: 2, corners: 1, slash: 1, frame: 1, mirror: 1, core: 1.5, pillars: 1.5, islands: 1 },
     pathOdds: { hilbert: 2, spiral: 1, snake: 1, random: 1 },
+    symmetricOdds: 0.3,
+    wallsFirstOdds: 0.25,
   },
   medium: {
     sizes: [6, 7],
@@ -79,8 +93,10 @@ export const ZIP_TIERS: Record<Difficulty, ZipTier> = {
     candidates: 3,
     targetTraps: 14,
     hiddenNumbers: [0, 0],
-    figureOdds: { none: 3, cross: 2, face: 2, corners: 2, slash: 2, frame: 2, mirror: 2 },
+    figureOdds: { none: 3, cross: 2, face: 2, corners: 2, slash: 2, frame: 2, mirror: 2, core: 1.5, pillars: 2, islands: 2 },
     pathOdds: { hilbert: 1, spiral: 1, snake: 1, random: 1 },
+    symmetricOdds: 0.3,
+    wallsFirstOdds: 0.3,
   },
   hard: {
     sizes: [7, 8],
@@ -93,8 +109,10 @@ export const ZIP_TIERS: Record<Difficulty, ZipTier> = {
     candidates: 3,
     targetTraps: 28,
     hiddenNumbers: [0.25, 0.4],
-    figureOdds: { none: 5, cross: 1, face: 1.5, corners: 1.5, slash: 2, frame: 2, mirror: 2 },
+    figureOdds: { none: 5, cross: 1, face: 1.5, corners: 1.5, slash: 2, frame: 2, mirror: 2, core: 1.5, pillars: 2, islands: 2.5 },
     pathOdds: { hilbert: 1.5, spiral: 2, snake: 2, random: 1 },
+    symmetricOdds: 0.3,
+    wallsFirstOdds: 0.3,
   },
   expert: {
     sizes: [7, 8],
@@ -104,10 +122,12 @@ export const ZIP_TIERS: Record<Difficulty, ZipTier> = {
     maxCheckpointDensity: 0.21,
     perturbation: [0.2, 0.42],
     maxExtraWallShare: 0.24,
-    candidates: 4,
+    candidates: 5,
     targetTraps: Number.POSITIVE_INFINITY,
     hiddenNumbers: [0.4, 0.6],
-    figureOdds: { none: 7, face: 1, corners: 1, frame: 1.5, slash: 2, mirror: 2 },
+    figureOdds: { none: 7, face: 1, corners: 1, frame: 1.5, slash: 2, mirror: 2, core: 1.5, pillars: 2, islands: 2.5 },
     pathOdds: { hilbert: 1, spiral: 3, snake: 3, random: 1 },
+    symmetricOdds: 0.3,
+    wallsFirstOdds: 0.3,
   },
 };

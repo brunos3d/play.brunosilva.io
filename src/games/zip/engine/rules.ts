@@ -1,6 +1,6 @@
 import { type Topology, areAdjacent, wallKey } from "./grid";
 
-export type MoveErrorCode = "start-at-one" | "not-adjacent" | "wall" | "revisit" | "wrong-number" | "path-ended";
+export type MoveErrorCode = "start-at-one" | "blocked" | "not-adjacent" | "wall" | "revisit" | "wrong-number" | "path-ended";
 
 export type MoveError = { code: MoveErrorCode; message: string };
 
@@ -22,7 +22,7 @@ const ordinal = (value: number): string => ORDINALS[value] ?? `${value}th`;
  * Can the path grow into `cell`? Returns null when it can, or the rule that
  * stops it. These are the rules of the game, in one place:
  * start on 1, move to a side neighbour, never through a wall, never onto the
- * path, and take the numbers in order.
+ * path or a blocked cell, and take the numbers in order.
  *
  * "In order" is checked by position: a visible number n must be the nth
  * numbered cell on the path. A hidden number ("?") fits any position, because
@@ -31,6 +31,7 @@ const ordinal = (value: number): string => ORDINALS[value] ?? `${value}th`;
  * looser rule.
  */
 export function checkStep(topology: Topology, path: readonly number[], cell: number): MoveError | null {
+  if (topology.blockedAt[cell]) return { code: "blocked", message: "That cell is blocked. The path goes around it." };
   if (path.length === 0) {
     return cell === topology.start ? null : { code: "start-at-one", message: "The path starts on 1." };
   }
@@ -72,7 +73,7 @@ export function validatePath(topology: Topology, path: readonly number[]): PathV
     seen.add(cell);
   }
   const uncovered: number[] = [];
-  for (let cell = 0; cell < topology.cellCount; cell++) if (!seen.has(cell)) uncovered.push(cell);
+  for (let cell = 0; cell < topology.cellCount; cell++) if (!seen.has(cell) && !topology.blockedAt[cell]) uncovered.push(cell);
   const endsOnLast = path.length > 0 && path[path.length - 1] === topology.end;
   return { complete: uncovered.length === 0 && endsOnLast, error: null, uncovered };
 }

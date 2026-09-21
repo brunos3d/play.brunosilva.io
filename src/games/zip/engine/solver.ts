@@ -36,7 +36,7 @@ const DEFAULT_MAX_NODES = 400_000;
  */
 export function solveZip(shape: ZipShape, options: SolveOptions = {}, prebuilt?: Topology): SolveResult {
   const topology = prebuilt ?? buildTopology(shape);
-  const { cellCount, neighbors, numberAt, hiddenAt, lastNumber, start, end } = topology;
+  const { cellCount, playableCount, neighbors, numberAt, hiddenAt, lastNumber, start, end } = topology;
   const maxSolutions = options.maxSolutions ?? 2;
   const maxNodes = options.maxNodes ?? DEFAULT_MAX_NODES;
   const result: SolveResult = { solutions: [], solutionCount: 0, unique: false, nodes: 0, exhausted: true };
@@ -76,7 +76,7 @@ export function solveZip(shape: ZipShape, options: SolveOptions = {}, prebuilt?:
 
   /** Flood fill from the head: are all unvisited cells reachable, and does each have enough exits? */
   const stillSolvable = (head: number): boolean => {
-    const remaining = cellCount - length;
+    const remaining = playableCount - length;
     if (remaining === 0) return true;
     stampId++;
     let reached = 0;
@@ -109,10 +109,10 @@ export function solveZip(shape: ZipShape, options: SolveOptions = {}, prebuilt?:
       return;
     }
     const head = path[length - 1];
-    if (length === cellCount) {
+    if (length === playableCount) {
       if (head === end) {
         result.solutionCount++;
-        result.solutions.push(Array.from(path));
+        result.solutions.push(Array.from(path.subarray(0, length)));
       }
       return;
     }
@@ -122,7 +122,7 @@ export function solveZip(shape: ZipShape, options: SolveOptions = {}, prebuilt?:
     for (const other of neighbors[head]) {
       if (visited[other]) continue;
       if (!fits(other)) continue;
-      if (numberAt[other] === lastNumber && length + 1 !== cellCount) continue;
+      if (numberAt[other] === lastNumber && length + 1 !== playableCount) continue;
       options.push(other);
     }
     options.sort((a, b) => freeExits(a, -1) - freeExits(b, -1));

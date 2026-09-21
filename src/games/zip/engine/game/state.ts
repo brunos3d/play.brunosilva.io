@@ -52,7 +52,7 @@ export function stepTo(topology: Topology, state: ZipState, cell: number): StepR
 
   const next = [...path, cell];
   // Completion is decided by the full validator, not by the length of the path.
-  const solved = next.length === topology.cellCount && validatePath(topology, next).complete;
+  const solved = next.length === topology.playableCount && validatePath(topology, next).complete;
   const event: StepEvent = solved ? "solved" : topology.numberAt[cell] !== 0 ? "checkpoint" : "extend";
   return { ok: true, state: { ...state, path: next, status: solved ? "solved" : "playing" }, event };
 }

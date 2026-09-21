@@ -7,7 +7,7 @@ const SIZE = 6;
 // This seed was picked because its board has all three situations the tests below need: a wall next to
 // the solution path, a legal detour right after 2, and a last number that can be reached too early.
 // The tests assert that, so a generator change that breaks the assumption fails loudly and never skips.
-const { puzzle, url } = zipPuzzle("e2e-zip-1", "medium", SIZE);
+const { puzzle, url } = zipPuzzle("e2e-zip-13", "medium", SIZE);
 const solution = puzzle.solution;
 const topology = buildTopology(puzzle);
 
@@ -267,4 +267,32 @@ test("expert boards hide some numbers behind a ?, and a covered ? shows the plac
   await drawCells(page, 7, hiddenBoard.puzzle.solution.slice(0, reach + 1));
   await expect(marks.filter({ hasText: String(first.number) })).toHaveCount(1);
   await expect(marks.filter({ hasText: "?" })).toHaveCount(hidden.length - 1);
+});
+
+test("blocked cells show a cross, refuse the path, and the board is solved without them", async ({ page }) => {
+  // The first medium 6x6 seed of this series that has blocked cells. The scan is deterministic.
+  const found = Array.from({ length: 60 }, (_, index) => zipPuzzle(`e2e-zip-blocked-${index}`, "medium", SIZE)).find((entry) => entry.puzzle.blocked.length > 0);
+  expect(found).toBeDefined();
+  const blockedBoard = found!.puzzle;
+  const blockedTopology = buildTopology(blockedBoard);
+  const playable = SIZE * SIZE - blockedBoard.blocked.length;
+
+  await openZip(page, found!.url);
+  await expect(board(page).locator('.zip-cell[data-blocked="true"]')).toHaveCount(blockedBoard.blocked.length);
+
+  // Walk the solution until the head is next to a blocked cell, then try to step onto it.
+  const isBlocked = new Set(blockedBoard.blocked);
+  const beside = (cell: number) => [cell - SIZE, cell + SIZE, cell % SIZE > 0 ? cell - 1 : -1, cell % SIZE < SIZE - 1 ? cell + 1 : -1].find((other) => isBlocked.has(other));
+  const reach = blockedBoard.solution.findIndex((cell, index) => index > 0 && index < playable - 1 && beside(cell) !== undefined);
+  expect(reach).toBeGreaterThan(0);
+  await drawCells(page, SIZE, blockedBoard.solution.slice(0, reach + 1));
+  await tapCell(page, SIZE, beside(blockedBoard.solution[reach])!);
+  await expect(status(page)).toContainText("blocked");
+  await expect(status(page)).toHaveAttribute("data-kind", "invalid");
+  await expect(visited(page)).toHaveCount(reach + 1);
+
+  await drawCells(page, SIZE, blockedBoard.solution.slice(reach));
+  await expect(board(page)).toHaveAttribute("data-solved", "true");
+  await expect(visited(page)).toHaveCount(playable);
+  expect(blockedTopology.playableCount).toBe(playable);
 });

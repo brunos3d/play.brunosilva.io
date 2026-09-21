@@ -126,7 +126,7 @@ export function useZipGame({ puzzle, settings, persist = true }: Options) {
       }
       if (gestureRef.current) gestureRef.current.lastRefused = null;
       show(result.state);
-      const progress = result.state.path.length / topology.cellCount;
+      const progress = result.state.path.length / topology.playableCount;
       if (result.event === "back") feedback("back", null);
       else if (result.event === "checkpoint") feedback("checkpoint", "checkpoint", 1 + progress * 0.5);
       else if (result.event === "extend") feedback("step", "step", 1 + progress);
@@ -264,12 +264,12 @@ export function useZipGame({ puzzle, settings, persist = true }: Options) {
         }
         const grew = next.path.length > gameRef.current.path.length;
         show(next);
-        if (grew) feedback("reveal", null, 1 + next.path.length / topology.cellCount);
+        if (grew) feedback("reveal", null, 1 + next.path.length / topology.playableCount);
         window.setTimeout(tick, AUTO_STEP_MS);
       };
       tick();
     },
-    [feedback, show, topology.cellCount],
+    [feedback, show, topology.playableCount],
   );
 
   const runReveal = useCallback(() => {

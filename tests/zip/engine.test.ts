@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { createRng } from "@/shared/engine/prng";
 import {
+  BLOCK_FIGURES,
   DIFFICULTIES,
   FIGURES,
   ZIP_TIERS,
@@ -20,12 +21,14 @@ import {
   getZipDailyPuzzle,
   getZipHint,
   isHamiltonianPath,
+  mapCell,
   measureTraps,
   nextNumber,
   resetZip,
   revealZipStep,
   solveZip,
   stepTo,
+  symmetricPath,
   truncateTo,
   twinWall,
   undoZip,
@@ -160,7 +163,7 @@ describe("generator", () => {
   it("pins a known version 1 puzzle: old seeds must keep their boards forever", () => {
     const puzzle = generateZipPuzzle("example-seed", "medium", { version: 1 });
     expect(puzzle.seed).toBe("ZIP:example-seed:1:medium");
-    expect(puzzle.metadata.theme).toEqual({ figure: "none", path: "random" });
+    expect(puzzle.metadata.theme).toEqual({ figure: "none", path: "random", symmetric: false });
     expect({ size: puzzle.width, numbers: puzzle.checkpoints.length, walls: puzzle.walls.length, path: puzzle.solution.slice(0, 8) }).toMatchInlineSnapshot(`
       {
         "numbers": 4,
@@ -185,23 +188,24 @@ describe("generator", () => {
     expect(puzzle.seed).toBe("ZIP:example-seed:2:medium");
     expect({ size: puzzle.width, theme: puzzle.metadata.theme, numbers: puzzle.checkpoints.length, walls: puzzle.walls.length, path: puzzle.solution.slice(0, 8) }).toMatchInlineSnapshot(`
       {
-        "numbers": 8,
+        "numbers": 3,
         "path": [
-          3,
-          4,
-          5,
-          11,
-          17,
-          23,
-          29,
-          35,
+          14,
+          15,
+          21,
+          20,
+          19,
+          13,
+          7,
+          8,
         ],
         "size": 6,
         "theme": {
           "figure": "none",
-          "path": "snake",
+          "path": "spiral",
+          "symmetric": false,
         },
-        "walls": 0,
+        "walls": 6,
       }
     `);
   });
@@ -266,11 +270,11 @@ describe("themes", () => {
       for (let size = zipSeeds.minSize; size <= zipSeeds.maxSize; size++) {
         const rng = createRng(`figure-${name}-${size}`);
         const figure = buildFigure(name, size, rng);
-        if (figure.walls.length === 0) continue;
+        if (figure.walls.length === 0 && figure.blocked.length === 0) continue;
         for (const wall of figure.walls) expect(buildTopology({ width: size, height: size, checkpoints: [], walls: [] }).neighbors[wall.a], `${name} ${size}`).toContain(wall.b);
-        const { neighbors } = buildTopology({ width: size, height: size, checkpoints: [], walls: figure.walls });
-        // Random mirrored walls can close off a cell. The generator just draws again. Every designed figure must work.
-        if (name !== "mirror") expect(findHamiltonianPath(rng, neighbors, size), `${name} ${size}x${size}`).not.toBeNull();
+        const { neighbors, blockedAt } = buildTopology({ width: size, height: size, checkpoints: [], walls: figure.walls, blocked: figure.blocked });
+        // Random mirrored walls and random islands can close off a cell. The generator just draws again. Every designed figure must work.
+        if (name !== "mirror" && name !== "islands") expect(findHamiltonianPath(rng, neighbors, { skip: blockedAt }), `${name} ${size}x${size}`).not.toBeNull();
       }
     }
   });
@@ -316,7 +320,7 @@ describe("themes", () => {
     const figure = buildFigure("face", 8, createRng("bb"));
     const { neighbors } = buildTopology({ width: 8, height: 8, checkpoints: [], walls: figure.walls });
     const rng = createRng("bb-path");
-    const found = findHamiltonianPath(rng, neighbors, 8)!;
+    const found = findHamiltonianPath(rng, neighbors)!;
     expect(isHamiltonianPath(backbite(rng, found, neighbors, 500), neighbors)).toBe(true);
   });
 });
@@ -407,6 +411,116 @@ describe("hidden numbers", () => {
 
   it("version 1 boards never hide a number", () => {
     for (let i = 0; i < 6; i++) expect(generateZipPuzzle(`hidden-${i}`, "expert", { version: 1 }).metadata.hiddenCount).toBe(0);
+  });
+});
+
+describe("blocked cells", () => {
+  // 1 . .      The centre is blocked. The path goes around it and the board is
+  // . X .      solved with eight cells.
+  // . . 2
+  const RING: ZipShape = { width: 3, height: 3, checkpoints: [{ number: 1, row: 0, column: 0 }, { number: 2, row: 2, column: 2 }], walls: [], blocked: [4] };
+
+  it("cannot be entered, are nobody's neighbour, and do not have to be covered", () => {
+    const topology = buildTopology(RING);
+    expect(topology.playableCount).toBe(8);
+    expect(topology.neighbors[4]).toEqual([]);
+    expect(topology.neighbors[1]).not.toContain(4);
+    expect(checkStep(topology, [0, 1], 4)?.code).toBe("blocked");
+    // Parity: both ends of an eight-cell path around the ring have different colours, so 0 to 8 cannot work...
+    expect(solveZip(RING).solutionCount).toBe(0);
+    // ...and 0 to 5 can, in exactly one way round.
+    const open: ZipShape = { ...RING, checkpoints: [{ number: 1, row: 0, column: 0 }, { number: 2, row: 1, column: 0 }] };
+    const result = solveZip(open);
+    expect(result.unique).toBe(true);
+    expect(result.solutions[0]).toEqual([0, 1, 2, 5, 8, 7, 6, 3]);
+    expect(validatePath(buildTopology(open), result.solutions[0])).toEqual({ complete: true, error: null, uncovered: [] });
+    expect(validatePath(buildTopology(open), [0, 1, 2]).uncovered).not.toContain(4);
+  });
+
+  it("solves a board through the game state with fewer cells than the grid has", () => {
+    const open: ZipShape = { ...RING, checkpoints: [{ number: 1, row: 0, column: 0 }, { number: 2, row: 1, column: 0 }] };
+    const topology = buildTopology(open);
+    let state = createZipGame("ring");
+    for (const cell of [0, 1, 2, 5, 8, 7, 6, 3]) state = stepTo(topology, state, cell).state;
+    expect(state.status).toBe("solved");
+  });
+
+  it("block figures keep the two colours of the checkerboard level, so a path can exist", () => {
+    for (const name of BLOCK_FIGURES) {
+      for (let size = zipSeeds.minSize; size <= zipSeeds.maxSize; size++) {
+        for (let i = 0; i < 12; i++) {
+          const figure = buildFigure(name, size, createRng(`blocks-${name}-${size}-${i}`));
+          if (figure.blocked.length === 0) continue;
+          expect(figure.walls).toHaveLength(0);
+          const colour = (cell: number) => (Math.floor(cell / size) + (cell % size)) % 2;
+          const even = Math.ceil((size * size) / 2) - figure.blocked.filter((cell) => colour(cell) === 0).length;
+          const odd = Math.floor((size * size) / 2) - figure.blocked.filter((cell) => colour(cell) === 1).length;
+          expect(Math.abs(even - odd), `${name} ${size}`).toBeLessThanOrEqual(1);
+        }
+      }
+    }
+  });
+
+  it("generated boards keep blocked cells off the path, the numbers and the walls, and stay unique", () => {
+    let withBlocks = 0;
+    for (const difficulty of DIFFICULTIES) {
+      for (let i = 0; i < 30; i++) {
+        const puzzle = generateZipPuzzle(`blocked-${i}`, difficulty);
+        expect(puzzle.metadata.blockedCount).toBe(puzzle.blocked.length);
+        expect(puzzle.solution).toHaveLength(puzzle.width * puzzle.height - puzzle.blocked.length);
+        if (puzzle.blocked.length === 0) continue;
+        withBlocks++;
+        const blocked = new Set(puzzle.blocked);
+        expect(puzzle.solution.some((cell) => blocked.has(cell))).toBe(false);
+        expect(puzzle.checkpoints.some((checkpoint) => blocked.has(checkpoint.row * puzzle.width + checkpoint.column))).toBe(false);
+        expect(puzzle.walls.some((wall) => blocked.has(wall.a) || blocked.has(wall.b))).toBe(false);
+        expect(validateZipPuzzle(puzzle)).toEqual({ ok: true, problems: [] });
+      }
+    }
+    expect(withBlocks).toBeGreaterThan(10);
+  });
+});
+
+describe("symmetric solutions", () => {
+  it("builds a path whose second half is the image of the first, on even and odd boards", () => {
+    for (const [size, symmetry] of [[6, "mirror-x"], [8, "mirror-y"], [5, "rotate"], [7, "rotate"]] as const) {
+      const { neighbors, blockedAt } = buildTopology({ width: size, height: size, checkpoints: [], walls: [] });
+      for (let i = 0; i < 8; i++) {
+        const path = symmetricPath(createRng(`sym-${size}-${i}`), neighbors, blockedAt, size, symmetry, i / 3)!;
+        expect(path, `${size} ${symmetry}`).not.toBeNull();
+        expect(isHamiltonianPath(path, neighbors)).toBe(true);
+        path.forEach((cell, index) => expect(mapCell(symmetry, size, path[path.length - 1 - index])).toBe(cell));
+      }
+    }
+  });
+
+  it("refuses a symmetry the size cannot have, and a board that is not symmetric itself", () => {
+    const open = buildTopology({ width: 6, height: 6, checkpoints: [], walls: [] });
+    expect(symmetricPath(createRng("s"), open.neighbors, open.blockedAt, 6, "rotate", 1)).toBeNull();
+    const odd = buildTopology({ width: 7, height: 7, checkpoints: [], walls: [] });
+    expect(symmetricPath(createRng("s"), odd.neighbors, odd.blockedAt, 7, "mirror-x", 1)).toBeNull();
+    const lopsided = buildTopology({ width: 6, height: 6, checkpoints: [], walls: [{ a: 0, b: 1 }] });
+    expect(symmetricPath(createRng("s"), lopsided.neighbors, lopsided.blockedAt, 6, "mirror-x", 1)).toBeNull();
+  });
+
+  it("generated boards flagged symmetric really are, and the seed decides which boards get one", () => {
+    let symmetric = 0;
+    for (let i = 0; i < 40; i++) {
+      const puzzle = generateZipPuzzle(`symmetric-${i}`, "hard");
+      if (!puzzle.metadata.theme.symmetric) continue;
+      symmetric++;
+      const size = puzzle.width;
+      const last = puzzle.solution.length - 1;
+      const fits = (["mirror-x", "mirror-y", "rotate"] as const).some((symmetry) => puzzle.solution.every((cell, index) => mapCell(symmetry, size, puzzle.solution[last - index]) === cell));
+      expect(fits, puzzle.seed).toBe(true);
+    }
+    expect(symmetric).toBeGreaterThan(3);
+    expect(symmetric).toBeLessThan(30);
+  });
+
+  it("one tier offers boards with many numbers and boards that trade numbers for walls", () => {
+    const counts = Array.from({ length: 40 }, (_, i) => generateZipPuzzle(`trade-${i}`, "medium", { size: 7 }).metadata.checkpointCount);
+    expect(Math.max(...counts) - Math.min(...counts)).toBeGreaterThanOrEqual(4);
   });
 });
 

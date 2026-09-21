@@ -14,10 +14,11 @@ export type GeneratedBoard = {
   size: number;
   checkpoints: Checkpoint[];
   walls: Wall[];
+  blocked?: number[];
   solution: number[];
   attempts: number;
   solverNodes: number;
-  theme: { figure: string; path: string };
+  theme: { figure: string; path: string; symmetric: boolean };
   traps?: TrapReport;
 };
 
@@ -38,7 +39,7 @@ export function generateZipFromSpec(spec: PuzzleSpec): ZipPuzzle {
 
   const board = VERSIONS[spec.version](spec);
   const shareSeed = zipSeeds.format({ ...spec, token: normalizeToken(spec.token) });
-  const shape = { width: board.size, height: board.size, checkpoints: board.checkpoints, walls: board.walls };
+  const shape = { width: board.size, height: board.size, checkpoints: board.checkpoints, walls: board.walls, blocked: board.blocked ?? [] };
   const traps = board.traps ?? measureTraps(shape, buildTopology(shape), board.solution);
   return {
     id: zipPuzzleId(shareSeed),
@@ -55,6 +56,7 @@ export function generateZipFromSpec(spec: PuzzleSpec): ZipPuzzle {
       wallCount: board.walls.length,
       checkpointCount: board.checkpoints.length,
       hiddenCount: board.checkpoints.filter((checkpoint) => checkpoint.hidden).length,
+      blockedCount: shape.blocked.length,
       theme: board.theme,
       trapScore: traps.score,
       deepTraps: traps.deepTraps,

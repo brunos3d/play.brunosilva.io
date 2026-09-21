@@ -133,7 +133,7 @@ export function generateZipV1(spec: PuzzleSpec): GeneratedBoard {
     const unique = wallsForUniqueness(rng, shape, solution, maxWalls);
     if (!unique) continue;
     const walls = [...unique.walls].sort((a, b) => a.a - b.a || a.b - b.b);
-    return { size, checkpoints, walls, solution, attempts: attempt, solverNodes: unique.nodes, theme: { figure: "none", path: "random" } };
+    return { size, checkpoints, walls, solution, attempts: attempt, solverNodes: unique.nodes, theme: { figure: "none", path: "random", symmetric: false } };
   }
   throw new Error(`No uniquely solvable board found for seed ${zipSeeds.format(spec)}`);
 }
