@@ -11,8 +11,21 @@ export type DailyConfig = {
   epoch: DateKey;
   /** Indexed by day of week, 0 = Sunday. */
   schedule: WeeklySchedule;
+  /** Generator of the first daily puzzles. It also keys the weekday draw, so past difficulties never change. */
   generatorVersion: number;
+  /**
+   * Later generators, each from a date on. A daily puzzle keeps the generator
+   * that was current on its date, so going back to an old date shows the board
+   * that was played that day.
+   */
+  upgrades?: readonly { from: DateKey; version: number }[];
 };
+
+export function dailyGeneratorVersion(config: DailyConfig, date: DateKey): number {
+  let version = config.generatorVersion;
+  for (const upgrade of config.upgrades ?? []) if (date >= upgrade.from) version = Math.max(version, upgrade.version);
+  return version;
+}
 
 /** Easier early in the week, hardest on Sunday. Shared by every game unless one overrides it. */
 export const DEFAULT_WEEKLY_SCHEDULE: WeeklySchedule = {
@@ -48,7 +61,7 @@ export function dailyNumber(config: DailyConfig, date: DateKey): number {
 export function getDailyInfo(codec: SeedCodec, config: DailyConfig, date: DateKey): DailyInfo {
   if (!isDateKey(date)) throw new RangeError(`Invalid daily date: ${date}`);
   const difficulty = dailyDifficulty(codec, config, date);
-  const spec: PuzzleSpec = { token: date, version: config.generatorVersion, difficulty };
+  const spec: PuzzleSpec = { token: date, version: dailyGeneratorVersion(config, date), difficulty };
   return { date, number: dailyNumber(config, date), difficulty, spec, seed: codec.format(spec) };
 }
 
