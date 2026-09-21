@@ -36,15 +36,10 @@ export function ClueBadge({ clue, derivedArea }: BadgeProps) {
       <svg viewBox="0 0 40 40">
         <ShapeOutline shape={clue.shape} />
       </svg>
-      {label !== undefined ? (
-        <span className="patches-clue-number" data-derived={clue.area === undefined}>
-          {label}
-        </span>
-      ) : clue.shape === undefined || clue.shape === "unconstrained" ? (
-        <span className="patches-clue-number" data-derived="true">
-          ?
-        </span>
-      ) : null}
+      {/* A clue without a number shows "?", with or without a shape, until a patch gives it a size. */}
+      <span className="patches-clue-number" data-derived={clue.area === undefined} data-testid={label === undefined ? "patches-hidden-number" : undefined}>
+        {label ?? "?"}
+      </span>
     </div>
   );
 }
