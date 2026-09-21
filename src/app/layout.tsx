@@ -1,50 +1,51 @@
-import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import type { Metadata, Viewport } from "next";
+import { Bricolage_Grotesque, Fraunces } from "next/font/google";
+import { PLATFORM_NAME } from "@/games/registry";
+import { ServiceWorker } from "@/shared/platform/service-worker";
+import { SITE_ORIGIN } from "@/shared/platform/site";
 import "./globals.css";
+import "@/shared/ui/theme.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
+const display = Fraunces({ variable: "--font-display", subsets: ["latin"], axes: ["opsz"] });
+const body = Bricolage_Grotesque({ variable: "--font-body", subsets: ["latin"] });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+const description = "Small daily logic puzzles. A new board for every game each day, with streaks, hints and unlimited practice.";
 
 export const metadata: Metadata = {
-  title: "Zip | Daily Puzzle Game",
-  description:
-    "Draw a single continuous path across every cell. A daily logic puzzle inspired by NYT and LinkedIn games.",
+  // Open Graph image URLs are resolved against the canonical address.
+  metadataBase: new URL(SITE_ORIGIN),
+  alternates: { canonical: "/" },
+  title: { default: `${PLATFORM_NAME} | Daily Logic Puzzles`, template: `%s | ${PLATFORM_NAME}` },
+  description,
+  manifest: "/manifest.webmanifest",
+  applicationName: PLATFORM_NAME,
+  appleWebApp: { capable: true, title: PLATFORM_NAME, statusBarStyle: "default" },
   icons: {
-    icon: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧩</text></svg>",
+    icon: [
+      { url: "/icons/platform.svg", type: "image/svg+xml" },
+      { url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
+    ],
+    apple: "/icons/apple-touch-icon.png",
   },
-  openGraph: {
-    title: "Zip | Daily Puzzle Game",
-    description:
-      "Draw a single continuous path across every cell. A daily logic puzzle inspired by NYT and LinkedIn games.",
-    images: [{ url: "/og_image.png" }],
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "Zip | Daily Puzzle Game",
-    description:
-      "Draw a single continuous path across every cell. A daily logic puzzle inspired by NYT and LinkedIn games.",
-    images: ["/og_image.png"],
-  },
+  openGraph: { title: `${PLATFORM_NAME} | Daily Logic Puzzles`, description, images: [{ url: "/og_image.png" }] },
 };
 
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#f6f1e7" },
+    { media: "(prefers-color-scheme: dark)", color: "#1d1a17" },
+  ],
+};
+
+export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
-        {children}
+      <body className={`${display.variable} ${body.variable} antialiased`}>
+        <div className="mg-root">{children}</div>
+        <ServiceWorker />
       </body>
     </html>
   );

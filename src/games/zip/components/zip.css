@@ -1,0 +1,113 @@
+/*
+ * Zip board. Tiles, gaps, radii and the pixel-snapped grid come from the shared
+ * tile board in src/shared/ui/theme.css. This file adds what is unique to Zip:
+ * visited tiles, the path, walls, numbers and their feedback states.
+ */
+
+.zip-board { cursor: pointer; }
+.zip-board[data-locked="true"] { cursor: default; }
+.zip-board[data-dragging="true"] { cursor: grabbing; }
+
+/* A visited tile takes the colour the path has at that point. */
+.zip-cell[data-visited="true"]::before {
+  background: color-mix(in oklab, var(--patch) var(--visited-tint), var(--tile));
+  box-shadow: inset 0 0 0 1.5px color-mix(in oklab, var(--patch) 72%, #2a2622 var(--clue-edge));
+  transition: background-color 120ms ease;
+}
+
+/* Cells the path never reached, shown when it arrives at the last number too early. */
+.zip-cell[data-missing="true"]::before {
+  box-shadow: inset 0 0 0 2px var(--hint);
+  animation: hint-pulse 900ms ease-in-out 3;
+}
+
+/* The step that was just refused. Hatching, not colour alone. */
+.zip-cell[data-refused="true"]::before {
+  box-shadow: inset 0 0 0 2.5px var(--invalid);
+  background-image: repeating-linear-gradient(45deg, rgb(192 57 43 / 0.5) 0 2px, transparent 2px 7px);
+}
+
+/* Part of the path a hint is about to take off. */
+.zip-cell[data-wrong="true"]::before {
+  box-shadow: inset 0 0 0 2.5px var(--invalid);
+  background-image: repeating-linear-gradient(45deg, rgb(192 57 43 / 0.55) 0 3px, transparent 3px 9px);
+  animation: hint-pulse 750ms ease-in-out 1;
+}
+
+.mg-board[data-solved="true"] .zip-cell[data-visited="true"]::before {
+  animation: zip-celebrate 480ms cubic-bezier(0.3, 0.7, 0.3, 1) both;
+  animation-delay: calc(var(--order) * 14ms);
+}
+
+.zip-svg {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+
+/*
+ * The line is the tile's own hue, darker and more saturated. Mixing a pastel
+ * with ink instead gives a muddy brown, so that mix is only the fallback for
+ * browsers without relative colour syntax. --line is what every part of the
+ * path paints with: gradient stops, joints and the head marker.
+ */
+.zip-stop,
+.zip-joint,
+.zip-head {
+  --line: color-mix(in oklab, var(--seg) 58%, #2a2622);
+}
+@supports (color: oklch(from red l c h)) {
+  .zip-stop,
+  .zip-joint,
+  .zip-head {
+    --line: oklch(from var(--seg) calc(l - 0.28) calc(c * 2) h);
+  }
+}
+
+.zip-segment {
+  stroke-width: 0.3;
+  stroke-linecap: butt;
+  fill: none;
+}
+.zip-stop { stop-color: var(--line); }
+.zip-joint { fill: var(--line); }
+
+.zip-wall {
+  stroke: var(--ink);
+  stroke-width: 0.11;
+  stroke-linecap: round;
+}
+
+.zip-number-disc { fill: var(--ink); }
+.zip-number-text {
+  fill: var(--linen);
+  font-size: 0.34px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  text-anchor: middle;
+  dominant-baseline: central;
+  font-family: var(--font-body), ui-sans-serif, system-ui, sans-serif;
+}
+
+/* The number the path has to reach next. */
+.zip-number-ring {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 0.07;
+  animation: hint-pulse 1400ms ease-in-out infinite;
+}
+
+/* Where the path ends right now: the place to press to keep drawing. */
+.zip-head {
+  fill: var(--surface);
+  stroke: var(--line);
+  stroke-width: 0.07;
+}
+
+:root { --visited-tint: 62%; }
+@media (prefers-color-scheme: dark) {
+  :root { --visited-tint: 86%; }
+}
+
+@keyframes zip-celebrate { 0% { transform: scale(1); } 45% { transform: scale(0.84); } 75% { transform: scale(1.05); } 100% { transform: scale(1); } }

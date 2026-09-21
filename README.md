@@ -1,195 +1,107 @@
-<p align="center">
-  <a href="https://zip-game.vercel.app/">
-    <img alt="zip game preview" src="./.github/preview.png" />
-  </a>
-</p>
-<h1 align="center">
-  ⚡ ZIP ⚡
-</h1>
-<h3 align="center">
-  A path-drawing puzzle game where every cell matters.
-</h3>
+# Minigames
 
+A small platform of daily logic puzzles, playable at [play.brunosilva.io](https://play.brunosilva.io/). It currently has two games, both inspired by the LinkedIn games of the same name:
 
+- **Zip**: draw one path through every cell, passing the numbers in order.
+- **Patches**: cover the grid with rectangles so that each one holds exactly one clue.
 
-# About
+Every game gets one new board per day, the same for every player, plus unlimited practice. There is no server state. Puzzles are generated in the browser from a seed, and progress, streaks and best times stay on the device. The app installs as a PWA and plays offline after the first visit.
 
-Inspired by the [LinkedIn Zip game](https://www.linkedin.com/games/zip/) — built entirely using [Claude Opus 4.6](https://www.anthropic.com/claude) as the AI coding assistant. Zero game libraries. Zero animation frameworks. Just Next.js, Canvas, and a lot of math.
+## Routes
 
-> Draw a single path that visits every cell on the grid — but you must hit the numbered checkpoints in order. Sounds simple. It's not.
+| Route | What it is |
+|---|---|
+| `/` | hub: every game, today's number and difficulty, your status and streak, countdown to the next boards |
+| `/zip`, `/patches` | today's puzzle |
+| `/zip/practice`, `/patches/practice` | pick a difficulty, a board size and an optional seed |
+| `/zip/play?seed=ZIP:lucky:1:hard:8` | an exact puzzle. The same seed always builds the same board, so links are shareable |
 
----
+Old Zip links such as `/hard/42` redirect to the new practice route. The shortcut domains `zip.brunosilva.io` and `patches.brunosilva.io` redirect to their game on `play.brunosilva.io`.
 
-## 🎮 How to Play
+## How the games work
 
-### The Goal
+**Zip.** Press 1 and drag. The path moves to side neighbours, cannot cross itself or a wall, and must reach the numbers in order. The board is solved when the path covers every cell and ends on the last number. Drag backwards to rewind, or tap a cell on the path to cut it there. Boards go from 5x5 to 8x8.
 
-Fill **every cell** on the grid by drawing one continuous path. That's it. That's the whole game.
+**Patches.** Press a clue and drag outward to draw its patch. A clue can give a cell count, a shape (square, tall, wide or any), both, or nothing. Patches cannot overlap and every cell must be covered. Tap a patch to remove it. Boards go from 5x5 to 10x10.
 
-...except the numbered checkpoints scattered across the board must be crossed **in strictly increasing order** (1 → 2 → 3 → ...). Miss one, skip one, or hit them out of order? The game won't let you.
+Both games share the same controls and rules around the board:
 
-### The Rules
+- **Undo**, **Hint**, **Reveal** and **Reset**. A hint acts: it removes a mistake if there is one, otherwise it plays the next forced move and says why. Reveal plays the whole solution piece by piece, and that puzzle then earns no streak and no best time.
+- **The clock** starts the first time you see the board and only stops when the puzzle ends. Closing the tab does not pause it.
+- **Daily puzzles** change at midnight Pacific Time and get harder from Monday to Sunday. Finishing one extends that game's streak.
+- **Sound and vibration** are on by default and can be turned off in the settings, which apply to every game.
+- Everything works with the keyboard, and the layout follows the system's light or dark theme and its reduced motion setting.
 
-| Rule                     | What it means                                                          |
-| ------------------------ | ---------------------------------------------------------------------- |
-| **One path**             | Your line can't branch or overlap — each cell is visited exactly once  |
-| **Adjacent moves**       | You can only move to cells that share an edge (no diagonals)           |
-| **Checkpoints in order** | Numbered cells must be reached in sequence: 1 first, then 2, then 3... |
-| **Walls block you**      | Dark cells are walls — you can't pass through them                     |
-| **Every cell counts**    | The puzzle isn't solved until every non-wall cell is part of your path |
+Every generated puzzle has exactly one solution, proven by a solver before the board is shown, and Patches boards can always be solved by deduction alone.
 
-### Controls
-
-- **Drag** across cells to draw your path
-- **Drag backward** to undo moves (backtrack along your path)
-- **Tap a previous cell** to truncate your path back to that point
-- **Long press** to use a hint (reveals the next correct cell)
-- **Hint button** — same as long press, limited per difficulty
-- **Reveal** — watch the full solution animate step-by-step
-
-### Tips & Strategy
-
-1. **Start from checkpoint 1** — you have to. The game enforces it.
-2. **Look ahead** — before drawing, scan where checkpoints 2, 3, 4... are located. Plan your route.
-3. **Corners and edges first** — cells in corners have fewer exits. Handle them early or you'll get stuck.
-4. **Use the orange ping** — if you've hit all checkpoints but cells remain empty, they'll flash orange to show you what's missing.
-5. **Don't waste hints** — you get a limited budget per difficulty. Save them for when you're truly stuck.
-
----
-
-## 🧩 Difficulty Levels
-
-| Level      | Grid  | Checkpoints | Hints |
-| ---------- | ----- | ----------- | ----- |
-| **Easy**   | 5×5   | 3–5         | 10    |
-| **Medium** | 7×7   | 4–7         | 14    |
-| **Hard**   | 9×9   | 6–14        | 18    |
-| **Expert** | 12×12 | 10–32       | 24    |
-
-More checkpoints = more constraints = harder to find a valid Hamiltonian path. Expert grids with 32 checkpoints are no joke.
-
----
-
-## 🔗 Challenge Your Friends
-
-Solved a tricky puzzle? Hit the **Challenge** button to generate a shareable URL. Anyone who opens it gets the exact same puzzle (same seed, same grid, same suffering).
-
-The **Share** button copies your solve stats:
+## Project structure
 
 ```
-Zip 7×7 — medium-1337
-Moves: 52 | Time: 2:14
+src/
+  app/        routes only
+  games/      registry.ts, zip/, patches/ (each: engine, components, hooks, storage)
+  shared/     engine, storage, platform, hooks, ui: everything the games have in common
+public/       service worker, manifest, icons
+scripts/      CLI tools per game
+tests/        Vitest unit and bulk generation tests
+e2e/          Playwright tests against the production build
+docs/         architecture, seeds, and one folder per game
 ```
 
----
+A game imports `shared` and never another game. Each `engine/` folder is pure TypeScript with no React or DOM, so it also runs from the command line. `docs/ARCHITECTURE.md` explains the layers and lists the steps to add a game.
 
-## 🏗️ Tech Stack
+The stack is Next.js 16, React 19, TypeScript and Tailwind CSS 4, with no runtime dependencies beyond React and Next.js. Icons are hand-drawn SVG, sounds are synthesized with Web Audio, and the boards are DOM and SVG.
 
-|               |                                             |
-| ------------- | ------------------------------------------- |
-| **Framework** | Next.js 16 (App Router)                     |
-| **UI**        | React 19                                    |
-| **Language**  | TypeScript 5                                |
-| **Styling**   | Tailwind CSS 4                              |
-| **Rendering** | HTML5 Canvas — no game engine               |
-| **Animation** | Hand-rolled easing, particles, and pulses   |
-| **State**     | Pure functional reducers with `useState`    |
-| **PRNG**      | Seeded mulberry32 for deterministic puzzles |
-
-**Zero runtime dependencies** beyond React and Next.js. No Redux. No Zustand. No Framer Motion. No Pixi.js. Everything — from the confetti particles to the 3D tilt effect — is built from scratch.
-
----
-
-## 🧠 How It Works Under the Hood
-
-### Puzzle Generation
-
-1. A **Hamiltonian path** is generated using [Warnsdorff's heuristic](https://en.wikipedia.org/wiki/Knight%27s_tour#Warnsdorf's_rule) with random tie-breaking (seeded PRNG ensures reproducibility)
-2. **Checkpoints** are placed at evenly-distributed positions along the path and numbered sequentially
-3. A **backtracking solver** with BFS connectivity pruning validates the puzzle and powers the hint system
-
-### Rendering Pipeline
-
-The canvas renderer uses a layered drawing approach:
-
-- **Layer 0:** Cached static grid (off-screen canvas for performance)
-- **Layer 1:** Cell highlights (hover, hints, invalid feedback)
-- **Layer 2:** Path with animated extension and glow effects
-- **Layer 3:** Checkpoint circles with pulse animations
-- **Layer 4:** Confetti particle system (on solve)
-- **Layer 5:** 3D perspective tilt with bounce-in (on solve)
-
-### Input System
-
-A unified `PointerController` handles mouse and touch events with:
-
-- Drag-to-draw path following
-- Automatic backtrack detection
-- Long-press for hints
-- Tilt-aware coordinate correction (because the canvas is skewed on solve)
-
----
-
-## 🚀 Getting Started
+## Getting started
 
 ```bash
-# Clone
 git clone https://github.com/brunos3d/zip.git
 cd zip
-
-# Install
 npm install
-
-# Dev server
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) and start drawing.
-
-### Build for Production
+Open [http://localhost:3000](http://localhost:3000). In development each game shows a debug panel under the board with the seed, solver statistics and a switch that outlines the solution. The service worker only registers in production builds:
 
 ```bash
 npm run build
 npm start
 ```
 
----
+## Commands
 
-## 📁 Project Structure
+```bash
+npm test                # Vitest: shared, zip and patches, including bulk puzzle generation
+npm run test:e2e        # Playwright: builds, serves and drives the production app
+npm run lint
+npm run typecheck
+npm run icons           # render PNG icons from public/icons/*.svg
 
-```
-src/
-├── app/                  # Next.js App Router (layout + page)
-├── components/
-│   ├── zip-game.tsx      # Main game orchestrator
-│   ├── game-canvas.tsx   # Canvas + animation loop + input binding
-│   ├── top-bar.tsx       # Timer, moves, seed, reset
-│   └── controls.tsx      # Difficulty picker, hints, share, reveal
-├── engine/
-│   ├── types.ts          # Core types & difficulty config
-│   ├── grid-utils.ts     # Grid math, adjacency, seeded PRNG
-│   ├── puzzle-generator.ts  # Hamiltonian path + checkpoint placement
-│   └── puzzle-solver.ts  # Backtracking solver + hint engine
-├── input/
-│   └── pointer-controller.ts  # Unified mouse/touch/long-press
-├── render/
-│   ├── canvas-renderer.ts  # Full rendering pipeline + theme
-│   ├── animations.ts       # Pulses, confetti, pings, glows
-│   └── tilt.ts             # 3D skew with bounce animation
-└── state/
-    └── game-store.ts     # Pure functional game logic
+npm run zip:generate -- --seed 12345 --difficulty hard --solution
+npm run zip:validate        # audits seeds, sizes and a year of dailies
+npm run zip:benchmark
+
+npm run patches:generate -- --seed 12345 --difficulty hard --solution
+npm run patches:solve -- --seed 12345 --difficulty hard --steps
+npm run patches:validate
+npm run patches:benchmark
 ```
 
----
+The e2e tests need Chromium once: `npx playwright install chromium`.
 
-## 🤖 The AI Experiment
+## Documentation
 
-This entire project — from the Hamiltonian path generator to the confetti particles — was built using **10 prompts** with **Claude Opus 4.6**. No manual coding. No copy-pasting from Stack Overflow. Just iterative prompt engineering to go from "build me a Zip game" to a fully polished puzzle experience.
+- [Architecture](docs/ARCHITECTURE.md): layers, the shared game frame, the clock, persistence, the visual system, PWA
+- [Seeds and daily puzzles](docs/SEEDS.md): determinism, seed format, versioning, Pacific time, streaks
+- [Zip](docs/zip/ZIP.md): rules, solver, generator, tiers, interaction, benchmark
+- Patches: [reference notes](docs/patches/PATCHES_REFERENCE.md), [engine](docs/patches/PUZZLE_ENGINE.md), [generation](docs/patches/PUZZLE_GENERATION.md), [solver](docs/patches/SOLVER.md), [difficulty](docs/patches/DIFFICULTY.md)
 
-It's a proof of what's possible when you pair a clear vision with a capable AI coding assistant.
+## About
 
----
+This project started as a single game. The first version of Zip was built with Claude Opus 4.6 as the AI coding assistant, in 10 prompts, as an experiment in how far iterative prompting could go. Patches, the shared platform and the rewrite of Zip on top of it followed the same way.
 
-## 📝 License
+Made by [Bruno Silva](https://brunosilva.io).
+
+## License
 
 MIT

@@ -1,0 +1,199 @@
+/*
+ * Patches board: placed patches, clue badges, the drag preview and hint
+ * overlays. Tiles, gaps and radii come from the shared tile board in
+ * src/shared/ui/theme.css, which is why a patch covers its tiles exactly.
+ */
+
+/* ---------- Placed patch ---------- */
+
+.patches-region {
+  position: absolute;
+  padding: var(--tile-gap);
+  z-index: 2;
+  animation: patch-in 180ms cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+}
+
+.patches-region-fill {
+  width: 100%;
+  height: 100%;
+  border-radius: var(--tile-radius);
+  background: var(--patch);
+  box-shadow: inset 0 0 0 1.5px color-mix(in oklab, var(--patch) 70%, #2a2622);
+  position: relative;
+}
+
+/* Stitching: a dashed seam just inside the edge. */
+.patches-region-fill::after {
+  content: "";
+  position: absolute;
+  inset: clamp(3px, calc(100cqw / var(--cols) * 0.07), 5px);
+  border-radius: calc(var(--tile-radius) - 3px);
+  border: 1.5px dashed color-mix(in oklab, var(--patch) 45%, #2a2622);
+  opacity: 0.55;
+}
+
+.patches-region[data-leaving="true"] { animation: patch-out 140ms ease-in both; }
+
+/*
+ * A patch the game placed itself (hint or reveal) grows cell by cell from its
+ * clue, ring by ring, and then the single stitched patch fades in over it.
+ */
+.patches-region[data-tween="true"] { animation: none; padding: 0; }
+.patches-region[data-tween="true"] .patches-region-fill {
+  position: absolute;
+  inset: var(--tile-gap);
+  width: auto;
+  height: auto;
+  animation: fade-in 220ms ease both;
+  animation-delay: var(--fill-delay);
+}
+.patches-tween-cell { position: absolute; }
+.patches-tween-cell::before {
+  content: "";
+  position: absolute;
+  inset: var(--tile-gap);
+  border-radius: var(--tile-radius);
+  background: var(--patch);
+  animation: tile-pop 240ms cubic-bezier(0.2, 0.9, 0.3, 1.3) both;
+  animation-delay: var(--ring-delay);
+}
+
+/*
+ * The patch being redrawn steps back so the new outline reads clearly. The fade
+ * goes on the fill: the wrapper's entry animation ends with fill-mode "both",
+ * which pins its opacity at 1 and would win over a plain declaration.
+ */
+.patches-region-fill { transition: opacity 120ms ease; }
+.patches-region[data-redrawing="true"] .patches-region-fill { opacity: 0.28; }
+
+.patches-region[data-wrong="true"] .patches-region-fill {
+  background-image: repeating-linear-gradient(45deg, rgb(192 57 43 / 0.55) 0 3px, transparent 3px 9px);
+  box-shadow: inset 0 0 0 2.5px var(--invalid);
+  animation: wrong-pulse 900ms ease-in-out 2;
+}
+
+.mg-board[data-solved="true"] .patches-region {
+  animation: patch-celebrate 520ms cubic-bezier(0.3, 0.7, 0.3, 1) both;
+  animation-delay: calc(var(--order) * 45ms);
+}
+
+/* ---------- Clue badge ---------- */
+
+.patches-clue {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  z-index: 6;
+  color: var(--patch-ink);
+  pointer-events: none;
+}
+
+/* Small enough to clear the stitched seam of a one-cell-wide patch. */
+/* A finished board is just the quilt: the clues have done their job. */
+.mg-board[data-solved="true"] .patches-clue { opacity: 0; transition: opacity 500ms ease 700ms; }
+
+.patches-clue svg { width: 66%; height: 66%; overflow: visible; }
+
+.patches-clue-number {
+  position: absolute;
+  font-weight: 700;
+  font-size: clamp(12px, calc(100cqw / var(--cols) * 0.36), 30px);
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.patches-clue-number[data-derived="true"] { font-weight: 500; opacity: 0.72; }
+
+/* ---------- Drag preview ---------- */
+
+/* No z-index here on purpose: the fill sits under the clue badges and the size label above them. */
+.patches-preview {
+  position: absolute;
+  padding: var(--tile-gap);
+}
+
+.patches-preview-fill {
+  position: relative;
+  z-index: 5;
+  width: 100%;
+  height: 100%;
+  border-radius: var(--tile-radius);
+  border: 2.5px dashed var(--ink-faint);
+  background: rgb(120 110 100 / 0.12);
+}
+
+.patches-preview[data-status="valid"] .patches-preview-fill {
+  border: 2.5px solid var(--valid);
+  background: color-mix(in oklab, var(--patch, var(--valid)) 70%, transparent);
+}
+
+.patches-preview[data-status="invalid"] .patches-preview-fill {
+  border: 2.5px dashed var(--invalid);
+  background-color: color-mix(in oklab, var(--patch, var(--invalid)) 28%, transparent);
+  background-image: repeating-linear-gradient(45deg, rgb(192 57 43 / 0.45) 0 2px, transparent 2px 8px);
+}
+
+/* The label takes the corner farthest from the clue, so it never covers the clue's icon. */
+.patches-preview-size {
+  position: absolute;
+  z-index: 7;
+  font-size: 11px;
+  line-height: 16px;
+  font-weight: 700;
+  padding: 0 6px;
+  border-radius: 99px;
+  background: var(--ink);
+  color: var(--surface);
+  font-variant-numeric: tabular-nums;
+}
+.patches-preview[data-label-v="top"] .patches-preview-size { top: calc(var(--tile-gap) + 5px); }
+.patches-preview[data-label-v="bottom"] .patches-preview-size { bottom: calc(var(--tile-gap) + 5px); }
+.patches-preview[data-label-h="right"] .patches-preview-size { right: calc(var(--tile-gap) + 6px); }
+.patches-preview[data-label-h="left"] .patches-preview-size { left: calc(var(--tile-gap) + 6px); }
+
+/* ---------- Hint and debug overlays ---------- */
+
+.patches-hint {
+  position: absolute;
+  padding: var(--tile-gap);
+  z-index: 5;
+}
+
+.patches-hint-fill {
+  width: 100%;
+  height: 100%;
+  border-radius: var(--tile-radius);
+  border: 3px solid var(--hint);
+  background: rgb(240 185 90 / 0.18);
+  animation: hint-pulse 1100ms ease-in-out infinite;
+}
+
+.patches-hint-cell {
+  position: absolute;
+  z-index: 5;
+  display: grid;
+  place-items: center;
+}
+.patches-hint-cell::after {
+  content: "";
+  width: 34%;
+  height: 34%;
+  border-radius: 50%;
+  background: var(--hint);
+  animation: hint-pulse 1100ms ease-in-out infinite;
+}
+
+.patches-debug-region {
+  position: absolute;
+  z-index: 7;
+  outline: 2px dotted #d6249f;
+  outline-offset: -6px;
+  border-radius: 6px;
+}
+
+@keyframes patch-in { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
+@keyframes patch-out { to { opacity: 0; transform: scale(0.92); } }
+@keyframes patch-celebrate { 0% { transform: scale(1); } 40% { transform: scale(0.9); } 70% { transform: scale(1.04); } 100% { transform: scale(1); } }
+@keyframes wrong-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
+@keyframes tile-pop { from { opacity: 0; transform: scale(0.4); } to { opacity: 1; transform: scale(1); } }

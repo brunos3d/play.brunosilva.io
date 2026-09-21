@@ -1,12 +1,24 @@
 {
-  "name": "zip",
+  "name": "minigames",
   "version": "0.1.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "playwright test",
+    "patches:generate": "tsx scripts/patches/generate.ts",
+    "patches:solve": "tsx scripts/patches/solve.ts",
+    "patches:validate": "tsx scripts/patches/validate.ts",
+    "patches:benchmark": "tsx scripts/patches/benchmark.ts",
+    "zip:generate": "tsx scripts/zip/generate.ts",
+    "zip:validate": "tsx scripts/zip/validate.ts",
+    "zip:benchmark": "tsx scripts/zip/benchmark.ts",
+    "icons": "tsx scripts/make-icons.ts"
   },
   "dependencies": {
     "next": "16.1.6",
@@ -14,13 +26,17 @@
     "react-dom": "19.2.3"
   },
   "devDependencies": {
+    "@playwright/test": "^1.63.0",
     "@tailwindcss/postcss": "^4",
-    "@types/node": "^20",
+    "@types/node": "^24.13.6",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
+    "fake-indexeddb": "^6.2.5",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "tsx": "^4.23.15",
+    "typescript": "^5",
+    "vitest": "^5.0.1"
   }
 }

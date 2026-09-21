@@ -1,0 +1,440 @@
+/*
+ * Platform visual system: linen, ink and fabric. Every game shares these
+ * tokens, the page shell, the tile board, buttons, dialogs and the status line.
+ * A game adds only what is unique to its board in its own stylesheet. Layout
+ * utilities come from Tailwind.
+ */
+
+:root {
+  --linen: #f6f1e7;
+  --linen-deep: #ece4d4;
+  --surface: #fffdf8;
+  --ink: #2a2622;
+  --ink-soft: #6b635a;
+  --ink-faint: #a39a8e;
+  --thread: #d9cfbd;
+  /* Board well and the empty tiles that sit in it. */
+  --board: #e9e0cf;
+  --tile: #fffdf8;
+  --accent: #c2553d;
+  --accent-ink: #ffffff;
+  --valid: #2f7d5b;
+  --invalid: #c0392b;
+  --hint: #b7791f;
+  --patch-ink: #2a2622;
+  /* How much patch colour an empty clue cell carries. */
+  --clue-tint: 46%;
+  /* How much ink goes into a clue tile's edge. */
+  --clue-edge: 22%;
+  --shadow: 0 1px 0 rgb(42 38 34 / 0.04), 0 8px 24px -12px rgb(42 38 34 / 0.18);
+
+}
+
+.mg-root {
+  color: var(--ink);
+  background-color: var(--linen);
+  /* Faint woven texture: two crossed hairline gradients. */
+  background-image:
+    repeating-linear-gradient(0deg, rgb(42 38 34 / 0.018) 0 1px, transparent 1px 3px),
+    repeating-linear-gradient(90deg, rgb(42 38 34 / 0.018) 0 1px, transparent 1px 3px);
+  font-family: var(--font-body), ui-sans-serif, system-ui, sans-serif;
+  min-height: 100dvh;
+  overscroll-behavior: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  padding:
+    env(safe-area-inset-top) env(safe-area-inset-right)
+    env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --linen: #1d1a17;
+    --linen-deep: #26221e;
+    --surface: #2b2622;
+    --ink: #f1eadd;
+    --ink-soft: #b8ad9d;
+    --ink-faint: #7d7468;
+    --thread: #453e36;
+    --board: #171412;
+    --tile: #2e2924;
+    --accent: #e0765e;
+    --accent-ink: #1d1a17;
+    --valid: #6fcf9f;
+    --invalid: #ff8a7a;
+    --hint: #f0b95a;
+    /* Clue ink stays dark because placed patches are pastel in both themes. A stronger tint keeps it readable on the dark board. */
+    --clue-tint: 82%;
+    --clue-edge: 40%;
+    --shadow: 0 1px 0 rgb(0 0 0 / 0.3), 0 10px 28px -12px rgb(0 0 0 / 0.7);
+  }
+}
+
+.mg-root input,
+.mg-root textarea {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+.mg-display {
+  font-family: var(--font-display), ui-serif, Georgia, serif;
+  font-optical-sizing: auto;
+  letter-spacing: -0.01em;
+}
+
+/* The outline follows each element's own radius. Forcing one here squared off the dialog once it took focus. */
+.mg-root :focus-visible {
+  outline: 2.5px solid var(--ink);
+  outline-offset: 2px;
+}
+
+/* ---------- Shell ---------- */
+
+.mg-shell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  max-width: 560px;
+  margin: 0 auto;
+  padding: 12px 16px 20px;
+  min-height: 100dvh;
+}
+
+.mg-stage {
+  /*
+   * The board takes the full width unless the viewport is short. 340px is the
+   * rest of the column: header 88, status 58, controls 60, footer 26, five gaps
+   * of 14, padding 32, plus a little air. Keeps 1280x720 free of page scroll.
+   */
+  width: min(100%, max(240px, calc(100dvh - 350px)));
+}
+
+/* Phones held sideways: board on the left, everything else beside it. */
+@media (orientation: landscape) and (max-height: 520px) {
+  .mg-shell {
+    max-width: none;
+    display: grid;
+    grid-template-columns: auto minmax(200px, 320px);
+    grid-template-areas: "stage header" "stage status" "stage controls" "stage footer";
+    align-content: center;
+    justify-content: center;
+    column-gap: 24px;
+    row-gap: 10px;
+    padding: 10px 16px;
+  }
+  .mg-header { grid-area: header; }
+  .mg-stage { grid-area: stage; width: calc(100dvh - 24px); align-self: center; }
+  .mg-status { grid-area: status; }
+  .mg-controls { grid-area: controls; }
+  .mg-footer { grid-area: footer; }
+}
+
+.mg-footer { margin-top: auto; }
+
+/* ---------- Hub ---------- */
+
+.mg-card {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 18px;
+  border-radius: 22px;
+  background: var(--surface);
+  box-shadow: var(--shadow), 0 0 0 1.5px var(--thread);
+}
+
+/* ---------- Board ---------- */
+
+/*
+ * The board is made of tiles. An empty cell, a clue cell and a placed patch all
+ * share one gap and one corner radius, so a patch covers the tiles under it
+ * exactly and nothing square peeks out behind its rounded corners.
+ *
+ * --tile-gap and --tile-radius use container units, which resolve against the
+ * board for its descendants. They are declared here and consumed by children.
+ */
+.mg-board {
+  --cols: 6;
+  --rows: 6;
+  --board-pad: 5px;
+  --tile-gap: clamp(1.5px, calc(100cqw / var(--cols) * 0.035), 3px);
+  --tile-radius: clamp(5px, calc(100cqw / var(--cols) * 0.17), 12px);
+  position: relative;
+  margin-inline: auto;
+  width: 100%;
+  /*
+   * Snap the grid to a whole number of pixels per cell, so tiles and patches
+   * land on the pixel grid. The left margin is rounded too: plain centring
+   * leaves half a pixel on each side whenever the leftover width is odd.
+   */
+  --board-width: calc(round(down, 100% - 2 * var(--board-pad), var(--cols) * 1px) + 2 * var(--board-pad));
+  width: var(--board-width);
+  margin-left: round(down, calc((100% - var(--board-width)) / 2), 1px);
+  aspect-ratio: var(--cols) / var(--rows);
+  border-radius: 18px;
+  background: var(--board);
+  box-shadow: var(--shadow), 0 0 0 1.5px var(--thread);
+  touch-action: none;
+  container-type: inline-size;
+  overflow: hidden;
+}
+
+.mg-board[data-drawing="true"] { cursor: grabbing; }
+
+.mg-grid,
+.mg-layer {
+  position: absolute;
+  inset: var(--board-pad);
+}
+
+.mg-grid {
+  display: grid;
+  grid-template-columns: repeat(var(--cols), 1fr);
+  grid-template-rows: repeat(var(--rows), 1fr);
+}
+
+.mg-layer { pointer-events: none; }
+
+.mg-cell {
+  position: relative;
+  outline: none;
+}
+
+.mg-cell::before {
+  content: "";
+  position: absolute;
+  inset: var(--tile-gap);
+  border-radius: var(--tile-radius);
+  background: var(--tile);
+}
+
+/* The clue tile wears its patch colour before anything is drawn, and invites a drag. */
+.mg-cell[data-clue="true"] { cursor: grab; }
+.mg-cell[data-clue="true"]::before {
+  background: color-mix(in oklab, var(--patch) var(--clue-tint), var(--tile));
+  box-shadow: inset 0 0 0 1.5px color-mix(in oklab, var(--patch) 72%, #2a2622 var(--clue-edge));
+}
+.mg-board[data-locked="true"] .mg-cell[data-clue="true"],
+.mg-board[data-drawing="true"] .mg-cell[data-clue="true"] { cursor: inherit; }
+
+/* Keyboard cursor. :focus-visible keeps it away from mouse and touch. */
+.mg-cell:focus-visible::after {
+  content: "";
+  position: absolute;
+  inset: calc(var(--tile-gap) + 1px);
+  border-radius: calc(var(--tile-radius) - 1px);
+  box-shadow: 0 0 0 2.5px var(--ink), 0 0 0 4.5px var(--surface);
+  z-index: 8;
+  pointer-events: none;
+}
+
+.mg-board[data-shake="true"] { animation: board-shake 280ms ease-in-out; }
+
+/* ---------- Buttons ---------- */
+
+.mg-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 48px;
+  padding: 0 18px;
+  border-radius: 14px;
+  font-weight: 600;
+  font-size: 15px;
+  color: var(--ink);
+  background: var(--surface);
+  box-shadow: 0 0 0 1.5px var(--thread), 0 2px 0 var(--thread);
+  transition: transform 90ms ease, box-shadow 90ms ease, background-color 120ms ease;
+  touch-action: manipulation;
+  cursor: pointer;
+}
+.mg-button:hover:not(:disabled) { background: var(--linen-deep); }
+.mg-button:active:not(:disabled) { transform: translateY(2px); box-shadow: 0 0 0 1.5px var(--thread), 0 0 0 var(--thread); }
+.mg-button:disabled { opacity: 0.4; cursor: not-allowed; }
+.mg-button svg { width: 18px; height: 18px; flex: none; }
+
+/* Icon over label. Used by the four game controls so they fit a 360 px screen. */
+.mg-button[data-layout="stacked"] {
+  flex-direction: column;
+  gap: 3px;
+  min-height: 58px;
+  padding: 0 4px;
+  font-size: 12.5px;
+  white-space: nowrap;
+}
+.mg-button[data-layout="stacked"] svg { width: 20px; height: 20px; }
+
+.mg-button[data-variant="primary"] {
+  background: var(--accent);
+  color: var(--accent-ink);
+  box-shadow: 0 2px 0 color-mix(in oklab, var(--accent) 70%, black);
+}
+.mg-button[data-variant="primary"]:hover:not(:disabled) { background: color-mix(in oklab, var(--accent) 90%, black); }
+.mg-button[data-variant="primary"]:active:not(:disabled) { box-shadow: 0 0 0 transparent; }
+
+.mg-icon-button {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  color: var(--ink-soft);
+  touch-action: manipulation;
+  cursor: pointer;
+}
+.mg-icon-button:hover { background: var(--linen-deep); color: var(--ink); }
+.mg-icon-button svg { width: 21px; height: 21px; }
+
+.mg-chip {
+  display: inline-flex;
+  align-items: center;
+  height: 24px;
+  padding: 0 9px;
+  border-radius: 99px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  background: var(--linen-deep);
+  white-space: nowrap;
+}
+
+/* ---------- Status line ---------- */
+
+.mg-status {
+  width: 100%;
+  /* Room for a three-line hint, so the controls do not jump when one appears. */
+  min-height: 58px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  font-size: 14px;
+  line-height: 1.35;
+  color: var(--ink-soft);
+  text-wrap: balance;
+}
+.mg-status[data-kind="invalid"] { color: var(--invalid); font-weight: 600; }
+.mg-status[data-kind="hint"] { color: var(--ink); text-align: left; }
+.mg-status[data-kind="success"] { color: var(--valid); font-weight: 600; }
+.mg-status svg { width: 16px; height: 16px; flex: none; margin-right: 6px; }
+
+/* ---------- Dialogs ---------- */
+
+.mg-dialog {
+  margin: auto;
+  width: min(420px, calc(100vw - 32px));
+  max-height: calc(100dvh - 32px);
+  overflow-y: auto;
+  padding: 24px;
+  border-radius: 22px;
+  border: 0;
+  color: var(--ink);
+  background: var(--surface);
+  box-shadow: 0 0 0 1.5px var(--thread), 0 30px 80px -20px rgb(0 0 0 / 0.45);
+}
+.mg-dialog:focus-visible { outline: none; }
+.mg-dialog::backdrop { background: rgb(30 26 22 / 0.5); backdrop-filter: blur(3px); }
+.mg-dialog[open] { animation: dialog-in 260ms cubic-bezier(0.2, 0.9, 0.3, 1.1) both; }
+.mg-dialog[open]::backdrop { animation: fade-in 200ms ease both; }
+
+.mg-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--linen);
+}
+.mg-stat dt { font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-soft); }
+.mg-stat dd { font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; }
+
+.mg-switch {
+  position: relative;
+  width: 48px;
+  height: 28px;
+  border-radius: 99px;
+  background: var(--thread);
+  transition: background-color 140ms ease;
+  flex: none;
+  cursor: pointer;
+}
+.mg-switch::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--surface);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.3);
+  transition: transform 140ms ease;
+}
+.mg-switch[aria-checked="true"] { background: var(--valid); }
+.mg-switch[aria-checked="true"]::after { transform: translateX(20px); }
+
+.mg-field {
+  width: 100%;
+  min-height: 48px;
+  padding: 0 14px;
+  border-radius: 12px;
+  font-size: 16px; /* 16px stops iOS from zooming on focus */
+  color: var(--ink);
+  background: var(--surface);
+  box-shadow: 0 0 0 1.5px var(--thread);
+}
+
+.mg-segment {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 14px;
+  background: var(--linen-deep);
+}
+.mg-segment button {
+  min-height: 44px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink-soft);
+  touch-action: manipulation;
+  cursor: pointer;
+}
+.mg-segment button[aria-pressed="true"] {
+  color: var(--ink);
+  background: var(--surface);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.12);
+}
+
+.mg-loading-cell::before { animation: loading-cell 1100ms ease-in-out infinite; animation-delay: var(--delay, 0ms); }
+
+/* ---------- Keyframes ---------- */
+
+@keyframes board-shake { 0%, 100% { transform: translateX(0); } 20% { transform: translateX(-6px); } 40% { transform: translateX(5px); } 60% { transform: translateX(-3px); } 80% { transform: translateX(2px); } }
+@keyframes hint-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
+@keyframes dialog-in { from { opacity: 0; transform: translateY(14px) scale(0.97); } to { opacity: 1; transform: none; } }
+@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes loading-cell { 0%, 100% { opacity: 0.25; } 50% { opacity: 0.9; } }
+
+/* Reduced motion: keep state changes, drop movement. The hint stays visible without pulsing. */
+@media (prefers-reduced-motion: reduce) {
+  .mg-root *,
+  .mg-root *::before,
+  .mg-root *::after,
+  .mg-dialog,
+  .mg-dialog::backdrop {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    animation-delay: 0ms !important;
+    transition-duration: 1ms !important;
+  }
+}
