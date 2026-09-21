@@ -11,6 +11,7 @@ import { ConfirmDialog } from "./confirm-dialog";
 import { GameControls } from "./game-controls";
 import { GameFooter } from "./game-footer";
 import { GameHeader } from "./game-header";
+import { ShuffleIcon } from "./icons";
 import { type ResultData, ResultDialog } from "./result-dialog";
 import { SettingsDialog } from "./settings-dialog";
 import { type StatusMessage, StatusLine } from "./status-line";
@@ -142,10 +143,15 @@ export function GameFrame({ game, daily, difficulty, size, seed, shareUrl, sessi
       <StatusLine status={status} />
 
       {summary ? (
-        <div className="mg-controls w-full grid gap-2.5">
-          <button type="button" className="mg-button" data-variant="primary" onClick={() => setResultOpen(true)} disabled={!result}>
+        <div className={`mg-controls w-full grid gap-2.5 ${onNext ? "grid-cols-2" : ""}`}>
+          <button type="button" className="mg-button" data-variant={onNext ? undefined : "primary"} onClick={() => setResultOpen(true)} disabled={!result}>
             View result
           </button>
+          {onNext && (
+            <button type="button" className="mg-button" data-variant="primary" onClick={onNext} data-testid="game-new">
+              <ShuffleIcon /> New game
+            </button>
+          )}
         </div>
       ) : (
         <GameControls
@@ -157,6 +163,7 @@ export function GameFrame({ game, daily, difficulty, size, seed, shareUrl, sessi
           onHint={session.requestHint}
           onReveal={() => setConfirmOpen(true)}
           onReset={session.reset}
+          onNewGame={onNext}
         />
       )}
 
