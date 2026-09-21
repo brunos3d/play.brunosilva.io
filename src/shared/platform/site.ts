@@ -4,6 +4,9 @@ import { DIFFICULTIES } from "@/shared/engine/difficulty";
 /** The one canonical address of the platform. Everything else redirects here. */
 export const SITE_ORIGIN = "https://play.brunosilva.io";
 
+/** Source code. Linked from the hub and from every game's footer. */
+export const REPOSITORY_URL = "https://github.com/brunos3d/play.brunosilva.io";
+
 /** Shortcut domains. Each opens its game on the canonical address. */
 export const GAME_HOSTS: Record<string, GameId> = {
   "zip.brunosilva.io": "zip",

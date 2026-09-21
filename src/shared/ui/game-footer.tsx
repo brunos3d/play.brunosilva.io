@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { GAME_LIST, type GameId } from "@/games/registry";
+import { REPOSITORY_URL } from "@/shared/platform/site";
 
 /** Way out of a game: the hub and the other games. */
 export function GameFooter({ current }: { current?: GameId }) {
@@ -17,7 +18,7 @@ export function GameFooter({ current }: { current?: GameId }) {
         </span>
       ))}
       <span aria-hidden="true">·</span>
-      <a href="https://github.com/brunos3d/zip" target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:text-[var(--ink-soft)]">
+      <a href={REPOSITORY_URL} target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:text-[var(--ink-soft)]">
         GitHub
       </a>
     </footer>

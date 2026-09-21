@@ -12,6 +12,7 @@ import type { DailyInfo } from "@/shared/engine/daily";
 import { msUntilPacificMidnight } from "@/shared/engine/pacific-time";
 import { computeStreak } from "@/shared/engine/streak";
 import { useDailyDate } from "@/shared/hooks/use-daily-date";
+import { REPOSITORY_URL } from "@/shared/platform/site";
 import { loadBoard, loadDailyResult, loadDailyResults, streakDates } from "@/shared/storage/progress";
 import { GameIcon, PlatformIcon } from "../game-icons";
 import { ArrowRightIcon, CheckIcon, ClockIcon, FlameIcon, RevealIcon } from "../icons";
@@ -164,7 +165,7 @@ export function Hub() {
           Bruno Silva
         </a>
         <span className="mx-2">·</span>
-        <a href="https://github.com/brunos3d/zip" target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:text-[var(--ink-soft)]">
+        <a href={REPOSITORY_URL} target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:text-[var(--ink-soft)]">
           GitHub
         </a>
       </footer>
