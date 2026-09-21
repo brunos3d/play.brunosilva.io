@@ -1,4 +1,10 @@
-# Minigames
+# play.brunosilva.io
+
+<p align="center">
+  <a href="https://play.brunosilva.io/">
+    <img alt="Minigames: small daily logic puzzles" src="./public/og/home.png" width="720" />
+  </a>
+</p>
 
 A small platform of daily logic puzzles, playable at [play.brunosilva.io](https://play.brunosilva.io/). It currently has two games, both inspired by the LinkedIn games of the same name:
 
@@ -6,6 +12,32 @@ A small platform of daily logic puzzles, playable at [play.brunosilva.io](https:
 - **Patches**: cover the grid with rectangles so that each one holds exactly one clue.
 
 Every game gets one new board per day, the same for every player, plus unlimited practice. There is no server state. Puzzles are generated in the browser from a seed, and progress, streaks and best times stay on the device. The app installs as a PWA and plays offline after the first visit.
+
+## Screenshots
+
+<table>
+  <tr>
+    <th width="33%">Hub</th>
+    <th width="33%">Zip</th>
+    <th width="33%">Patches</th>
+  </tr>
+  <tr>
+    <td><img alt="Hub with both games, today's status, the streak and the countdown to the next boards" src="./.github/screenshots/hub.png" /></td>
+    <td><img alt="Zip board with the path drawn through the first three numbers" src="./.github/screenshots/zip.png" /></td>
+    <td><img alt="Patches board with most of its patches placed" src="./.github/screenshots/patches.png" /></td>
+  </tr>
+</table>
+
+The interface follows the system theme:
+
+<table>
+  <tr>
+    <td width="50%"><img alt="Zip in the dark theme" src="./.github/screenshots/zip-dark.png" /></td>
+    <td width="50%"><img alt="Patches in the dark theme" src="./.github/screenshots/patches-dark.png" /></td>
+  </tr>
+</table>
+
+The screenshots are not mockups. `npm run screenshots` plays both games against a running production build and saves what it sees.
 
 ## Routes
 
@@ -55,8 +87,8 @@ The stack is Next.js 16, React 19, TypeScript and Tailwind CSS 4, with no runtim
 ## Getting started
 
 ```bash
-git clone https://github.com/brunos3d/zip.git
-cd zip
+git clone https://github.com/brunos3d/play.brunosilva.io.git
+cd play.brunosilva.io
 npm install
 npm run dev
 ```
@@ -76,6 +108,8 @@ npm run test:e2e        # Playwright: builds, serves and drives the production a
 npm run lint
 npm run typecheck
 npm run icons           # render PNG icons from public/icons/*.svg
+npm run og              # render the Open Graph images in public/og, once
+npm run screenshots     # play both games on a running server and save the README screenshots
 
 npm run zip:generate -- --seed 12345 --difficulty hard --solution
 npm run zip:validate        # audits seeds, sizes and a year of dailies
