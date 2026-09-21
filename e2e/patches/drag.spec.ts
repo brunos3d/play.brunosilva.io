@@ -195,3 +195,19 @@ test("events that arrive faster than React renders still paint the whole path", 
   await fire([clue], true);
   await expect(regions(page)).toHaveCount(0);
 });
+
+test("a press after a cancelled drag and a resize still lands on the right cell", async ({ page }) => {
+  // The board caches its box during a drag. Escape cancels without a pointer-up clean-up, so the next
+  // press has to measure again, or a resize in between would send it to the wrong cell.
+  const { clue, rect } = targets[0];
+  await dragThrough(page, SIZE, [clue, { row: rect.row, column: rect.column }]);
+  await page.keyboard.press("Escape");
+  await page.mouse.up();
+  await expect(regions(page)).toHaveCount(0);
+
+  const viewport = page.viewportSize()!;
+  await page.setViewportSize({ width: Math.max(340, viewport.width - 90), height: viewport.height });
+  await draw(page, SIZE, targets[0]);
+  await expect(regions(page)).toHaveCount(1);
+  await expect(status(page)).toContainText(`${rect.width} by ${rect.height}`);
+});

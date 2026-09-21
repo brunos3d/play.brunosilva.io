@@ -38,6 +38,10 @@ export function ZipBoard({ puzzle, topology, path, colors, locked, solved, shake
   // Source of truth for the handlers. React batches pointermove updates, so state would lag behind fast input.
   const draggingRef = useRef(false);
   const lastCellRef = useRef(-1);
+  // The grid's box, measured once per drag. Reading it on every pointermove forces a layout pass
+  // each time, which was a measured cost on phones in the canvas version of this game. The board
+  // cannot move during a drag: touch-action is none and the status line has a fixed height.
+  const dragBoxRef = useRef<DOMRect | null>(null);
   const { width, height } = puzzle;
   // Gradient ids must be unique per board: the tutorial board and the game board can be on screen together.
   const gradientId = `zip-${useId().replace(/[^a-zA-Z0-9]/g, "")}`;
@@ -64,7 +68,7 @@ export function ZipBoard({ puzzle, topology, path, colors, locked, solved, shake
 
   const cellFromPoint = useCallback(
     (clientX: number, clientY: number): number | null => {
-      const box = gridRef.current?.getBoundingClientRect();
+      const box = dragBoxRef.current ?? gridRef.current?.getBoundingClientRect();
       if (!box || box.width === 0) return null;
       const column = Math.floor(((clientX - box.left) / box.width) * width);
       const row = Math.floor(((clientY - box.top) / box.height) * height);
@@ -76,6 +80,8 @@ export function ZipBoard({ puzzle, topology, path, colors, locked, solved, shake
 
   const handlePointerDown = (event: PointerEvent<HTMLDivElement>) => {
     if (locked || !event.isPrimary || (event.pointerType === "mouse" && event.button !== 0)) return;
+    // Measure before locating the press, so a stale box can never decide which cell was hit.
+    dragBoxRef.current = gridRef.current?.getBoundingClientRect() ?? null;
     const cell = cellFromPoint(event.clientX, event.clientY);
     if (cell === null) return;
     event.preventDefault();
@@ -106,6 +112,7 @@ export function ZipBoard({ puzzle, topology, path, colors, locked, solved, shake
     if (!draggingRef.current || !event.isPrimary) return;
     if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
     draggingRef.current = false;
+    dragBoxRef.current = null;
     event.currentTarget.dataset.dragging = "false";
     onRelease();
   };

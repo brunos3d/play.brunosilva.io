@@ -84,6 +84,9 @@ export function Board({
   const boardRef = useRef<HTMLDivElement>(null);
   const gridRef = useRef<HTMLDivElement>(null);
   const cellRefs = useRef(new Map<string, HTMLDivElement>());
+  // The grid's box, measured once per drag. Reading it on every pointermove forces a layout pass
+  // each time. The board cannot move during a drag: touch-action is none and the status line has a fixed height.
+  const dragBoxRef = useRef<DOMRect | null>(null);
   // The ref is the source of truth for handlers. React batches pointermove updates, so two quick
   // moves can run before a render: reading the gesture from state would make the second move start
   // from a stale extent and drop what the first one added. State only drives what is drawn.
@@ -151,7 +154,7 @@ export function Board({
   /** Maps a pointer position to a cell. `outside` is true once the pointer is clearly off the grid. */
   const locate = useCallback(
     (clientX: number, clientY: number): { cell: CellCoordinate; outside: boolean } | null => {
-      const box = gridRef.current?.getBoundingClientRect();
+      const box = dragBoxRef.current ?? gridRef.current?.getBoundingClientRect();
       if (!box || box.width === 0 || box.height === 0) return null;
       const columnFloat = ((clientX - box.left) / box.width) * puzzle.width;
       const rowFloat = ((clientY - box.top) / box.height) * puzzle.height;
@@ -173,6 +176,9 @@ export function Board({
 
   const handlePointerDown = (event: PointerEvent<HTMLDivElement>) => {
     if (locked || !event.isPrimary || (event.pointerType === "mouse" && event.button !== 0)) return;
+    // Measure before locating the press. A drag cancelled with Escape can leave an old box behind,
+    // and the window may have been resized since.
+    dragBoxRef.current = gridRef.current?.getBoundingClientRect() ?? null;
     const located = locate(event.clientX, event.clientY);
     if (!located) return;
     event.preventDefault();
@@ -223,6 +229,7 @@ export function Board({
     const gesture = gestureRef.current;
     if (!gesture || !event.isPrimary) return;
     if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
+    dragBoxRef.current = null;
     setGesture(null);
     if (!commit || locked) return;
 
