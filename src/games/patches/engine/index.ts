@@ -5,6 +5,7 @@ export * from "./board/drag";
 export * from "./clues/clue";
 export * from "./regions/region";
 export * from "./validation/validate-region";
+export * from "./validation/extendable";
 export * from "./validation/validate-state";
 export * from "./validation/validate-puzzle";
 export * from "./solver/candidates";

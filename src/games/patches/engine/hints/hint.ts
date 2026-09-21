@@ -1,7 +1,7 @@
 import { rectCells, rectEquals } from "../board/geometry";
 import { describeClue } from "../clues/clue";
 import { regionRect } from "../regions/region";
-import { buildCandidates } from "../solver/candidates";
+import { buildCandidates, findCandidate } from "../solver/candidates";
 import { type Technique, solveWithLogic } from "../solver/logic";
 import { type FixedPlacement, solve } from "../solver/search";
 import type { CellCoordinate, PuzzleShape, Rect, Region } from "../types";
@@ -69,8 +69,32 @@ function explain(technique: Technique, clueText: string, rect: Rect, neededElimi
  * reported before anything else, because a deduction made on top of a wrong
  * patch would mislead.
  */
-export function getHint(puzzle: PuzzleShape, regions: readonly Region[]): Hint {
+export function getHint(puzzle: PuzzleShape, placed: readonly Region[]): Hint {
   const candidates = buildCandidates(puzzle);
+
+  // A pending patch is not a legal rectangle yet, so the solver cannot take it as given. It is on the right track
+  // if it lies inside the patch its clue has in the solution, and then it is simply left out of the reasoning: the
+  // hint for that clue will grow it into the full patch. Otherwise it is a mistake like any other.
+  const unfinished = placed.filter((region) => !findCandidate(candidates, puzzle.clues.findIndex((clue) => clue.id === region.clueId), regionRect(region)));
+  const regions = placed.filter((region) => !unfinished.includes(region));
+  if (unfinished.length > 0) {
+    const solved = solve(puzzle, { candidates, maxSolutions: 1 });
+    const astray = unfinished.find((region) => {
+      const target = solved.solutions[0]?.[puzzle.clues.findIndex((clue) => clue.id === region.clueId)];
+      const rect = regionRect(region);
+      return !target || rect.row < target.row || rect.column < target.column || rect.row + rect.height > target.row + target.height || rect.column + rect.width > target.column + target.width;
+    });
+    if (astray) {
+      return {
+        kind: "wrong-region",
+        regionId: astray.id,
+        clueId: astray.clueId,
+        cells: astray.cells.map((cell) => ({ ...cell })),
+        message: "This unfinished patch reaches cells that belong to another clue, so it cannot grow into the right one. It comes off.",
+      };
+    }
+  }
+
   const wrong = findWrongRegion(puzzle, regions, candidates);
   if (wrong) {
     return {

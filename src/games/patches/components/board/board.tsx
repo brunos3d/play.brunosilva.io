@@ -1,16 +1,17 @@
 "use client";
 
 import { type CSSProperties, type KeyboardEvent, type PointerEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { type DragExtent, extendExtent, extentRect, startExtent } from "../../engine/board/drag";
-import { cellKey } from "../../engine/board/geometry";
+import { type DragExtent, extendExtentWithin, extentRect, startExtent } from "../../engine/board/drag";
+import { cellKey, unionRect } from "../../engine/board/geometry";
 import { describeClue } from "../../engine/clues/clue";
 import type { Hint } from "../../engine/hints/hint";
 import { regionRect } from "../../engine/regions/region";
 import type { CellCoordinate, PuzzleShape, Rect, Region } from "../../engine/types";
+import { isTakenByOthers } from "../../engine/validation/extendable";
 import { ClueBadge } from "./clue-badge";
 import type { PatchColor } from "./palette";
 
-export type PreviewStatus = "neutral" | "valid" | "invalid";
+export type PreviewStatus = "valid" | "pending" | "invalid";
 
 type BoardProps = {
   puzzle: PuzzleShape;
@@ -22,6 +23,8 @@ type BoardProps = {
   solved: boolean;
   /** Changes whenever an illegal patch was refused. Triggers the shake. */
   shakeSignal: number;
+  /** Patches that are on the board but not legal yet. They are drawn as unfinished and show how many cells they have. */
+  pendingIds?: ReadonlySet<string>;
   /** Regions the game placed itself, by a hint or a reveal. They appear cell by cell from the clue outward. */
   tweenIds?: ReadonlySet<string>;
   /** Development only: outlines of the stored solution. */
@@ -37,8 +40,10 @@ type BoardProps = {
 };
 
 /**
- * A pointer gesture. Drawing always starts on a clue cell and paints outward
- * (see engine/board/drag.ts). A press anywhere else can only become a tap.
+ * A pointer gesture. Drawing starts on a clue cell, or on any cell of a patch
+ * that is already there, and paints outward (see engine/board/drag.ts). A
+ * stroke adds to the clue's patch, so a patch can be drawn in several strokes.
+ * A press anywhere else can only become a tap.
  */
 type Gesture =
   | { kind: "draw"; clueId: string; extent: DragExtent; moved: boolean; outside: boolean }
@@ -72,6 +77,7 @@ export function Board({
   locked,
   solved,
   shakeSignal,
+  pendingIds,
   tweenIds,
   debugSolution,
   label,
@@ -98,6 +104,7 @@ export function Board({
   }, []);
   const [cursor, setCursor] = useState<CellCoordinate>({ row: 0, column: 0 });
   const [keyboardExtent, setKeyboardExtent] = useState<DragExtent | null>(null);
+  const [keyboardClueId, setKeyboardClueId] = useState<string | null>(null);
   const [keyboardActive, setKeyboardActive] = useState(false);
 
   // Patches that just left the board stay mounted long enough to animate out.
@@ -113,6 +120,15 @@ export function Board({
       setLeavingSerial((serial) => serial + gone.length);
     }
   }
+
+  /** The rectangle a stroke stands for: what was painted, together with the patch the clue already has. */
+  const withOwnPatch = (clueId: string, rect: Rect): Rect => {
+    const own = regions.find((region) => region.clueId === clueId);
+    return own ? unionRect(regionRect(own), rect) : rect;
+  };
+  /** A stroke may wander over another clue or patch. The rectangle stops at their edge and never covers them. */
+  const grow = (clueId: string, extent: DragExtent, cell: CellCoordinate): DragExtent =>
+    extendExtentWithin(extent, cell, (rect) => !isTakenByOthers(puzzle, regions, clueId, withOwnPatch(clueId, rect)));
 
   const clueByCell = useMemo(() => new Map(puzzle.clues.map((clue) => [cellKey(clue), clue])), [puzzle.clues]);
   const regionByCell = useMemo(() => {
@@ -191,8 +207,8 @@ export function Board({
     setKeyboardActive(false);
     setKeyboardExtent(null);
     setCursor(located.cell);
-    const clue = clueByCell.get(cellKey(located.cell));
-    setGesture(clue ? { kind: "draw", clueId: clue.id, extent: startExtent(located.cell), moved: false, outside: false } : { kind: "tap", cell: located.cell, moved: false });
+    const clueId = clueByCell.get(cellKey(located.cell))?.id ?? regionByCell.get(cellKey(located.cell))?.clueId;
+    setGesture(clueId ? { kind: "draw", clueId, extent: startExtent(located.cell), moved: false, outside: false } : { kind: "tap", cell: located.cell, moved: false });
   };
 
   const handlePointerMove = (event: PointerEvent<HTMLDivElement>) => {
@@ -217,7 +233,7 @@ export function Board({
       const located = locate(point.clientX, point.clientY);
       if (!located) continue;
       outside = located.outside;
-      if (!located.outside) extent = extendExtent(extent, located.cell);
+      if (!located.outside) extent = grow(current.clueId, extent, located.cell);
       moved = moved || !sameCell(located.cell, extent.anchor);
     }
     if (extent !== current.extent || moved !== current.moved || outside !== current.outside) {
@@ -247,7 +263,7 @@ export function Board({
       else if (clueByCell.get(cellKey(anchor))?.area === 1) onPlace(extentRect(gesture.extent));
       return;
     }
-    onPlace(extentRect(gesture.extent));
+    onPlace(withOwnPatch(gesture.clueId, extentRect(gesture.extent)));
   };
 
   const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
@@ -263,19 +279,22 @@ export function Board({
       };
       setKeyboardActive(true);
       setCursor(next);
-      if (keyboardExtent) setKeyboardExtent(extendExtent(keyboardExtent, next));
+      if (keyboardExtent && keyboardClueId) setKeyboardExtent(grow(keyboardClueId, keyboardExtent, next));
       return;
     }
     if (event.key === "Enter" || event.key === " ") {
       event.preventDefault();
       onInteract?.();
       setKeyboardActive(true);
-      if (keyboardExtent) {
-        onPlace(extentRect(keyboardExtent));
+      const clueId = clueByCell.get(cellKey(cursor))?.id ?? regionByCell.get(cellKey(cursor))?.clueId;
+      if (keyboardExtent && keyboardClueId) {
+        const untouched = keyboardExtent.top === keyboardExtent.bottom && keyboardExtent.left === keyboardExtent.right;
+        // Enter twice on a patch without moving is the keyboard's tap: it takes the patch off.
+        if (untouched && regionByCell.has(cellKey(cursor))) onRemove(cursor);
+        else onPlace(withOwnPatch(keyboardClueId, extentRect(keyboardExtent)));
         setKeyboardExtent(null);
-      } else if (regionByCell.has(cellKey(cursor))) {
-        onRemove(cursor);
-      } else if (clueByCell.has(cellKey(cursor))) {
+      } else if (clueId) {
+        setKeyboardClueId(clueId);
         setKeyboardExtent(startExtent(cursor));
       } else {
         onMisstart?.();
@@ -295,17 +314,20 @@ export function Board({
   };
 
   const activeExtent = gesture?.kind === "draw" && gesture.moved && !gesture.outside ? gesture.extent : keyboardExtent;
-  const previewRect = activeExtent ? extentRect(activeExtent) : null;
+  const activeClueId = gesture?.kind === "draw" ? gesture.clueId : keyboardClueId;
+  const drawingClue = activeExtent && activeClueId ? puzzle.clues.find((clue) => clue.id === activeClueId) : undefined;
+  const previewRect = activeExtent && drawingClue ? withOwnPatch(drawingClue.id, extentRect(activeExtent)) : null;
   const previewState = previewRect ? previewStatus(previewRect) : null;
-  const drawingClue = activeExtent ? clueByCell.get(cellKey(activeExtent.anchor)) : undefined;
+  /** How many cells, and out of how many when the clue says. Faster to read than width by height. */
+  const cellCount = (area: number, clueArea: number | undefined): string => (clueArea === undefined ? String(area) : `${area}/${clueArea}`);
   const wrongRegionId = hint?.kind === "wrong-region" ? hint.regionId : null;
 
   // The size label sits in the corner farthest from the clue, so it never hides the clue's icon.
   const labelCorner =
     activeExtent && previewRect
       ? {
-          vertical: activeExtent.anchor.row - previewRect.row < previewRect.height / 2 ? "bottom" : "top",
-          horizontal: activeExtent.anchor.column - previewRect.column < previewRect.width / 2 ? "right" : "left",
+          vertical: (drawingClue?.row ?? activeExtent.anchor.row) - previewRect.row < previewRect.height / 2 ? "bottom" : "top",
+          horizontal: (drawingClue?.column ?? activeExtent.anchor.column) - previewRect.column < previewRect.width / 2 ? "right" : "left",
         }
       : null;
 
@@ -335,6 +357,7 @@ export function Board({
               const parts = [`Row ${row + 1}, column ${column + 1}.`];
               if (clue) parts.push(`Clue: ${describeClue(clue)}.`);
               parts.push(region ? `Inside a ${region.width} by ${region.height} patch.` : "Empty.");
+              if (region && pendingIds?.has(region.id)) parts.push("This patch is unfinished.");
               if (keyboardExtent && isCursor) parts.push("Drawing. Press Enter to place, Escape to cancel.");
               return (
                 <div
@@ -372,6 +395,7 @@ export function Board({
               className="patches-region"
               data-testid="patches-region"
               data-tween={tween ? "true" : undefined}
+              data-pending={pendingIds?.has(region.id) ? "true" : undefined}
               data-wrong={region.id === wrongRegionId ? "true" : undefined}
               data-redrawing={drawingClue && region.clueId === drawingClue.id ? "true" : undefined}
               style={{ ...percentBox(box, puzzle), "--patch": colors.get(region.clueId)?.value, "--order": index, "--fill-delay": `${(lastRing + 1) * TWEEN_RING_MS}ms` } as CSSProperties}
@@ -393,6 +417,18 @@ export function Board({
                   />
                 ))}
               <div className="patches-region-fill" />
+              {pendingIds?.has(region.id) &&
+                (() => {
+                  // The count sits in the corner farthest from the clue, so it never covers the clue's number.
+                  const own = puzzle.clues.find((entry) => entry.id === region.clueId);
+                  const onRight = own !== undefined && box.width > 1 && own.column - box.column >= box.width / 2;
+                  const onBottom = own !== undefined && box.width === 1 && own.row - box.row >= box.height / 2;
+                  return (
+                    <span className="patches-pending-count" data-side={onRight ? "left" : "right"} data-edge={onBottom ? "top" : "bottom"} data-testid="patches-pending-count">
+                      {cellCount(region.area, own?.area)}
+                    </span>
+                  );
+                })()}
             </div>
           );
         })}
@@ -428,8 +464,8 @@ export function Board({
             style={{ ...percentBox(previewRect, puzzle), "--patch": drawingClue ? colors.get(drawingClue.id)?.value : undefined } as CSSProperties}
           >
             <div className="patches-preview-fill" />
-            <span className="patches-preview-size">
-              {previewRect.width}×{previewRect.height}
+            <span className="patches-preview-size" data-testid="patches-preview-count">
+              {cellCount(previewRect.width * previewRect.height, drawingClue?.area)}
             </span>
           </div>
         )}

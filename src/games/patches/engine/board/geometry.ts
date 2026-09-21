@@ -52,6 +52,13 @@ export function rectsOverlap(a: Rect, b: Rect): boolean {
   );
 }
 
+/** Smallest rectangle that holds both. */
+export function unionRect(a: Rect, b: Rect): Rect {
+  const row = Math.min(a.row, b.row);
+  const column = Math.min(a.column, b.column);
+  return { row, column, width: Math.max(a.column + a.width, b.column + b.width) - column, height: Math.max(a.row + a.height, b.row + b.height) - row };
+}
+
 export function rectInBounds(width: number, height: number, rect: Rect): boolean {
   return (
     rect.width >= 1 &&

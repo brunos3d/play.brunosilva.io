@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useGameClock } from "@/shared/hooks/use-game-clock";
 import { playSound } from "@/shared/platform/audio";
 import { vibrate } from "@/shared/platform/haptics";
@@ -8,7 +8,7 @@ import type { FinishSummary } from "@/shared/platform/results";
 import { loadBoard, saveBoard } from "@/shared/storage/progress";
 import type { Settings } from "@/shared/storage/settings";
 import { IDLE_STATUS, type StatusMessage } from "@/shared/ui/status-line";
-import { type GameState, canUndo, createGame, isLocked, placeRegion, previewRect, recordHint, removeRegionAt, resetGame, revealStep, undo as undoAction } from "../engine/game/state";
+import { type GameState, canUndo, createGame, isLocked, pendingRegionIds, placeRegion, previewRect, recordHint, removeRegionAt, resetGame, revealStep, undo as undoAction } from "../engine/game/state";
 import { type Hint, getHint } from "../engine/hints/hint";
 import type { CellCoordinate, PuzzleShape, Rect, Region } from "../engine/types";
 import { fromSnapshot, toSnapshot } from "../storage/progress";
@@ -27,6 +27,9 @@ type Options = {
   /** Persist progress under the puzzle id. The tutorial turns this off. */
   persist?: boolean;
 };
+
+const rectTouchesRegion = (rect: Rect, region: Region): boolean =>
+  region.cells.some((cell) => cell.row >= rect.row && cell.row < rect.row + rect.height && cell.column >= rect.column && cell.column < rect.column + rect.width);
 
 const summarize = (state: GameState, elapsedMs: number): FinishSummary => ({
   elapsedMs,
@@ -154,7 +157,9 @@ export function usePatchesGame({ puzzle, settings, persist = true }: Options) {
       const result = placeRegion(puzzle, gameRef.current, rect);
       if (!result.ok) {
         if (result.errors.length === 0) return;
-        setStatus({ kind: "invalid", text: result.errors[0].message });
+        // A refused stroke on top of an existing patch leaves that patch as it was.
+        const own = gameRef.current.regions.some((region) => result.errors.length > 0 && rectTouchesRegion(rect, region));
+        setStatus({ kind: "invalid", text: own ? `${result.errors[0].message} Tap the patch to take it off and start over.` : result.errors[0].message });
         setShakeSignal((signal) => signal + 1);
         feedback("invalid");
         return;
@@ -169,8 +174,13 @@ export function usePatchesGame({ puzzle, settings, persist = true }: Options) {
       commit(result.state);
       if (result.solved) {
         end(result.state);
+      } else if (result.pending) {
+        const clue = puzzle.clues.find((entry) => entry.id === result.region.clueId);
+        const count = clue?.area === undefined ? `${result.region.area} cells so far` : `${result.region.area} of ${clue.area} cells`;
+        setStatus({ kind: "info", text: `${count}. Drag again from the clue or from the patch to add the rest.` });
+        feedback("place");
       } else {
-        const verb = result.replaced ? "Redrew the patch as" : "Placed a";
+        const verb = result.replaced ? "Patch finished:" : "Placed a";
         setStatus({ kind: "info", text: `${verb} ${result.region.width} by ${result.region.height}${result.replaced ? "." : " patch."}` });
         feedback("place");
       }
@@ -256,6 +266,7 @@ export function usePatchesGame({ puzzle, settings, persist = true }: Options) {
   }, []);
 
   const previewStatus = useCallback((rect: Rect) => previewRect(puzzle, gameRef.current, rect).status, [puzzle]);
+  const pendingIds = useMemo(() => pendingRegionIds(puzzle, game), [puzzle, game]);
 
   return {
     game,
@@ -264,6 +275,7 @@ export function usePatchesGame({ puzzle, settings, persist = true }: Options) {
     hint,
     status,
     shakeSignal,
+    pendingIds,
     tweenIds,
     elapsed: clock.elapsed,
     summary,

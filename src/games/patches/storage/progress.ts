@@ -1,8 +1,8 @@
-import { type GameAction, type GameState, createGame } from "../engine/game/state";
-import { buildRegion } from "../engine/regions/region";
+import { type GameAction, type GameState, createGame, previewRect } from "../engine/game/state";
+import { buildRegion, isFilledRectangle, regionRect } from "../engine/regions/region";
 import { type Clock, restoreClock } from "@/shared/engine/clock";
 import type { CellCoordinate, PuzzleShape, Region } from "../engine/types";
-import { validateRegion } from "../engine/validation/validate-region";
+import { cluesInside } from "../engine/validation/validate-region";
 import { validateState } from "../engine/validation/validate-state";
 
 const SNAPSHOT_VERSION = 2;
@@ -70,7 +70,12 @@ export function fromSnapshot(puzzle: PuzzleShape & { id: string }, snapshot: unk
     const regions: Region[] = [];
     for (const stored of data.regions) {
       const region = unpack(stored);
-      if (!validateRegion(puzzle, regions, region).ok) return null;
+      // A stored patch must be a real rectangle, and either legal or still able to become legal.
+      if (!isFilledRectangle(region.cells)) return null;
+      // The patch must hold exactly the clue it claims, and no clue may have two patches.
+      const inside = cluesInside(puzzle, region.cells);
+      if (inside.length !== 1 || inside[0].id !== stored.clueId || regions.some((other) => other.clueId === stored.clueId)) return null;
+      if (previewRect(puzzle, { ...createGame(puzzle.id), regions }, regionRect(region)).status === "invalid") return null;
       regions.push(region);
     }
     const history: GameAction[] = data.history.map((action) => {

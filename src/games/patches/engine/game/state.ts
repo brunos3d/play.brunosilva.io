@@ -1,13 +1,14 @@
-import { cellKey, rectCells } from "../board/geometry";
-import { buildRegion, regionIdForClue } from "../regions/region";
+import { cellKey, rectCells, unionRect } from "../board/geometry";
+import { buildRegion, regionIdForClue, regionRect } from "../regions/region";
 import type { CellCoordinate, PuzzleShape, Rect, Region } from "../types";
+import { canGrowIntoLegal } from "../validation/extendable";
 import { type RegionError, cluesInside, validateRegion } from "../validation/validate-region";
 import { validateState } from "../validation/validate-state";
 
 export type GameAction =
   | { type: "place"; region: Region }
   | { type: "remove"; region: Region }
-  /** A clue's patch was redrawn in one gesture. `previous` is what it replaced. */
+  /** A clue's patch grew by another stroke. `previous` is what it was before. */
   | { type: "replace"; region: Region; previous: Region };
 
 export type GameStatus = "playing" | "solved";
@@ -20,7 +21,7 @@ export type GameState = {
   status: GameStatus;
   /** Patches placed, including ones later removed. */
   moves: number;
-  /** Patches taken off the board by a tap or by Undo. */
+  /** Patches taken off the board by a tap or by Undo. Growing a patch with another stroke is not a redraw. */
   redraws: number;
   hintsUsed: number;
   /**
@@ -30,8 +31,18 @@ export type GameState = {
   revealed: boolean;
 };
 
+/**
+ * How a rectangle stands against the rules.
+ * - valid: a legal patch.
+ * - pending: not legal yet, but it can still grow into a legal patch, so the
+ *   player may leave it on the board and come back to it.
+ * - invalid: it can never become legal: it holds another clue, overlaps another
+ *   patch, exceeds the clue's number, or contradicts the clue's shape for good.
+ */
+export type RectStatus = "valid" | "pending" | "invalid";
+
 export type PlaceResult =
-  | { ok: true; state: GameState; region: Region; solved: boolean; replaced: Region | null }
+  | { ok: true; state: GameState; region: Region; solved: boolean; pending: boolean; replaced: Region | null }
   | { ok: false; state: GameState; errors: RegionError[] };
 
 export function createGame(puzzleId: string): GameState {
@@ -46,30 +57,57 @@ export function regionForRect(puzzle: PuzzleShape, rect: Rect): Region {
   return buildRegion(clueId ? regionIdForClue(clueId) : "region-preview", clueId, cells);
 }
 
-/** Live feedback for a drag. `neutral` means no clue yet, so nothing is wrong so far. */
-export function previewRect(puzzle: PuzzleShape, state: GameState, rect: Rect): { status: "neutral" | "valid" | "invalid"; errors: RegionError[] } {
-  const region = regionForRect(puzzle, rect);
+/**
+ * A drag adds to the patch its clue already has: the result is the smallest
+ * rectangle around both. That is what lets a patch be drawn in several strokes.
+ * To make a patch smaller, the player taps it off and draws again.
+ */
+export function mergeWithOwnPatch(puzzle: PuzzleShape, state: Pick<GameState, "regions">, rect: Rect): Rect {
+  const cells = rectCells(rect);
+  const inside = cluesInside(puzzle, cells);
+  if (inside.length > 1) return rect;
+  // With a clue inside, the stroke belongs to that clue. Without one, it belongs to the patch it starts on,
+  // which is how a second stroke from the far end of an unfinished patch still counts.
+  const keys = new Set(cells.map(cellKey));
+  const touched = state.regions.filter((region) => region.cells.some((cell) => keys.has(cellKey(cell))));
+  const own = inside.length === 1 ? state.regions.find((region) => region.clueId === inside[0].id) : touched.length === 1 ? touched[0] : undefined;
+  return own ? unionRect(regionRect(own), rect) : rect;
+}
+
+function classify(puzzle: PuzzleShape, state: GameState, rect: Rect): { status: RectStatus; region: Region; errors: RegionError[] } {
+  const region = regionForRect(puzzle, mergeWithOwnPatch(puzzle, state, rect));
+  // validateRegion skips the region with the same id, so a clue's own patch never blocks its growth.
   const result = validateRegion(puzzle, state.regions, region);
-  if (result.ok) return { status: "valid", errors: [] };
-  const onlyMissingClue = result.errors.every((error) => error.code === "no-clue");
-  return { status: onlyMissingClue ? "neutral" : "invalid", errors: result.errors };
+  if (result.ok) return { status: "valid", region, errors: [] };
+  const onlyUnfinished = result.clue !== null && result.errors.every((error) => error.code === "wrong-area" || error.code === "wrong-shape");
+  const others = state.regions.filter((other) => other.id !== region.id);
+  const pending = onlyUnfinished && canGrowIntoLegal(puzzle, others, result.clue!, regionRect(region));
+  return { status: pending ? "pending" : "invalid", region, errors: result.errors };
+}
+
+/** Live feedback for a drag. */
+export function previewRect(puzzle: PuzzleShape, state: GameState, rect: Rect): { status: RectStatus; errors: RegionError[] } {
+  const { status, errors } = classify(puzzle, state, rect);
+  return { status, errors };
+}
+
+/** Patches on the board that are not legal yet. The board cannot be complete while there is one. */
+export function pendingRegionIds(puzzle: PuzzleShape, state: Pick<GameState, "regions">): Set<string> {
+  return new Set(state.regions.filter((region) => !validateRegion(puzzle, state.regions, region).ok).map((region) => region.id));
 }
 
 /**
- * Places a patch if the rules allow it. An illegal rectangle leaves the state
- * untouched and reports why. A legal patch is placed even when it is not the
- * one from the solution: the player finds that out by deduction or by a hint.
- *
- * Drawing again from a clue that already has a patch replaces that patch in a
- * single undoable action and counts as a redraw. Completion is decided by the
- * full validator, never by counting covered cells.
+ * Puts a rectangle on the board if it is legal, or if it can still become
+ * legal. Only a rectangle that can never be right is refused, and then the
+ * state is untouched and the reason comes back. A legal patch stays even when
+ * it is not the one from the solution: the player finds that out by deduction
+ * or by a hint. Completion is decided by the full validator, never by counting
+ * covered cells, so a pending patch can never finish a board.
  */
 export function placeRegion(puzzle: PuzzleShape, state: GameState, rect: Rect): PlaceResult {
   if (isLocked(state)) return { ok: false, state, errors: [] };
-  const region = regionForRect(puzzle, rect);
-  // validateRegion skips the region with the same id, so a clue's own patch never blocks its redraw.
-  const result = validateRegion(puzzle, state.regions, region);
-  if (!result.ok) return { ok: false, state, errors: result.errors };
+  const { status, region, errors } = classify(puzzle, state, rect);
+  if (status === "invalid") return { ok: false, state, errors };
 
   const previous = state.regions.find((other) => other.id === region.id) ?? null;
   if (previous && previous.cells.length === region.cells.length && previous.cells.every((cell, index) => cellKey(cell) === cellKey(region.cells[index]))) {
@@ -82,13 +120,13 @@ export function placeRegion(puzzle: PuzzleShape, state: GameState, rect: Rect): 
     ok: true,
     region,
     solved,
+    pending: status === "pending",
     replaced: previous,
     state: {
       ...state,
       regions,
       history: [...state.history, previous ? { type: "replace", region, previous } : { type: "place", region }],
       moves: state.moves + 1,
-      redraws: state.redraws + (previous ? 1 : 0),
       status: solved ? "solved" : "playing",
     },
   };

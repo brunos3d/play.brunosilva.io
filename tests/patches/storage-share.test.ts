@@ -97,9 +97,11 @@ describe("seeds and share URLs", () => {
     expect(specFromSearchParams(patchesSeeds, new URLSearchParams("seed=abc"))).toEqual({ token: "abc", version: 1, difficulty: "medium" });
     expect(resolveSpec({ seed: "abc", difficulty: "nope", size: "99" })).toEqual({ token: "abc", version: 1, difficulty: "medium" });
     expect(specFromSearchParams(patchesSeeds, new URLSearchParams("difficulty=hard"))).toBeNull();
-    expect(buildPlayPath("/zip", zipSeeds, { token: "7", version: 1, difficulty: "easy" })).toBe("/zip/play?seed=ZIP%3A7%3A1%3Aeasy");
+    expect(buildPlayPath("/zip", zipSeeds, { token: "7", version: 2, difficulty: "easy" })).toBe("/zip/play?seed=ZIP%3A7%3A2%3Aeasy");
     // An old Zip link such as /hard/42 lands here: size 9 is out of Zip's range and is dropped, not fatal.
-    expect(specFromSearchParams(zipSeeds, new URLSearchParams("seed=42&difficulty=hard&size=9"))).toEqual({ token: "42", version: 1, difficulty: "hard" });
+    expect(specFromSearchParams(zipSeeds, new URLSearchParams("seed=42&difficulty=hard&size=9"))).toEqual({ token: "42", version: 2, difficulty: "hard" });
+    // A link made with the first generator says so, and keeps its board.
+    expect(specFromSearchParams(zipSeeds, new URLSearchParams("seed=ZIP%3A42%3A1%3Ahard"))).toEqual({ token: "42", version: 1, difficulty: "hard" });
   });
 
   it("formats the result text the same way for every game", () => {

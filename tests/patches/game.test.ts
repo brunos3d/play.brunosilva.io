@@ -28,12 +28,16 @@ describe("placing and removing", () => {
     if (!result.ok) expect(result.errors.map((error) => error.code)).toContain("overlap");
   });
 
-  it("previews neutral, valid and invalid rectangles", () => {
+  it("previews valid, pending and invalid rectangles", () => {
     const state = place(fresh(), "a");
-    expect(previewRect(puzzle, state, { row: 1, column: 2, width: 1, height: 1 }).status).toBe("neutral");
     expect(previewRect(puzzle, state, QUADRANT_RECTS.b).status).toBe("valid");
-    expect(previewRect(puzzle, state, { row: 0, column: 2, width: 2, height: 1 }).status).toBe("invalid");
-    expect(previewRect(puzzle, state, { row: 0, column: 1, width: 1, height: 1 }).status).toBe("invalid");
+    // Two of the four cells of "4, square": not legal yet, but it can still grow into the 2x2.
+    expect(previewRect(puzzle, state, { row: 0, column: 2, width: 2, height: 1 }).status).toBe("pending");
+    // No clue inside and no patch under it, or reaching into another clue's patch: never legal.
+    expect(previewRect(puzzle, state, { row: 1, column: 2, width: 1, height: 1 }).status).toBe("invalid");
+    expect(previewRect(puzzle, state, { row: 0, column: 1, width: 3, height: 2 }).status).toBe("invalid");
+    // A stroke on a clue's own patch is part of that patch.
+    expect(previewRect(puzzle, state, { row: 0, column: 1, width: 1, height: 1 }).status).toBe("valid");
   });
 
   it("removes the patch under a tapped cell and counts a redraw", () => {

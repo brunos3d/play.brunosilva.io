@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { type Puzzle, type Rect, clueAccepts, generateFromSpec, rectContains, rectEquals, resolveSpec } from "@/games/patches/engine";
-import { type Target, board, cellCenter, dragThrough, draw, openPuzzle, regions, skipTutorial, status, tapCell, targetsOf } from "./helpers";
+import { type Target, board, cellCenter, dragThrough, draw, firstStroke, openPuzzle, regions, skipTutorial, status, tapCell, targetsOf } from "./helpers";
 
 const SIZE = 7;
 
@@ -59,15 +59,18 @@ test("dragging up from a middle clue and back down keeps the rows above", async 
   const topLeft = { row: rect.row, column: rect.column };
   const bottomRight = { row: rect.row + rect.height - 1, column: rect.column + rect.width - 1 };
 
-  // First leg: from the clue to the top-left corner. So far the patch spans only that stretch.
+  // First leg: from the clue to the top-left corner. So far the patch spans only that stretch. The label counts cells.
+  const count = page.getByTestId("patches-preview-count");
+  const area = puzzle.clues.find((entry) => entry.row === clue.row && entry.column === clue.column)!.area;
+  const label = (cells: number) => (area === undefined ? String(cells) : `${cells}/${area}`);
   await dragThrough(page, SIZE, [clue, topLeft]);
-  await expect(preview).toContainText(`${clue.column - rect.column + 1}×${clue.row - rect.row + 1}`);
+  await expect(count).toHaveText(label((clue.column - rect.column + 1) * (clue.row - rect.row + 1)));
 
   // Back down past the clue row. An anchor-to-cursor rectangle would drop the rows above here.
   const grid = board(page).getByRole("grid");
   const end = await cellCenter(grid, SIZE, bottomRight);
   await page.mouse.move(end.x, end.y, { steps: 8 });
-  await expect(preview).toContainText(`${rect.width}×${rect.height}`);
+  await expect(count).toHaveText(label(rect.width * rect.height));
   await expect(preview).toHaveAttribute("data-status", "valid");
   await page.mouse.up();
 
@@ -92,18 +95,52 @@ test("a legal patch stays on the board even when it is the wrong answer, until i
   await expect(regions(page)).toHaveCount(0);
 });
 
-test("drawing again from a clue replaces its patch, and one undo brings the old one back", async ({ page }) => {
-  const wrong = legalButWrong();
-  const right = targets.find((target) => target.clue.row === wrong.clue.row && target.clue.column === wrong.clue.column)!;
-  await draw(page, SIZE, wrong);
-  await draw(page, SIZE, right);
-  await expect(regions(page)).toHaveCount(1);
-  await expect(status(page)).toContainText("Redrew");
+test("an unfinished patch stays, and a second stroke from the patch finishes it", async ({ page }) => {
+  const { target, part, area } = firstStroke(puzzle);
+  await draw(page, SIZE, { clue: target.clue, rect: part });
 
-  await page.getByRole("button", { name: "Undo" }).click();
+  // Not cancelled, not complete: it stays as unfinished and says how many cells it has.
   await expect(regions(page)).toHaveCount(1);
+  await expect(regions(page).first()).toHaveAttribute("data-pending", "true");
+  await expect(page.getByTestId("patches-pending-count")).toHaveText(`2/${area}`);
+  await expect(status(page)).toContainText(`2 of ${area} cells`);
+  await expect(status(page)).toHaveAttribute("data-kind", "info");
+
+  // Second stroke, started on a cell of the patch that is not the clue.
+  const other = part.width > 1 ? { row: part.row, column: part.column === target.clue.column ? part.column + 1 : part.column } : { row: part.row === target.clue.row ? part.row + 1 : part.row, column: part.column };
+  const { rect } = target;
+  await dragThrough(page, SIZE, [other, { row: rect.row, column: rect.column }, { row: rect.row + rect.height - 1, column: rect.column + rect.width - 1 }]);
+  await expect(page.getByTestId("patches-preview")).toHaveAttribute("data-status", "valid");
+  await page.mouse.up();
+
+  await expect(regions(page)).toHaveCount(1);
+  await expect(regions(page).first()).not.toHaveAttribute("data-pending", "true");
+  await expect(page.getByTestId("patches-pending-count")).toHaveCount(0);
+
+  // Each stroke is one undo step, and growing a patch is not a redraw.
+  await page.getByRole("button", { name: "Undo" }).click();
+  await expect(regions(page).first()).toHaveAttribute("data-pending", "true");
   await page.getByRole("button", { name: "Undo" }).click();
   await expect(regions(page)).toHaveCount(0);
+});
+
+test("a stroke stops at other clues and never shows them covered", async ({ page }) => {
+  // Sweep from one clue to the far corners of the board, across every other clue.
+  const { clue } = targets[0];
+  await dragThrough(page, SIZE, [clue, { row: 0, column: 0 }, { row: SIZE - 1, column: SIZE - 1 }, { row: 0, column: SIZE - 1 }, { row: SIZE - 1, column: 0 }]);
+  const preview = page.getByTestId("patches-preview");
+  await expect(preview).toBeVisible();
+
+  const grid = (await board(page).getByRole("grid").boundingBox())!;
+  const box = (await preview.boundingBox())!;
+  const step = grid.width / SIZE;
+  const covered = puzzle.clues.filter((entry) => {
+    const [x, y] = [grid.x + (entry.column + 0.5) * step, grid.y + (entry.row + 0.5) * step];
+    return x > box.x && x < box.x + box.width && y > box.y && y < box.y + box.height;
+  });
+  expect(covered.map((entry) => [entry.row, entry.column])).toEqual([[clue.row, clue.column]]);
+  await expect(status(page)).not.toHaveAttribute("data-kind", "invalid");
+  await page.mouse.up();
 });
 
 test("releasing outside the board, or pressing Escape, cancels the drag", async ({ page }) => {

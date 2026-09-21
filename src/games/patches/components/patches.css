@@ -35,6 +35,34 @@
 .patches-region[data-leaving="true"] { animation: patch-out 140ms ease-in both; }
 
 /*
+ * An unfinished patch: legal so far, but not complete. It is lighter, has a
+ * dashed edge and no stitching, and says how many cells it has. A finished
+ * patch looks sewn on. This one looks pinned.
+ */
+.patches-region[data-pending="true"] .patches-region-fill {
+  background: color-mix(in oklab, var(--patch) 38%, var(--tile));
+  box-shadow: none;
+  border: 2px dashed color-mix(in oklab, var(--patch) 62%, #2a2622);
+}
+.patches-region[data-pending="true"] .patches-region-fill::after { display: none; }
+.patches-pending-count {
+  position: absolute;
+  right: calc(var(--tile-gap) + 5px);
+  bottom: calc(var(--tile-gap) + 4px);
+  z-index: 7;
+  font-size: 11px;
+  line-height: 16px;
+  font-weight: 700;
+  padding: 0 6px;
+  border-radius: 99px;
+  background: var(--ink);
+  color: var(--surface);
+  font-variant-numeric: tabular-nums;
+}
+.patches-pending-count[data-side="left"] { right: auto; left: calc(var(--tile-gap) + 5px); }
+.patches-pending-count[data-edge="top"] { bottom: auto; top: calc(var(--tile-gap) + 4px); }
+
+/*
  * A patch the game placed itself (hint or reveal) grows cell by cell from its
  * clue, ring by ring, and then the single stitched patch fades in over it.
  */
@@ -128,6 +156,12 @@
   background: color-mix(in oklab, var(--patch, var(--valid)) 70%, transparent);
 }
 
+/* Not a legal patch yet, but it can still become one. Calm, in the clue's own colour. */
+.patches-preview[data-status="pending"] .patches-preview-fill {
+  border: 2.5px dashed color-mix(in oklab, var(--patch, var(--ink-faint)) 62%, #2a2622);
+  background: color-mix(in oklab, var(--patch, var(--ink-faint)) 45%, transparent);
+}
+
 .patches-preview[data-status="invalid"] .patches-preview-fill {
   border: 2.5px dashed var(--invalid);
   background-color: color-mix(in oklab, var(--patch, var(--invalid)) 28%, transparent);
@@ -147,6 +181,8 @@
   color: var(--surface);
   font-variant-numeric: tabular-nums;
 }
+.patches-pending-count[data-side="left"] { right: auto; left: calc(var(--tile-gap) + 5px); }
+.patches-pending-count[data-edge="top"] { bottom: auto; top: calc(var(--tile-gap) + 4px); }
 .patches-preview[data-label-v="top"] .patches-preview-size { top: calc(var(--tile-gap) + 5px); }
 .patches-preview[data-label-v="bottom"] .patches-preview-size { bottom: calc(var(--tile-gap) + 5px); }
 .patches-preview[data-label-h="right"] .patches-preview-size { right: calc(var(--tile-gap) + 6px); }

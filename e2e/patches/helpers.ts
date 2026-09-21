@@ -54,6 +54,46 @@ export function sweep(target: Target): CellCoordinate[] {
   return [clue, { row: rect.row, column: rect.column }, { row: rect.row + rect.height - 1, column: rect.column + rect.width - 1 }];
 }
 
+/**
+ * A stroke that can never be right: the solution patch of a numbered clue, grown by one row or column that holds no
+ * other clue. It has more cells than the clue allows. Strokes stop at other clues by themselves, so "swallow
+ * everything" is no longer a way to draw something illegal.
+ */
+export function overshoot(puzzle: Puzzle): Target {
+  for (const target of targetsOf(puzzle)) {
+    const clue = puzzle.clues.find((entry) => entry.row === target.clue.row && entry.column === target.clue.column)!;
+    if (clue.area === undefined) continue;
+    const { row, column, width, height } = target.rect;
+    const grown: Rect[] = [
+      { row: row - 1, column, width, height: height + 1 },
+      { row, column, width, height: height + 1 },
+      { row, column: column - 1, width: width + 1, height },
+      { row, column, width: width + 1, height },
+    ];
+    const fits = grown.find(
+      (rect) =>
+        rect.row >= 0 && rect.column >= 0 && rect.row + rect.height <= puzzle.height && rect.column + rect.width <= puzzle.width &&
+        puzzle.clues.filter((entry) => entry.row >= rect.row && entry.row < rect.row + rect.height && entry.column >= rect.column && entry.column < rect.column + rect.width).length === 1,
+    );
+    if (fits) return { rect: fits, clue: target.clue };
+  }
+  throw new Error("no clue in this puzzle can be overshot");
+}
+
+/** The clue cell plus one neighbour inside its patch: a first stroke that leaves the patch unfinished. */
+export function firstStroke(puzzle: Puzzle): { target: Target; part: Rect; area: number } {
+  for (const target of targetsOf(puzzle)) {
+    const clue = puzzle.clues.find((entry) => entry.row === target.clue.row && entry.column === target.clue.column)!;
+    if (clue.area === undefined || clue.area < 4) continue;
+    const { rect } = target;
+    const sideways = rect.width > 1;
+    const column = sideways ? Math.min(clue.column, rect.column + rect.width - 2) : clue.column;
+    const row = sideways ? clue.row : Math.min(clue.row, rect.row + rect.height - 2);
+    return { target, part: { row, column, width: sideways ? 2 : 1, height: sideways ? 1 : 2 }, area: clue.area };
+  }
+  throw new Error("no numbered clue of four or more cells in this puzzle");
+}
+
 export async function startDraw(page: Page, size: number, target: Target): Promise<void> {
   await dragThrough(page, size, sweep(target));
 }

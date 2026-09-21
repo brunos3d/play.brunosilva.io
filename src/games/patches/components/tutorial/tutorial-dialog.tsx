@@ -10,35 +10,37 @@ import { Dialog } from "@/shared/ui/dialog";
 import { HintIcon, UndoIcon } from "@/shared/ui/icons";
 import { TUTORIAL_PUZZLE } from "./tutorial-puzzle";
 
-type Step = { title: string; body: string; done: (game: GameState) => boolean };
+type Step = { title: string; body: string; done: (game: GameState, pending: ReadonlySet<string>) => boolean };
 
-const has = (game: GameState, clueId: string): boolean => game.regions.some((region) => region.clueId === clueId);
+/** The clue has a finished patch. An unfinished one does not complete a step. */
+const has = (game: GameState, clueId: string, pending: ReadonlySet<string>): boolean => game.regions.some((region) => region.clueId === clueId && !pending.has(region.id));
+const present = (game: GameState, clueId: string): boolean => game.regions.some((region) => region.clueId === clueId);
 
 const STEPS: Step[] = [
   {
     title: "Draw a patch",
     body: "Every patch is a rectangle with exactly one clue inside. The 4 in a square outline means a square of 4 cells. Press the 4 and drag outward to draw it.",
-    done: (game) => has(game, "a"),
+    done: (game, pending) => has(game, "a", pending),
   },
   {
     title: "Shapes",
-    body: "A tall outline means taller than wide. This clue wants 6 cells, 2 wide and 3 high. Press the 6, drag up and left, then down. The patch keeps what you already covered.",
-    done: (game) => has(game, "c"),
+    body: "A tall outline means taller than wide. This clue wants 6 cells, 2 wide and 3 high. Press the 6 and drag. You can stop halfway: an unfinished patch stays, and another drag from it adds the rest.",
+    done: (game, pending) => has(game, "c", pending),
   },
   {
     title: "Remove a patch",
     body: "Changed your mind? Tap a patch to remove it. Tap the tall patch you just drew.",
-    done: (game) => !has(game, "c"),
+    done: (game) => !present(game, "c"),
   },
   {
     title: "Undo",
     body: "Undo reverts your last move, including a removal. Press Undo to bring the patch back.",
-    done: (game) => has(game, "c"),
+    done: (game, pending) => has(game, "c", pending),
   },
   {
     title: "No number",
     body: "The wide outline has no number, so the size is up to you. Patches cannot overlap or swallow a second clue. Only one wide rectangle fits here.",
-    done: (game) => has(game, "b"),
+    done: (game, pending) => has(game, "b", pending),
   },
   {
     title: "Fill the board",
@@ -55,7 +57,7 @@ function TutorialBody({ settings, onClose }: Omit<Props, "open">) {
 
   // Steps only move forward. A player who works ahead skips the steps they already satisfied.
   const [stepIndex, setStepIndex] = useState(0);
-  if (stepIndex < STEPS.length && STEPS[stepIndex].done(game.game)) setStepIndex(stepIndex + 1);
+  if (stepIndex < STEPS.length && STEPS[stepIndex].done(game.game, game.pendingIds)) setStepIndex(stepIndex + 1);
 
   const finished = stepIndex >= STEPS.length;
   const step = STEPS[Math.min(stepIndex, STEPS.length - 1)];
@@ -84,6 +86,7 @@ function TutorialBody({ settings, onClose }: Omit<Props, "open">) {
           locked={finished}
           solved={game.game.status === "solved"}
           shakeSignal={game.shakeSignal}
+          pendingIds={game.pendingIds}
           tweenIds={game.tweenIds}
           label="Tutorial board, 4 by 4"
           previewStatus={game.previewStatus}

@@ -31,6 +31,36 @@ export function extendExtent(extent: DragExtent, cell: CellCoordinate): DragExte
   return { anchor: extent.anchor, top, bottom, left, right };
 }
 
+/**
+ * Grows the extent toward `cell`, but only as far as `isFree` allows. The
+ * drag can wander over another clue or another patch, and the rectangle simply
+ * stops at their edge instead of swallowing them. It grows one row or column at
+ * a time, taking turns between the four sides, so it reaches as far as it can
+ * in every direction that is still open.
+ */
+export function extendExtentWithin(extent: DragExtent, cell: CellCoordinate, isFree: (rect: Rect) => boolean): DragExtent {
+  const target = extendExtent(extent, cell);
+  if (target === extent) return extent;
+  let current = extent;
+  for (let progressed = true; progressed; ) {
+    progressed = false;
+    const steps: DragExtent[] = [];
+    if (current.top > target.top) steps.push({ ...current, top: current.top - 1 });
+    if (current.bottom < target.bottom) steps.push({ ...current, bottom: current.bottom + 1 });
+    if (current.left > target.left) steps.push({ ...current, left: current.left - 1 });
+    if (current.right < target.right) steps.push({ ...current, right: current.right + 1 });
+    for (const step of steps) {
+      // Re-check against the latest extent: an earlier step of this round may have changed the other axis.
+      const next: DragExtent = { anchor: current.anchor, top: Math.min(current.top, step.top), bottom: Math.max(current.bottom, step.bottom), left: Math.min(current.left, step.left), right: Math.max(current.right, step.right) };
+      if (isFree(extentRect(next))) {
+        current = next;
+        progressed = true;
+      }
+    }
+  }
+  return current;
+}
+
 export function extentRect(extent: DragExtent): Rect {
   return { row: extent.top, column: extent.left, width: extent.right - extent.left + 1, height: extent.bottom - extent.top + 1 };
 }

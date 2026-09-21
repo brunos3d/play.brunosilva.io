@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { confirmReveal, seconds, timer } from "../shared";
-import { board, draw, openPuzzle, practicePuzzle, regions, skipTutorial, solve, startDraw, status, tapCell, watchConsole } from "./helpers";
+import { board, draw, openPuzzle, overshoot, practicePuzzle, regions, skipTutorial, solve, startDraw, status, tapCell, watchConsole } from "./helpers";
 
 const SIZE = 6;
 const { puzzle, targets, url } = practicePuzzle("e2e-gameplay", "medium", SIZE);
@@ -40,9 +40,8 @@ test("the preview reports valid and invalid, and an illegal release changes noth
   await page.mouse.up();
   await expect(regions(page)).toHaveCount(1);
 
-  // Sweeping the whole board from a clue swallows every other clue, so it can never be one patch.
-  const whole = { clue: targets[1].clue, rect: { row: 0, column: 0, width: SIZE, height: SIZE } };
-  await startDraw(page, SIZE, whole);
+  // One row or column too many for a numbered clue: more cells than it allows, so it can never be right.
+  await startDraw(page, SIZE, overshoot(puzzle));
   await expect(preview).toHaveAttribute("data-status", "invalid");
   await page.mouse.up();
   await expect(regions(page)).toHaveCount(1);
@@ -142,6 +141,8 @@ test("the keyboard alone can draw and remove a patch, starting from the clue", a
   await page.keyboard.press("Enter");
   await expect(regions(page)).toHaveCount(1);
 
+  // Enter twice on a patch without moving is the keyboard's tap: it takes the patch off.
+  await page.keyboard.press("Enter");
   await page.keyboard.press("Enter");
   await expect(regions(page)).toHaveCount(0);
   await page.keyboard.press("z");
@@ -167,4 +168,35 @@ test("practice setup starts a seeded puzzle", async ({ page }) => {
   await page.getByTestId("game-start").click();
   await expect(page).toHaveURL(/seed=PATCHES%3Amy-seed%3A1%3Ahard%3A8/);
   await expect(page.getByRole("gridcell")).toHaveCount(64);
+});
+
+test("practice has a New game control that loads another board and restarts the clock", async ({ page }) => {
+  await page.clock.install({ time: new Date("2026-09-21T18:00:00Z") });
+  await openPuzzle(page, url);
+  await draw(page, SIZE, targets[0]);
+  // Real time spent dragging counts too, so the clock shows at least the twenty seconds skipped here.
+  await page.clock.fastForward(20_000);
+  expect(seconds(await timer(page).innerText())).toBeGreaterThanOrEqual(20);
+
+  await page.getByTestId("game-new").click();
+  await expect(page).toHaveURL(/seed=PATCHES%3A[a-z0-9]{8}%3A1%3Amedium%3A6/);
+  await expect(board(page)).toHaveAttribute("data-locked", "false");
+  await expect(regions(page)).toHaveCount(0);
+  expect(seconds(await timer(page).innerText())).toBeLessThan(3);
+});
+
+test("a clue without a number shows ?, with or without a shape, and the patch size once it has a patch", async ({ page }) => {
+  const hard = practicePuzzle("e2e-hidden", "expert", 8);
+  const numberless = hard.puzzle.clues.filter((clue) => clue.area === undefined);
+  expect(numberless.length).toBeGreaterThan(0);
+  expect(numberless.length).toBeLessThan(hard.puzzle.clues.length);
+
+  await openPuzzle(page, hard.url);
+  const marks = board(page).getByTestId("patches-hidden-number");
+  await expect(marks).toHaveCount(numberless.length);
+  for (const text of await marks.allTextContents()) expect(text.trim()).toBe("?");
+
+  const target = hard.targets.find((entry) => numberless.some((clue) => clue.row === entry.clue.row && clue.column === entry.clue.column))!;
+  await draw(page, 8, target);
+  await expect(marks).toHaveCount(numberless.length - 1);
 });

@@ -46,7 +46,8 @@ function GameView({ spec, puzzle, generationMs, daily, onNext }: ViewProps) {
   const colors = useMemo(() => assignPatchColors(puzzle.clues, puzzle.id), [puzzle]);
 
   const solved = game.game.status === "solved";
-  const placed = game.game.regions.length;
+  const placed = game.game.regions.length - game.pendingIds.size;
+  const unfinished = game.pendingIds.size;
 
   return (
     <GameFrame
@@ -57,7 +58,7 @@ function GameView({ spec, puzzle, generationMs, daily, onNext }: ViewProps) {
       seed={puzzle.seed}
       shareUrl={() => (daily ? `${window.location.origin}${GAME.path}` : buildPlayUrl(window.location.origin, GAME.path, patchesSeeds, spec))}
       session={game}
-      idleText={placed === 0 ? "Press a clue and drag outward to draw its patch." : `${placed} of ${puzzle.clues.length} patches placed.`}
+      idleText={placed + unfinished === 0 ? "Press a clue and drag outward to draw its patch." : `${placed} of ${puzzle.clues.length} patches done${unfinished > 0 ? `, ${unfinished} unfinished` : ""}.`}
       onNext={onNext}
       board={
         <Board
@@ -68,9 +69,10 @@ function GameView({ spec, puzzle, generationMs, daily, onNext }: ViewProps) {
           locked={game.locked || !game.ready}
           solved={solved}
           shakeSignal={game.shakeSignal}
+          pendingIds={game.pendingIds}
           tweenIds={game.tweenIds}
           debugSolution={showSolution ? puzzle.solution : null}
-          label={`Patches board, ${puzzle.width} by ${puzzle.height}, ${puzzle.clues.length} clues. Arrow keys move. Enter on a clue starts a patch, arrows grow it, Enter places it. Enter on a patch removes it.`}
+          label={`Patches board, ${puzzle.width} by ${puzzle.height}, ${puzzle.clues.length} clues. Arrow keys move. Enter on a clue or on a patch starts a stroke, arrows grow it, Enter places it. Enter twice on a patch, or Delete, removes it.`}
           previewStatus={game.previewStatus}
           onPlace={game.place}
           onRemove={game.removeAt}

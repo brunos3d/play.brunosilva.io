@@ -63,14 +63,14 @@ describe("legal but wrong patches stay on the board", () => {
     expect(validateState(REAL_188, result.state.regions).consistent).toBe(true);
   });
 
-  it("still refuses patches that break a rule", () => {
+  it("still refuses patches that can never be right", () => {
     const state = createGame("real");
-    expect(placeRegion(REAL_188, state, { row: 0, column: 0, width: 3, height: 1 }).ok).toBe(false); // clue says 6
     expect(placeRegion(REAL_188, state, { row: 0, column: 1, width: 2, height: 2 }).ok).toBe(false); // three clues
+    expect(placeRegion(quadrants(), createGame("q"), { row: 0, column: 0, width: 3, height: 1 }).ok).toBe(false); // "4, square" cannot be 3 wide
   });
 });
 
-describe("redrawing from a clue", () => {
+describe("drawing a patch in several strokes", () => {
   const puzzle = quadrants({ a: { area: undefined, shape: undefined } });
   const small = { row: 0, column: 0, width: 1, height: 2 };
   const big = { row: 0, column: 0, width: 2, height: 2 };
@@ -81,14 +81,14 @@ describe("redrawing from a clue", () => {
     return first.state;
   };
 
-  it("replaces the clue's patch in one action and counts a redraw", () => {
+  it("grows the clue's patch in one action, and growing is not a redraw", () => {
     const result = placeRegion(puzzle, placed(), big);
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect(result.replaced?.area).toBe(2);
     expect(result.state.regions).toHaveLength(1);
     expect(result.state.regions[0].area).toBe(4);
-    expect(result.state.redraws).toBe(1);
+    expect(result.state.redraws).toBe(0);
     expect(result.state.history.at(-1)?.type).toBe("replace");
   });
 
