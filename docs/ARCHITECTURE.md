@@ -125,6 +125,12 @@ The rule is the pure function `resolveHostRedirect`, unit tested, and an e2e tes
 
 All three domains have to be attached to the same Vercel project for the proxy to see the requests. Browser storage is per origin, so progress made on `zip.brunosilva.io` before the move does not follow the player to `play.brunosilva.io`.
 
+## Open Graph images
+
+The hub and each game have their own 1200x630 image: `public/og/home.png`, `zip.png` and `patches.png`. They are static files, rendered once by `npm run og` and committed, so nothing is generated per request or per build. The script lays out an HTML card (title and tagline on the left, the game's icon on the right) with the site's fonts and the SVG marks from `public/icons`, and takes a screenshot with Playwright's Chromium. Texts come from `games/registry.ts`, so the images are re-rendered only when a name, a tagline or an icon changes.
+
+A child route segment replaces its parent's `openGraph` metadata as a whole, so each game layout repeats every field. An e2e test checks the tags on all three pages and reads the PNG header of each file to confirm its size.
+
 ## PWA and offline
 
 `public/sw.js` is registered in production with scope `/`.
@@ -156,6 +162,8 @@ npm run build
 npm run typecheck
 npm run lint
 npm run icons             render PNG icons from public/icons/*.svg
+npm run og                render the Open Graph images in public/og
+npm run screenshots       play both games on a running server and save the README screenshots
 
 npm run zip:generate -- --seed 12345 --difficulty hard [--size 8] [--solution] [--json]
 npm run zip:validate -- [--count 100] [--from 2025-03-18 --days 365]

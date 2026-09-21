@@ -27,7 +27,16 @@ export const metadata: Metadata = {
     ],
     apple: "/icons/apple-touch-icon.png",
   },
-  openGraph: { title: `${PLATFORM_NAME} | Daily Logic Puzzles`, description, images: [{ url: "/og_image.png" }] },
+  // The Open Graph images are static files in public/og, rendered once by `npm run og`.
+  openGraph: {
+    type: "website",
+    siteName: PLATFORM_NAME,
+    title: `${PLATFORM_NAME} | Daily Logic Puzzles`,
+    description,
+    url: "/",
+    images: [{ url: "/og/home.png", width: 1200, height: 630, alt: `${PLATFORM_NAME}: small daily logic puzzles` }],
+  },
+  twitter: { card: "summary_large_image", title: `${PLATFORM_NAME} | Daily Logic Puzzles`, description, images: ["/og/home.png"] },
 };
 
 export const viewport: Viewport = {

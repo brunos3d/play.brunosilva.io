@@ -18,7 +18,9 @@
     "zip:generate": "tsx scripts/zip/generate.ts",
     "zip:validate": "tsx scripts/zip/validate.ts",
     "zip:benchmark": "tsx scripts/zip/benchmark.ts",
-    "icons": "tsx scripts/make-icons.ts"
+    "icons": "tsx scripts/make-icons.ts",
+    "screenshots": "tsx scripts/make-screenshots.ts",
+    "og": "tsx scripts/make-og-images.ts"
   },
   "dependencies": {
     "next": "16.1.6",
