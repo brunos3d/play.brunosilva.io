@@ -1,0 +1,102 @@
+/*
+ * Sumbreak board. Tiles, gaps, radii and the pixel-snapped grid come from the
+ * shared tile board in src/shared/ui/theme.css. This file adds what is unique
+ * to Sumbreak: numbered tiles that slide into each other, and their states.
+ */
+
+.sumbreak-board { cursor: pointer; }
+.sumbreak-board[data-locked="true"] { cursor: default; }
+.sumbreak-board[data-dragging="true"] { cursor: grabbing; }
+
+/* An empty cell is a hollow in the board: a tile was here and merged away. */
+.sumbreak-cell::before {
+  background: color-mix(in oklab, var(--tile) 42%, var(--board));
+  box-shadow: inset 0 0 0 1.5px color-mix(in oklab, var(--ink) 9%, transparent);
+}
+
+/* A merge aimed at a cell that cannot take it. Hatching, not colour alone. */
+.sumbreak-cell[data-refused="true"]::before {
+  box-shadow: inset 0 0 0 2.5px var(--invalid);
+  background-image: repeating-linear-gradient(45deg, rgb(192 57 43 / 0.5) 0 2px, transparent 2px 7px);
+}
+
+/*
+ * Keyboard cursor. It is drawn in the tile layer, so it sits above the tiles,
+ * and it only shows while the grid has keyboard focus.
+ */
+.sumbreak-board .mg-grid:focus-visible { outline: none; }
+.sumbreak-cursor {
+  display: none;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: calc(100% / var(--cols));
+  height: calc(100% / var(--rows));
+  z-index: 8;
+}
+.sumbreak-cursor::after {
+  content: "";
+  position: absolute;
+  inset: calc(var(--tile-gap) + 1px);
+  border-radius: calc(var(--tile-radius) - 1px);
+  box-shadow: 0 0 0 2.5px var(--ink), 0 0 0 4.5px var(--surface);
+}
+.sumbreak-board .mg-grid:focus-visible ~ .sumbreak-tiles .sumbreak-cursor { display: block; }
+.sumbreak-tile {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: calc(100% / var(--cols));
+  height: calc(100% / var(--rows));
+  transition: transform 170ms cubic-bezier(0.25, 0.8, 0.3, 1), opacity 170ms ease;
+  will-change: transform;
+}
+/* Under the finger the tile follows at once. */
+.sumbreak-tile[data-lifted="true"] { transition: none; z-index: 3; }
+/* Sliding into the tile it merged with. */
+.sumbreak-tile[data-leaving="true"] { opacity: 0; z-index: 2; }
+
+.sumbreak-face {
+  position: absolute;
+  inset: var(--tile-gap);
+  border-radius: var(--tile-radius);
+  display: grid;
+  place-items: center;
+  color: #2a2622;
+  background: var(--tile-color);
+  box-shadow: inset 0 0 0 1.5px color-mix(in oklab, var(--tile-color) 70%, #2a2622 26%), 0 1px 0 color-mix(in oklab, var(--tile-color) 60%, #2a2622 40%);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+  animation: sumbreak-pop 220ms cubic-bezier(0.3, 0.8, 0.3, 1.25) both;
+}
+.sumbreak-face span { font-size: calc(100cqw / var(--cols) * 0.4); line-height: 1; }
+.sumbreak-face span[data-digits="3"] { font-size: calc(100cqw / var(--cols) * 0.33); }
+.sumbreak-face span[data-digits="4"] { font-size: calc(100cqw / var(--cols) * 0.27); }
+.sumbreak-face span[data-digits="5"] { font-size: calc(100cqw / var(--cols) * 0.22); }
+
+.sumbreak-tile[data-lifted="true"] .sumbreak-face { box-shadow: inset 0 0 0 1.5px color-mix(in oklab, var(--tile-color) 70%, #2a2622 26%), 0 6px 14px -4px rgb(0 0 0 / 0.4); scale: 1.04; }
+
+/* The tile that was picked up with a tap, and the neighbours that can take it. */
+.sumbreak-tile[data-selected="true"] .sumbreak-face { box-shadow: 0 0 0 3px var(--ink), 0 0 0 5px var(--surface); scale: 1.04; }
+.sumbreak-tile[data-selected="true"] { z-index: 3; }
+.sumbreak-tile[data-partner="true"] .sumbreak-face { box-shadow: inset 0 0 0 3px #2a2622; }
+
+/* A hint: the tile to move has a solid ring, the tile it lands on a dashed one. */
+.sumbreak-tile[data-hint] .sumbreak-face { animation: hint-pulse 750ms ease-in-out infinite; }
+.sumbreak-tile[data-hint="from"] .sumbreak-face { box-shadow: 0 0 0 3px var(--hint), 0 0 0 5px var(--surface); }
+.sumbreak-tile[data-hint="to"] .sumbreak-face { outline: 3px dashed var(--hint); outline-offset: -3px; }
+
+.sumbreak-tile[data-refused="true"] .sumbreak-face {
+  box-shadow: inset 0 0 0 2.5px var(--invalid);
+  background-image: repeating-linear-gradient(45deg, rgb(192 57 43 / 0.45) 0 2px, transparent 2px 7px);
+}
+
+/* Nothing left to merge: the tiles sit back. */
+.sumbreak-board[data-stuck="true"] .sumbreak-face { filter: saturate(0.45); }
+
+/* The last tile takes a bow. */
+.sumbreak-board[data-solved="true"] .sumbreak-face { animation: sumbreak-celebrate 620ms cubic-bezier(0.3, 0.7, 0.3, 1) 120ms both; }
+
+@keyframes sumbreak-pop { 0% { scale: 0.82; } 60% { scale: 1.06; } 100% { scale: 1; } }
+@keyframes sumbreak-celebrate { 0% { scale: 1; } 35% { scale: 1.12; rotate: -3deg; } 70% { scale: 0.97; rotate: 2deg; } 100% { scale: 1; rotate: 0deg; } }
