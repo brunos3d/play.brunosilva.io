@@ -64,6 +64,54 @@ test("players can move between games and back to the hub from anywhere", async (
   await expect(page).toHaveURL(/\/patches$/);
 });
 
+test("every game is on the hub from its launch day, numbered from 1", async ({ page }) => {
+  // 2026-11-23 18:00 UTC is a Monday morning in Pacific time, the day after Chess and Queens launched.
+  await page.clock.setFixedTime(new Date("2026-11-23T18:00:00Z"));
+  await page.goto("/");
+  for (const game of ["zip", "patches", "chess", "queens"]) await expect(page.getByTestId(`hub-card-${game}`)).toBeVisible();
+  await expect(page.getByTestId("hub-today-chess")).toContainText("#2");
+  await expect(page.getByTestId("hub-today-chess")).toContainText("easy");
+  await expect(page.getByTestId("hub-today-queens")).toContainText("#2");
+  await page.getByTestId("hub-card-chess").getByRole("link", { name: /Play today's puzzle/ }).click();
+  await expect(page).toHaveURL(/\/chess$/);
+  await expect(page.getByTestId("chess-board")).toBeVisible();
+});
+
+test("the game's mark in the header leads home, and asks first once a puzzle is under way", async ({ page }) => {
+  const { puzzle } = getZipDailyPuzzle(new Date());
+  await openZip(page, "/zip");
+
+  // Nothing played yet: the mark is a plain link.
+  await page.getByTestId("game-home").click();
+  await expect(page).toHaveURL(/\/$/);
+  await expect(page.getByRole("heading", { name: "Minigames" })).toBeVisible();
+
+  await openZip(page, "/zip");
+  await drawCells(page, puzzle.width, puzzle.solution.slice(0, 4));
+  await page.getByTestId("game-home").click();
+  const leave = page.getByTestId("game-leave");
+  await expect(leave).toBeVisible();
+  await expect(leave).toContainText("the clock keeps running");
+  await leave.getByRole("button", { name: "Keep playing" }).click();
+  await expect(leave).toBeHidden();
+  await expect(page).toHaveURL(/\/zip$/);
+
+  // The grid icon on the right asks the same question, and "Leave" goes home with the board saved.
+  await page.getByRole("link", { name: "All games", exact: true }).first().click();
+  await expect(leave).toBeVisible();
+  await leave.getByRole("button", { name: "Leave" }).click();
+  await expect(page).toHaveURL(/\/$/);
+  await expect(page.getByTestId("hub-card-zip").getByRole("link", { name: /Continue playing/ })).toBeVisible();
+
+  // A solved board has nothing left to lose, so it leaves at once.
+  await openZip(page, "/zip");
+  await drawCells(page, puzzle.width, puzzle.solution.slice(3));
+  await expect(page.getByTestId("game-result")).toBeVisible();
+  await page.getByTestId("game-result").getByRole("button", { name: "Close" }).click();
+  await page.getByTestId("game-home").click();
+  await expect(page).toHaveURL(/\/$/);
+});
+
 test("each game has its own practice setup, sizes and icon", async ({ page }) => {
   await page.goto("/zip/practice");
   await expect(page.getByRole("button", { name: "8 by 8" })).toBeVisible();

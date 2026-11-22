@@ -31,11 +31,20 @@ const cards: Card[] = [
     headline: "Small daily logic puzzles",
     description: "One new board per game, every day. Free, in your browser, no sign-up.",
     path: "",
-    // Both game icons, staggered so that each one stays readable.
-    art: `<div class="pair"><div class="tile small" style="transform: translate(-78px, -74px) rotate(-7deg)">${icon("zip")}</div><div class="tile small" style="transform: translate(78px, 74px) rotate(6deg)">${icon("patches")}</div></div>`,
+    // Every game icon, two by two and slightly turned, so that each one stays readable.
+    art: `<div class="quad">${[
+      ["zip", -92, -92, -6],
+      ["patches", 92, -78, 5],
+      ["chess", -84, 92, 4],
+      ["queens", 96, 100, -5],
+    ]
+      .map(([name, x, y, turn]) => `<div class="tile tiny" style="transform: translate(${x}px, ${y}px) rotate(${turn}deg)">${icon(String(name))}</div>`)
+      .join("")}</div>`,
   },
   { file: "zip.png", title: GAMES.zip.name, headline: GAMES.zip.tagline, description: `${GAMES.zip.description} A new board every day.`, path: GAMES.zip.path, art: singleArt("zip") },
   { file: "patches.png", title: GAMES.patches.name, headline: GAMES.patches.tagline, description: `${GAMES.patches.description} A new board every day.`, path: GAMES.patches.path, art: singleArt("patches") },
+  { file: "chess.png", title: GAMES.chess.name, headline: GAMES.chess.tagline, description: "Mate, win material or save the position, with a coach at your side. A new puzzle every day.", path: GAMES.chess.path, art: singleArt("chess") },
+  { file: "queens.png", title: GAMES.queens.name, headline: "One queen per row, column and colour", description: "Place the queens so that no two touch. A new board every day.", path: GAMES.queens.path, art: singleArt("queens") },
 ];
 
 const page = (card: Card): string => `<!doctype html>
@@ -61,8 +70,9 @@ const page = (card: Card): string => `<!doctype html>
   .tile.big { width: 380px; height: 380px; border-radius: 90px; }
   .tile.small { width: 236px; height: 236px; border-radius: 56px; }
   .tile svg { width: 100%; height: 100%; display: block; }
-  .pair { display: grid; }
-  .pair .tile { grid-area: 1 / 1; }
+  .tile.tiny { width: 172px; height: 172px; border-radius: 42px; }
+  .quad { display: grid; }
+  .quad .tile { grid-area: 1 / 1; }
   /* A strip of fabric along the bottom edge, one swatch per palette colour. */
   .swatches { position: absolute; left: 0; right: 0; bottom: 0; height: 14px; display: flex; }
   .swatches span { flex: 1; }

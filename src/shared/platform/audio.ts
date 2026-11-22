@@ -16,7 +16,11 @@ export type SoundName =
   /** Zip: the path got shorter. */
   | "back"
   /** A solution is being revealed, one piece at a time. */
-  | "reveal";
+  | "reveal"
+  /** Chess: a piece landed on an empty square. */
+  | "move"
+  /** Chess: a piece was taken. */
+  | "capture";
 
 type Tone = { frequency: number; startMs: number; durationMs: number };
 type Sound = { wave: OscillatorType; gain: number; tones: Tone[] };
@@ -40,6 +44,8 @@ const SOUNDS: Record<SoundName, Sound> = {
   checkpoint: { wave: "sine", gain: 0.08, tones: [{ frequency: 660, startMs: 0, durationMs: 60 }, { frequency: 990, startMs: 55, durationMs: 110 }] },
   back: { wave: "sine", gain: 0.055, tones: [{ frequency: 294, startMs: 0, durationMs: 45 }] },
   reveal: { wave: "sine", gain: 0.05, tones: [{ frequency: 587, startMs: 0, durationMs: 60 }] },
+  move: { wave: "sine", gain: 0.07, tones: [{ frequency: 392, startMs: 0, durationMs: 55 }] },
+  capture: { wave: "triangle", gain: 0.09, tones: [{ frequency: 330, startMs: 0, durationMs: 45 }, { frequency: 247, startMs: 40, durationMs: 75 }] },
 };
 
 const FADE_SECONDS = 0.012;

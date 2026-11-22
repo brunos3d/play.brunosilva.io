@@ -1,6 +1,7 @@
 "use client";
 
-import { type ReactNode, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { type MouseEvent, type ReactNode, useEffect, useState } from "react";
 import type { GameMeta } from "@/games/registry";
 import type { DailyInfo } from "@/shared/engine/daily";
 import type { Difficulty } from "@/shared/engine/difficulty";
@@ -50,6 +51,8 @@ type FrameProps = {
   /** Text under the board while nothing else is being said. */
   idleText: string;
   board: ReactNode;
+  /** Takes the place of the status line, for a game that talks to the player in its own way. It must announce `session.status` itself. */
+  statusSlot?: ReactNode;
   tutorial: (props: { open: boolean; settings: Settings; onClose: () => void }) => ReactNode;
   debug?: ReactNode;
   onNext?: () => void;
@@ -63,12 +66,14 @@ const RESULT_DELAY_MS = 1_000;
  * line, the four controls, dialogs, keyboard shortcuts, the result flow and the
  * moment the clock starts.
  */
-export function GameFrame({ game, daily, difficulty, size, seed, shareUrl, session, idleText, board, tutorial, debug, onNext }: FrameProps) {
+export function GameFrame({ game, daily, difficulty, size, seed, shareUrl, session, idleText, board, statusSlot, tutorial, debug, onNext }: FrameProps) {
   const { settings, update, markTutorialSeen } = useSettings();
   const hydrated = useHydrated();
   const [helpOpen, setHelpOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [leaveOpen, setLeaveOpen] = useState(false);
+  const router = useRouter();
   const [result, setResult] = useState<ResultData | null>(null);
   const [resultOpen, setResultOpen] = useState(false);
 
@@ -103,7 +108,16 @@ export function GameFrame({ game, daily, difficulty, size, seed, shareUrl, sessi
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [summary]);
 
-  const dialogOpen = tutorialOpen || settingsOpen || resultOpen || confirmOpen;
+  // Leaving a board the player has started asks first: the clock keeps running while they are away.
+  const inProgress = session.ready && !summary && (session.canUndo || session.canReset);
+  const handleHome = (event: MouseEvent<HTMLAnchorElement>) => {
+    // A modified click opens the hub in another tab, and this one stays on the puzzle.
+    if (!inProgress || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) return;
+    event.preventDefault();
+    setLeaveOpen(true);
+  };
+
+  const dialogOpen = tutorialOpen || settingsOpen || resultOpen || confirmOpen || leaveOpen;
   const { undo, requestHint } = session;
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -136,11 +150,12 @@ export function GameFrame({ game, daily, difficulty, size, seed, shareUrl, sessi
         elapsedMs={session.elapsed}
         onHelp={() => setHelpOpen(true)}
         onSettings={() => setSettingsOpen(true)}
+        onHome={handleHome}
       />
 
       <div className="mg-stage">{board}</div>
 
-      <StatusLine status={status} />
+      {statusSlot ?? <StatusLine status={status} />}
 
       {summary ? (
         <div className={`mg-controls w-full grid gap-2.5 ${onNext ? "grid-cols-2" : ""}`}>
@@ -192,6 +207,19 @@ export function GameFrame({ game, daily, difficulty, size, seed, shareUrl, sessi
         }}
       >
         The puzzle solves itself and ends here. {daily ? "Today's puzzle will not count toward your streak, and it " : "It "}will not set a best time.
+      </ConfirmDialog>
+      <ConfirmDialog
+        open={leaveOpen}
+        title="Leave this puzzle?"
+        confirmLabel="Leave"
+        testId="game-leave"
+        onClose={() => setLeaveOpen(false)}
+        onConfirm={() => {
+          setLeaveOpen(false);
+          router.push("/");
+        }}
+      >
+        Your progress is saved on this device, but the clock keeps running until the puzzle is solved.
       </ConfirmDialog>
       <ResultDialog game={game} open={resultOpen} result={result} onClose={() => setResultOpen(false)} onNext={onNext} />
     </main>

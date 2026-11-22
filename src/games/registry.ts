@@ -1,5 +1,5 @@
 /** Every game on the platform. The hub, the headers and the footers are built from this list. */
-export const GAME_IDS = ["zip", "patches"] as const;
+export const GAME_IDS = ["zip", "patches", "chess", "queens"] as const;
 export type GameId = (typeof GAME_IDS)[number];
 
 export type GameMeta = {
@@ -11,6 +11,8 @@ export type GameMeta = {
   path: string;
   /** What the result screen calls a corrected mistake. */
   mistakesLabel: string;
+  /** False when every board has the same size, as in chess. The size is then left out of headers, results and the practice setup. */
+  hasSizes: boolean;
 };
 
 export const PLATFORM_NAME = "Minigames";
@@ -23,6 +25,7 @@ export const GAMES: Record<GameId, GameMeta> = {
     description: "Draw a single line through the numbers in order and fill the whole grid.",
     path: "/zip",
     mistakesLabel: "Backtracks",
+    hasSizes: true,
   },
   patches: {
     id: "patches",
@@ -31,6 +34,25 @@ export const GAMES: Record<GameId, GameMeta> = {
     description: "Cover the grid with rectangles so that each one holds exactly one clue.",
     path: "/patches",
     mistakesLabel: "Redraws",
+    hasSizes: true,
+  },
+  chess: {
+    id: "chess",
+    name: "Chess",
+    tagline: "Find the best move",
+    description: "Solve a tactic from a generated game: give mate, win material or save the position, with a coach at your side.",
+    path: "/chess",
+    mistakesLabel: "Mistakes",
+    hasSizes: false,
+  },
+  queens: {
+    id: "queens",
+    name: "Queens",
+    tagline: "One queen per row, column and colour",
+    description: "Place a queen in every row, column and coloured region so that no two queens touch.",
+    path: "/queens",
+    mistakesLabel: "Takebacks",
+    hasSizes: true,
   },
 };
 

@@ -7,7 +7,8 @@ export type ShareableResult = {
   /** Daily puzzle number. Missing for practice puzzles. */
   dailyNumber?: number;
   difficulty: Difficulty;
-  size: number;
+  /** Board edge length. Missing for games whose boards all have one size. */
+  size?: number;
   elapsedMs: number;
   hintsUsed: number;
   mistakesLabel: string;
@@ -31,7 +32,7 @@ export function buildShareText(result: ShareableResult): string {
   const title =
     result.dailyNumber !== undefined
       ? `${result.gameName} #${result.dailyNumber}`
-      : `${result.gameName} ${capitalize(result.difficulty)} ${result.size}x${result.size}`;
+      : `${result.gameName} ${capitalize(result.difficulty)}${result.size === undefined ? "" : ` ${result.size}x${result.size}`}`;
   const lines = [title, formatTime(result.elapsedMs), `Hints: ${result.hintsUsed}`, `${result.mistakesLabel}: ${result.mistakes}`];
   if (result.dailyNumber !== undefined && result.streak !== undefined) lines.push(`Streak: ${result.streak}`);
   return lines.join("\n");

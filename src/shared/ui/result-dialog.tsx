@@ -86,14 +86,15 @@ export function ResultDialog({ game, open, result, onClose, onNext }: Props) {
   const isDaily = result.dailyNumber !== undefined;
   const others = GAME_LIST.filter((entry) => entry.id !== game.id);
   const handleShare = async () => {
-    const text = buildShareText({ ...result, gameName: game.name, mistakesLabel: game.mistakesLabel, streak: result.streak?.current });
+    const text = buildShareText({ ...result, size: game.hasSizes ? result.size : undefined, gameName: game.name, mistakesLabel: game.mistakesLabel, streak: result.streak?.current });
     setShareLabel(SHARE_LABEL[await share({ title: game.name, text, url: result.shareUrl })]);
   };
 
   return (
     <Dialog open={open} onClose={onClose} title={headline(result)} testId="game-result">
       <p className="text-sm text-[var(--ink-soft)] -mt-2 mb-4">
-        {isDaily ? `${game.name} #${result.dailyNumber}` : "Practice puzzle"} · <span className="capitalize">{result.difficulty}</span> · {result.size}×{result.size}
+        {isDaily ? `${game.name} #${result.dailyNumber}` : "Practice puzzle"} · <span className="capitalize">{result.difficulty}</span>
+        {game.hasSizes && ` · ${result.size}×${result.size}`}
       </p>
 
       <div className="text-center py-3 rounded-2xl bg-[var(--linen)] mb-3">

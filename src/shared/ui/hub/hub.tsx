@@ -2,8 +2,12 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { getChessDailyInfo } from "@/games/chess/engine/daily";
+import { chessPuzzleId } from "@/games/chess/engine/generator";
 import { getDailyInfo as getPatchesDaily } from "@/games/patches/engine/daily/schedule";
 import { patchesPuzzleId } from "@/games/patches/engine/generator/generate";
+import { getQueensDailyInfo } from "@/games/queens/engine/daily";
+import { queensPuzzleId } from "@/games/queens/engine/generator";
 import { GAME_LIST, type GameId, type GameMeta, PLATFORM_NAME } from "@/games/registry";
 import { getZipDailyInfo } from "@/games/zip/engine/daily";
 import { zipPuzzleId } from "@/games/zip/engine/generator";
@@ -20,6 +24,8 @@ import { ArrowRightIcon, CheckIcon, ClockIcon, FlameIcon, RevealIcon } from "../
 const DAILY: Record<GameId, { info: (date: string) => DailyInfo; puzzleId: (seed: string) => string }> = {
   zip: { info: getZipDailyInfo, puzzleId: zipPuzzleId },
   patches: { info: getPatchesDaily, puzzleId: patchesPuzzleId },
+  chess: { info: getChessDailyInfo, puzzleId: chessPuzzleId },
+  queens: { info: getQueensDailyInfo, puzzleId: queensPuzzleId },
 };
 
 type Today =

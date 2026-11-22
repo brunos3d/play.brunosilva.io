@@ -7,18 +7,20 @@ type Props = {
   open: boolean;
   title: string;
   confirmLabel: string;
+  cancelLabel?: string;
+  testId?: string;
   children: ReactNode;
   onConfirm: () => void;
   onClose: () => void;
 };
 
-export function ConfirmDialog({ open, title, confirmLabel, children, onConfirm, onClose }: Props) {
+export function ConfirmDialog({ open, title, confirmLabel, cancelLabel = "Keep playing", testId = "game-confirm", children, onConfirm, onClose }: Props) {
   return (
-    <Dialog open={open} onClose={onClose} title={title} testId="game-confirm">
+    <Dialog open={open} onClose={onClose} title={title} testId={testId}>
       <div className="text-[15px] leading-relaxed text-[var(--ink-soft)] mb-5">{children}</div>
       <div className="grid grid-cols-2 gap-2.5">
         <button type="button" className="mg-button" onClick={onClose}>
-          Keep playing
+          {cancelLabel}
         </button>
         <button type="button" className="mg-button" data-variant="primary" onClick={onConfirm}>
           {confirmLabel}

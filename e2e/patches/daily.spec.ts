@@ -19,7 +19,7 @@ test("the daily puzzle follows the Pacific date, not the browser's timezone", as
   expect(info.number).toBe(188);
 
   await openPuzzle(page, "/patches");
-  await expect(page.getByRole("heading", { name: "Patches" }).locator("..")).toContainText("#188");
+  await expect(page.locator("header")).toContainText("#188");
   await expect(page.getByRole("gridcell")).toHaveCount(puzzle.width * puzzle.height);
   expect(problems).toEqual([]);
 });

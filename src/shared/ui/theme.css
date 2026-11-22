@@ -293,6 +293,20 @@
 .mg-icon-button:hover { background: var(--linen-deep); color: var(--ink); }
 .mg-icon-button svg { width: 21px; height: 21px; }
 
+/* Game mark and name in the header. One link, so the whole title is the way back to the hub. */
+.mg-home-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: none;
+  padding: 3px 8px 3px 3px;
+  margin: -3px 0 -3px -3px;
+  border-radius: 12px;
+  transition: background-color 120ms ease;
+  touch-action: manipulation;
+}
+.mg-home-link:hover { background: var(--linen-deep); }
+
 .mg-chip {
   display: inline-flex;
   align-items: center;

@@ -46,16 +46,18 @@ export function PracticeSetup({ game, codec, blurb }: Props) {
           </div>
         </fieldset>
 
-        <fieldset className="flex flex-col gap-2">
-          <legend className="text-xs font-bold tracking-wider uppercase text-[var(--ink-soft)] mb-2">Board size</legend>
-          <div className="mg-segment">
-            {sizes.map((option) => (
-              <button key={option ?? "auto"} type="button" aria-pressed={size === option} aria-label={option === null ? "Automatic size" : `${option} by ${option}`} onClick={() => setSize(option)}>
-                {option ?? "Auto"}
-              </button>
-            ))}
-          </div>
-        </fieldset>
+        {game.hasSizes && (
+          <fieldset className="flex flex-col gap-2">
+            <legend className="text-xs font-bold tracking-wider uppercase text-[var(--ink-soft)] mb-2">Board size</legend>
+            <div className="mg-segment">
+              {sizes.map((option) => (
+                <button key={option ?? "auto"} type="button" aria-pressed={size === option} aria-label={option === null ? "Automatic size" : `${option} by ${option}`} onClick={() => setSize(option)}>
+                  {option ?? "Auto"}
+                </button>
+              ))}
+            </div>
+          </fieldset>
+        )}
 
         <label className="flex flex-col gap-2">
           <span className="text-xs font-bold tracking-wider uppercase text-[var(--ink-soft)]">Seed (optional)</span>
@@ -70,7 +72,7 @@ export function PracticeSetup({ game, codec, blurb }: Props) {
             maxLength={96}
             data-testid="game-seed-input"
           />
-          <span className="text-xs text-[var(--ink-faint)]">The same seed, difficulty and size always build the same puzzle.</span>
+          <span className="text-xs text-[var(--ink-faint)]">{game.hasSizes ? "The same seed, difficulty and size always build the same puzzle." : "The same seed and difficulty always build the same puzzle."}</span>
         </label>
 
         <button type="submit" className="mg-button" data-variant="primary" data-testid="game-start">

@@ -16,7 +16,7 @@ test.describe("daily", () => {
     expect(info.number).toBe(553);
 
     await openZip(page, "/zip");
-    await expect(page.getByRole("heading", { name: "Zip" }).locator("..")).toContainText("#553");
+    await expect(page.locator("header")).toContainText("#553");
     await drawCells(page, puzzle.width, puzzle.solution);
 
     await expect(result(page)).toBeVisible();

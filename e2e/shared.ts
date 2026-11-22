@@ -5,7 +5,7 @@ export const SETTINGS_KEY = "minigames:settings:v1";
 /** Most tests start past the tutorials and with sound off. The tutorials have their own tests. */
 export async function skipTutorials(page: Page): Promise<void> {
   await page.addInitScript(([key]) => {
-    if (!localStorage.getItem(key)) localStorage.setItem(key, JSON.stringify({ sound: false, haptics: false, tutorials: { zip: true, patches: true } }));
+    if (!localStorage.getItem(key)) localStorage.setItem(key, JSON.stringify({ sound: false, haptics: false, tutorials: { zip: true, patches: true, chess: true, queens: true } }));
   }, [SETTINGS_KEY]);
 }
 

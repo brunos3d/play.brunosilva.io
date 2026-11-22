@@ -18,6 +18,12 @@
     "zip:generate": "tsx scripts/zip/generate.ts",
     "zip:validate": "tsx scripts/zip/validate.ts",
     "zip:benchmark": "tsx scripts/zip/benchmark.ts",
+    "chess:generate": "tsx scripts/chess/generate.ts",
+    "chess:validate": "tsx scripts/chess/validate.ts",
+    "chess:benchmark": "tsx scripts/chess/benchmark.ts",
+    "queens:generate": "tsx scripts/queens/generate.ts",
+    "queens:validate": "tsx scripts/queens/validate.ts",
+    "queens:benchmark": "tsx scripts/queens/benchmark.ts",
     "icons": "tsx scripts/make-icons.ts",
     "screenshots": "tsx scripts/make-screenshots.ts",
     "og": "tsx scripts/make-og-images.ts"
