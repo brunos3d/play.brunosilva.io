@@ -1,6 +1,6 @@
 /**
  * npm run screenshots
- * Plays both games against a running production server and saves the README
+ * Plays every game against a running production server and saves the README
  * images to .github/screenshots. Start the server first:
  *
  *   npm run build && npm start
@@ -11,7 +11,9 @@ import { resolve } from "node:path";
 import { type Browser, type Page, chromium } from "@playwright/test";
 import { getDailyPuzzle } from "@/games/patches/engine";
 import { getZipDailyPuzzle } from "@/games/zip/engine";
+import { chessPuzzle, coach, openChess, tapMove } from "../e2e/chess/helpers";
 import { draw, openPuzzle, practicePuzzle, targetsOf } from "../e2e/patches/helpers";
+import { openQueens, placeQueen, queensPuzzle } from "../e2e/queens/helpers";
 import { SETTINGS_KEY } from "../e2e/shared";
 import { drawCells, openZip, zipPuzzle } from "../e2e/zip/helpers";
 
@@ -22,7 +24,7 @@ const PHONE = { width: 390, height: 720 };
 async function newPage(browser: Browser, colorScheme: "light" | "dark", height = PHONE.height): Promise<Page> {
   const context = await browser.newContext({ baseURL: BASE_URL, viewport: { width: PHONE.width, height }, deviceScaleFactor: 2, colorScheme });
   await context.addInitScript(([key]) => {
-    localStorage.setItem(key, JSON.stringify({ sound: false, haptics: false, tutorials: { zip: true, patches: true } }));
+    localStorage.setItem(key, JSON.stringify({ sound: false, haptics: false, tutorials: { zip: true, patches: true, chess: true, queens: true } }));
   }, [SETTINGS_KEY]);
   return context.newPage();
 }
@@ -47,6 +49,20 @@ async function shootGames(browser: Browser, colorScheme: "light" | "dark", suffi
   for (const target of patches.targets.slice(0, Math.ceil(patches.targets.length * 0.65))) await draw(page, 7, target);
   await settle(page);
   await page.screenshot({ path: resolve(OUT, `patches${suffix}.png`) });
+
+  // A fork that wins a piece, one move in: the coach has praised the first move and asks for the next.
+  const chess = chessPuzzle("readme-9", "medium");
+  await openChess(page, chess.url);
+  await tapMove(page, chess.puzzle, chess.resolved.line[0]);
+  await coach(page).getByText("O adversário respondeu").first().waitFor();
+  await settle(page);
+  await page.screenshot({ path: resolve(OUT, `chess${suffix}.png`) });
+
+  const queens = queensPuzzle("readme", "hard", 8);
+  await openQueens(page, queens.url);
+  for (const cell of queens.puzzle.solution.slice(0, 5)) await placeQueen(page, 8, cell);
+  await settle(page);
+  await page.screenshot({ path: resolve(OUT, `queens${suffix}.png`) });
 
   await page.context().close();
 }

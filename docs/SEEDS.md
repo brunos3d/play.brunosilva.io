@@ -9,6 +9,8 @@ The same seed, difficulty, size and generator version always produce the same pu
 ```ts
 generatePuzzle("example-seed", "hard");      // Patches, identical every time
 generateZipPuzzle("example-seed", "hard");   // Zip, identical every time
+generateChessPuzzle("example-seed", "hard");  // Chess, identical every time
+generateQueensPuzzle("example-seed", "hard"); // Queens, identical every time
 ```
 
 No generator reads `Math.random()`, `Date.now()`, UUIDs, storage order or the network. `getDailyPuzzle(new Date())` reads the clock only to decide which date to build, and the date then acts as an ordinary seed.
@@ -32,21 +34,23 @@ Mulberry32, which the old Zip used, was not kept. Its 32-bit state limits the nu
 ZIP:2026-09-21:1:easy          a daily Zip
 PATCHES:2026-09-21:1:hard      a daily Patches
 ZIP:lucky:1:hard:8             practice, forced to 8x8
+CHESS:2026-11-23:1:easy        a daily Chess
+QUEENS:lucky:1:expert:10       practice Queens, forced to 10x10
 ```
 
 | Field | Rules |
 |---|---|
-| game | `ZIP` or `PATCHES`. A seed of one game is rejected by the other |
+| game | `ZIP`, `PATCHES`, `CHESS` or `QUEENS`. A seed of one game is rejected by the others |
 | `token` | letters, digits, `.`, `_`, `-`. Up to 64 characters. Free text is normalized: `"hello world"` becomes `hello-world` |
 | `version` | generator version, an integer |
 | `difficulty` | `easy`, `medium`, `hard`, `expert` |
-| `size` | optional. Zip 5 to 8, Patches 5 to 10. Without it the tier picks the size |
+| `size` | optional. Zip 5 to 8, Patches 5 to 10, Queens 5 to 10. Without it the tier picks the size. Chess seeds never carry one: every board is 8x8 |
 
 Each game builds its codec with `createSeedCodec({ prefix, currentVersion, supportedVersions, minSize, maxSize })`. The PRNG key is `<GAME>|v<version>|<token>|<difficulty>|<size or auto>`, so every field that changes the puzzle is in the key and two games never share a stream.
 
 ## Versioning
 
-Each game has its own generator version: `GENERATOR_VERSION` for Patches, currently 1, and `ZIP_GENERATOR_VERSION`, currently 2. When a generator change would alter the board a seed produces:
+Each game has its own generator version: `GENERATOR_VERSION` for Patches, currently 1, `ZIP_GENERATOR_VERSION`, currently 2, and `CHESS_GENERATOR_VERSION` and `QUEENS_GENERATOR_VERSION`, both 1. When a generator change would alter the board a seed produces:
 
 1. Keep the old code path.
 2. Bump the version.
@@ -95,10 +99,12 @@ number     = days since the game's epoch, plus 1
 |---|---|---|
 | Zip | 2025-03-18, the day the original Zip launched | #553 |
 | Patches | 2026-03-18, the day the original Patches launched | #188 |
+| Chess | 2026-11-22, the day it joined this platform | not out yet |
+| Queens | 2026-11-22, the day it joined this platform | not out yet |
 
-Both launch dates come from press coverage. The numbers were not checked against the counters LinkedIn shows in its own games.
+The Zip and Patches launch dates come from press coverage. The numbers were not checked against the counters LinkedIn shows in its own games.
 
-Both games share one weekly ramp (`DEFAULT_WEEKLY_SCHEDULE`): Monday easy, Tuesday easy or medium, Wednesday medium, Thursday medium or hard, Friday and Saturday hard, Sunday expert. On mixed days the date picks the tier through the seeded PRNG, per game, so every player gets the same one.
+All games share one weekly ramp (`DEFAULT_WEEKLY_SCHEDULE`): Monday easy, Tuesday easy or medium, Wednesday medium, Thursday medium or hard, Friday and Saturday hard, Sunday expert. On mixed days the date picks the tier through the seeded PRNG, per game, so every player gets the same one.
 
 Rollover happens at midnight Pacific. `msUntilPacificMidnight` first estimates from wall-clock parts, then corrects against the real date boundary, because the estimate is an hour off on the 23-hour and 25-hour days when daylight saving changes. Tests cover both days and check 400 instants across a year.
 
