@@ -6,12 +6,13 @@
   </a>
 </p>
 
-A small platform of daily logic puzzles, playable at [play.brunosilva.io](https://play.brunosilva.io/). It currently has four games. Zip, Patches and Queens are inspired by the LinkedIn games of the same name, and Chess by the puzzles of chess.com and Lichess:
+A small platform of daily logic puzzles, playable at [play.brunosilva.io](https://play.brunosilva.io/). It currently has five games. Zip, Patches, Queens and Sumbreak are inspired by the LinkedIn games of the same name, and Chess by the puzzles of chess.com and Lichess:
 
 - **Zip**: draw one path through every cell, passing the numbers in order.
 - **Patches**: cover the grid with rectangles so that each one holds exactly one clue.
 - **Chess**: solve a tactic from a generated game, with a coach who explains every move.
 - **Queens**: place one queen in every row, column and coloured region so that no two touch.
+- **Sumbreak**: merge equal neighbours into their sum, in the right order, until one tile is left.
 
 Every game gets one new board per day, the same for every player, plus unlimited practice. There is no server state. Puzzles are generated in the browser from a seed, and progress, streaks and best times stay on the device. The app installs as a PWA and plays offline after the first visit.
 
@@ -43,6 +44,19 @@ Every game gets one new board per day, the same for every player, plus unlimited
   </tr>
 </table>
 
+<table>
+  <tr>
+    <th width="33%">Sumbreak</th>
+    <th width="33%">Sumbreak, dark theme</th>
+    <th width="33%"></th>
+  </tr>
+  <tr>
+    <td><img alt="Sumbreak board five merges in, with eleven numbered tiles left" src="./.github/screenshots/sumbreak.png" /></td>
+    <td><img alt="Sumbreak in the dark theme" src="./.github/screenshots/sumbreak-dark.png" /></td>
+    <td></td>
+  </tr>
+</table>
+
 The interface follows the system theme:
 
 <table>
@@ -60,7 +74,7 @@ The screenshots are not mockups. `npm run screenshots` plays every game against 
 | Route | What it is |
 |---|---|
 | `/` | hub: every game, today's number and difficulty, your status and streak, countdown to the next boards |
-| `/zip`, `/patches`, `/chess`, `/queens` | today's puzzle |
+| `/zip`, `/patches`, `/chess`, `/queens`, `/sumbreak` | today's puzzle |
 | `/zip/practice` and the same under each game | pick a difficulty, a board size (Chess has one) and an optional seed |
 | `/zip/play?seed=ZIP:lucky:1:hard:8` | an exact puzzle. The same seed always builds the same board, so links are shareable |
 
@@ -80,6 +94,8 @@ Puzzles are not taken from a database. The generator plays a game against itself
 
 **Queens.** Tap a cell once for an X, twice for a queen. Dragging marks X's. Every row, column and coloured region takes exactly one queen, and two queens cannot touch, diagonals included. A queen that breaks a rule against one already on the board is refused, and cells that placed queens rule out get a small dot. Boards go from 5x5 to 10x10.
 
+**Sumbreak.** Drag a number onto a side neighbour that holds the same number, or tap one and then the other. The two become one tile with their sum, on the cell that was dropped on. The other cell stays empty and nothing slides, so a number that ends up away from its next partner is stranded for good. The board is solved when one tile is left. A merge that ruins the board is still played, and the game only says so when you get stuck or ask for a hint, which then takes the board back to the last position that can be finished. Boards go from 3x3 to 5x5.
+
 All games share the same controls and rules around the board:
 
 - **Undo**, **Hint**, **Reveal** and **Reset**, plus **New** in practice mode, which loads another board and restarts the clock. A hint acts: it removes a mistake if there is one, otherwise it plays the next forced move and says why. Reveal plays the whole solution piece by piece, and that puzzle then earns no streak and no best time.
@@ -90,14 +106,14 @@ All games share the same controls and rules around the board:
 
 The game's mark at the top left leads back to the hub. Once a puzzle is under way it asks first, because the clock keeps running while you are away.
 
-Every generated puzzle has exactly one solution, proven by a solver before the board is shown, and Patches and Queens boards can always be solved by deduction alone. In Chess, "one solution" means one move at each step that mates in time or wins the material, checked by the engine's search. Zip measures how hard a board is by counting the wrong turns that only fail many cells later, and each difficulty aims for its own score.
+Every generated puzzle has exactly one solution, proven by a solver before the board is shown, and Patches and Queens boards can always be solved by deduction alone. In Chess, "one solution" means one move at each step that mates in time or wins the material, checked by the engine's search. Sumbreak is the exception: many orders of merges solve a board, and the solver instead knows for every position whether it can still be finished. Zip measures how hard a board is by counting the wrong turns that only fail many cells later, and each difficulty aims for its own score.
 
 ## Project structure
 
 ```
 src/
   app/        routes only
-  games/      registry.ts, zip/, patches/, chess/, queens/ (each: engine, components, hooks, storage)
+  games/      registry.ts, zip/, patches/, chess/, queens/, sumbreak/ (each: engine, components, hooks, storage)
   shared/     engine, storage, platform, hooks, ui: everything the games have in common
 public/       service worker, manifest, icons
 scripts/      CLI tools per game
@@ -153,6 +169,10 @@ npm run chess:benchmark
 npm run queens:generate -- --seed 12345 --difficulty hard --solution --steps
 npm run queens:validate
 npm run queens:benchmark
+
+npm run sumbreak:generate -- --seed 12345 --difficulty hard --solution
+npm run sumbreak:validate
+npm run sumbreak:benchmark
 ```
 
 The e2e tests need Chromium once: `npx playwright install chromium`.
@@ -165,11 +185,12 @@ The e2e tests need Chromium once: `npx playwright install chromium`.
 - [Chess](docs/chess/CHESS.md): engine, generator, recipes per tier, the coach, the board, benchmark
 - [Chess and Queens research](docs/chess/RESEARCH.md): how chess.com, Lichess and LinkedIn do it, what was taken from each, and why no chess library is used
 - [Queens](docs/queens/QUEENS.md): rules, solvers, generator, tiers, interaction, benchmark
+- [Sumbreak](docs/sumbreak/SUMBREAK.md): how LinkedIn's game works, rules, solver, the difficulty measure, generator, benchmark
 - Patches: [reference notes](docs/patches/PATCHES_REFERENCE.md), [engine](docs/patches/PUZZLE_ENGINE.md), [generation](docs/patches/PUZZLE_GENERATION.md), [solver](docs/patches/SOLVER.md), [difficulty](docs/patches/DIFFICULTY.md)
 
 ## About
 
-This project started as a single game. The first version of Zip was built with Claude Opus 4.6 as the AI coding assistant, in 10 prompts, as an experiment in how far iterative prompting could go. Patches, the shared platform, the rewrite of Zip on top of it, Chess and Queens followed the same way.
+This project started as a single game. The first version of Zip was built with Claude Opus 4.6 as the AI coding assistant, in 10 prompts, as an experiment in how far iterative prompting could go. Patches, the shared platform, the rewrite of Zip on top of it, Chess, Queens and Sumbreak followed the same way.
 
 Made by [Bruno Silva](https://brunosilva.io).
 

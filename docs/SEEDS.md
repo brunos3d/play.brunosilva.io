@@ -7,10 +7,11 @@ Every game on the platform uses the same seed format, the same PRNG and the same
 The same seed, difficulty, size and generator version always produce the same puzzle, on any machine and in any JavaScript engine.
 
 ```ts
-generatePuzzle("example-seed", "hard");      // Patches, identical every time
-generateZipPuzzle("example-seed", "hard");   // Zip, identical every time
-generateChessPuzzle("example-seed", "hard");  // Chess, identical every time
-generateQueensPuzzle("example-seed", "hard"); // Queens, identical every time
+generatePuzzle("example-seed", "hard");         // Patches, identical every time
+generateZipPuzzle("example-seed", "hard");      // Zip, identical every time
+generateChessPuzzle("example-seed", "hard");    // Chess, identical every time
+generateQueensPuzzle("example-seed", "hard");   // Queens, identical every time
+generateSumbreakPuzzle("example-seed", "hard"); // Sumbreak, identical every time
 ```
 
 No generator reads `Math.random()`, `Date.now()`, UUIDs, storage order or the network. `getDailyPuzzle(new Date())` reads the clock only to decide which date to build, and the date then acts as an ordinary seed.
@@ -40,17 +41,17 @@ QUEENS:lucky:1:expert:10       practice Queens, forced to 10x10
 
 | Field | Rules |
 |---|---|
-| game | `ZIP`, `PATCHES`, `CHESS` or `QUEENS`. A seed of one game is rejected by the others |
+| game | `ZIP`, `PATCHES`, `CHESS`, `QUEENS` or `SUMBREAK`. A seed of one game is rejected by the others |
 | `token` | letters, digits, `.`, `_`, `-`. Up to 64 characters. Free text is normalized: `"hello world"` becomes `hello-world` |
 | `version` | generator version, an integer |
 | `difficulty` | `easy`, `medium`, `hard`, `expert` |
-| `size` | optional. Zip 5 to 8, Patches 5 to 10, Queens 5 to 10. Without it the tier picks the size. Chess seeds never carry one: every board is 8x8 |
+| `size` | optional. Zip 5 to 8, Patches 5 to 10, Queens 5 to 10, Sumbreak 3 to 5. Without it the tier picks the size. Chess seeds never carry one: every board is 8x8 |
 
 Each game builds its codec with `createSeedCodec({ prefix, currentVersion, supportedVersions, minSize, maxSize })`. The PRNG key is `<GAME>|v<version>|<token>|<difficulty>|<size or auto>`, so every field that changes the puzzle is in the key and two games never share a stream.
 
 ## Versioning
 
-Each game has its own generator version: `GENERATOR_VERSION` for Patches, currently 1, `ZIP_GENERATOR_VERSION`, currently 2, and `CHESS_GENERATOR_VERSION` and `QUEENS_GENERATOR_VERSION`, both 1. When a generator change would alter the board a seed produces:
+Each game has its own generator version: `GENERATOR_VERSION` for Patches, currently 1, `ZIP_GENERATOR_VERSION`, currently 2, and `CHESS_GENERATOR_VERSION`, `QUEENS_GENERATOR_VERSION` and `SUMBREAK_GENERATOR_VERSION`, all 1. When a generator change would alter the board a seed produces:
 
 1. Keep the old code path.
 2. Bump the version.
@@ -101,6 +102,7 @@ number     = days since the game's epoch, plus 1
 | Patches | 2026-03-18, the day the original Patches launched | #188 |
 | Chess | 2026-11-22, the day it joined this platform | not out yet |
 | Queens | 2026-11-22, the day it joined this platform | not out yet |
+| Sumbreak | 2026-11-18, the day LinkedIn's Sumbreak launched | not out yet |
 
 The Zip and Patches launch dates come from press coverage. The numbers were not checked against the counters LinkedIn shows in its own games.
 

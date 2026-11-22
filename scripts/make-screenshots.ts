@@ -15,6 +15,7 @@ import { chessPuzzle, coach, openChess, tapMove } from "../e2e/chess/helpers";
 import { draw, openPuzzle, practicePuzzle, targetsOf } from "../e2e/patches/helpers";
 import { openQueens, placeQueen, queensPuzzle } from "../e2e/queens/helpers";
 import { SETTINGS_KEY } from "../e2e/shared";
+import { openSumbreak, playMerges, sumbreakPuzzle } from "../e2e/sumbreak/helpers";
 import { drawCells, openZip, zipPuzzle } from "../e2e/zip/helpers";
 
 const BASE_URL = process.env.BASE_URL ?? "http://localhost:3000";
@@ -24,7 +25,7 @@ const PHONE = { width: 390, height: 720 };
 async function newPage(browser: Browser, colorScheme: "light" | "dark", height = PHONE.height): Promise<Page> {
   const context = await browser.newContext({ baseURL: BASE_URL, viewport: { width: PHONE.width, height }, deviceScaleFactor: 2, colorScheme });
   await context.addInitScript(([key]) => {
-    localStorage.setItem(key, JSON.stringify({ sound: false, haptics: false, tutorials: { zip: true, patches: true, chess: true, queens: true } }));
+    localStorage.setItem(key, JSON.stringify({ sound: false, haptics: false, tutorials: { zip: true, patches: true, chess: true, queens: true, sumbreak: true } }));
   }, [SETTINGS_KEY]);
   return context.newPage();
 }
@@ -63,6 +64,12 @@ async function shootGames(browser: Browser, colorScheme: "light" | "dark", suffi
   for (const cell of queens.puzzle.solution.slice(0, 5)) await placeQueen(page, 8, cell);
   await settle(page);
   await page.screenshot({ path: resolve(OUT, `queens${suffix}.png`) });
+
+  const sumbreak = sumbreakPuzzle("readme", "hard", 4);
+  await openSumbreak(page, sumbreak.url);
+  await playMerges(page, sumbreak.puzzle, sumbreak.puzzle.solution.slice(0, 5));
+  await settle(page);
+  await page.screenshot({ path: resolve(OUT, `sumbreak${suffix}.png`) });
 
   await page.context().close();
 }
