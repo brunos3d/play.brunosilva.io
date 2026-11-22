@@ -1,0 +1,277 @@
+/*
+ * Chess board and coach. The board container, the pixel-snapped grid and the
+ * shake come from the shared tile board in src/shared/ui/theme.css. This file
+ * turns the tiles into flush squares and adds what is unique to chess: pieces,
+ * move marks, the promotion choice and the coach's chat.
+ *
+ * The squares keep their green and cream in both themes, because the pieces
+ * are drawn for them. Only the frame around the board follows the theme.
+ */
+
+.chess-board {
+  --board-pad: 0px;
+  --square-light: #ecebd0;
+  --square-dark: #739552;
+  /* Last move and selection, laid over the square's own colour. */
+  --square-mark: rgb(255 242 60 / 0.52);
+  --square-ink-on-light: #739552;
+  --square-ink-on-dark: #ecebd0;
+  border-radius: 10px;
+  cursor: default;
+  user-select: none;
+}
+.chess-board[data-take-back="true"] { cursor: pointer; }
+
+.chess-square { --square: var(--square-light); --square-ink: var(--square-ink-on-light); }
+.chess-square[data-dark="true"] { --square: var(--square-dark); --square-ink: var(--square-ink-on-dark); }
+.chess-square::before {
+  inset: 0;
+  border-radius: 0;
+  background: var(--square);
+}
+.chess-square[data-last="true"]::before,
+.chess-square[data-selected="true"]::before {
+  background: linear-gradient(var(--square-mark), var(--square-mark)), var(--square);
+}
+/* The king in check sits on a red glow. */
+.chess-square[data-check="true"]::before {
+  background: radial-gradient(circle, rgb(226 44 32 / 0.95) 0%, rgb(226 44 32 / 0.7) 38%, rgb(226 44 32 / 0) 74%), var(--square);
+}
+.chess-board:not([data-locked="true"]) .chess-square[data-mine="true"] { cursor: grab; }
+.chess-board[data-dragging="true"],
+.chess-board[data-dragging="true"] .chess-square { cursor: grabbing; }
+
+/* Square under a dragged piece, the hinted piece and the keyboard cursor: rings inside the square, never colour alone. */
+.chess-square::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+}
+.chess-square[data-hover="true"]::after { box-shadow: inset 0 0 0 calc(100cqw / 8 * 0.06) rgb(255 255 255 / 0.85); }
+.chess-square[data-hint="true"]::after {
+  box-shadow: inset 0 0 0 calc(100cqw / 8 * 0.08) var(--hint);
+  animation: hint-pulse 1100ms ease-in-out infinite;
+}
+.mg-grid:focus-visible .chess-square[data-cursor="true"]::after { box-shadow: inset 0 0 0 3px #1d1a17, inset 0 0 0 5.5px #fffdf8; }
+.chess-board .mg-grid:focus-visible { outline: none; }
+
+.chess-coordinate {
+  position: absolute;
+  z-index: 1;
+  font-size: clamp(8px, calc(100cqw / 8 * 0.2), 13px);
+  font-weight: 700;
+  line-height: 1;
+  color: var(--square-ink);
+  pointer-events: none;
+}
+.chess-coordinate[data-edge="rank"] { top: 6%; left: 7%; }
+.chess-coordinate[data-edge="file"] { bottom: 6%; right: 8%; }
+
+/* Where the selected piece may go: a dot on an empty square, a ring around a piece it can take. */
+.chess-target {
+  position: absolute;
+  inset: 34%;
+  border-radius: 50%;
+  background: rgb(20 30 10 / 0.2);
+  pointer-events: none;
+}
+.chess-target[data-capture="true"] {
+  inset: 0;
+  background: none;
+  box-shadow: inset 0 0 0 calc(100cqw / 8 * 0.09) rgb(20 30 10 / 0.2);
+}
+
+.chess-pieces { inset: 0; }
+.chess-piece {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 12.5%;
+  height: 12.5%;
+  transition: transform 200ms cubic-bezier(0.25, 0.8, 0.3, 1);
+  will-change: transform;
+}
+.chess-piece svg { width: 100%; height: 100%; display: block; filter: drop-shadow(0 1px 0.6px rgb(0 0 0 / 0.25)); }
+/* The piece that just moved slides over everything else. */
+.chess-piece[data-moved="true"] { z-index: 2; }
+/* Dropped by hand: it is already there. */
+.chess-piece[data-instant="true"] { transition: none; }
+/* While it is being dragged the piece on the board is only a shadow of itself, and the real one follows the pointer. */
+.chess-piece[data-lifted="true"] { opacity: 0.28; }
+.chess-piece[data-exiting="true"] { animation: chess-capture 200ms ease-in both; }
+
+.chess-ghost {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 60;
+  pointer-events: none;
+  will-change: transform;
+}
+.chess-ghost svg { width: 100%; height: 100%; display: block; transform: scale(1.14); filter: drop-shadow(0 5px 5px rgb(0 0 0 / 0.32)); }
+.chess-ghost[data-touch="true"] svg { transform: scale(1.7); }
+
+/* The coach's verdict on a move: a tick or a cross on the corner of its square. A shape, not only a colour. */
+.chess-verdict {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 12.5%;
+  height: 12.5%;
+  z-index: 3;
+  pointer-events: none;
+}
+.chess-verdict svg {
+  position: absolute;
+  top: 4%;
+  right: 4%;
+  width: 38%;
+  height: 38%;
+  padding: 5%;
+  border-radius: 50%;
+  color: #fff;
+  background: #c0392b;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.4);
+  animation: chess-verdict-in 220ms cubic-bezier(0.2, 0.9, 0.3, 1.4) both;
+}
+.chess-verdict[data-good="true"] svg { background: #2f7d5b; }
+
+.chess-promotion-layer { inset: 0; z-index: 5; background: rgb(20 18 16 / 0.28); }
+.chess-promotion {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 12.5%;
+  display: flex;
+  flex-direction: column;
+  border-radius: 6px;
+  overflow: hidden;
+  background: #fffdf8;
+  box-shadow: 0 6px 20px rgb(0 0 0 / 0.45);
+  pointer-events: auto;
+  animation: fade-in 120ms ease both;
+}
+.chess-promotion button { aspect-ratio: 1; cursor: pointer; }
+.chess-promotion button:hover,
+.chess-promotion button:focus-visible { background: #f3dc8f; }
+.chess-promotion svg { width: 100%; height: 100%; display: block; }
+
+@media (prefers-color-scheme: dark) {
+  .chess-board {
+    --square-light: #d9d8be;
+    --square-dark: #67874a;
+    --square-ink-on-light: #67874a;
+    --square-ink-on-dark: #d9d8be;
+  }
+}
+
+/* ---------- Coach ---------- */
+
+/*
+ * Narrow screens: the coach sits under the board where the status line would
+ * be, and shows her latest line only. Room for three lines of text, so the
+ * controls do not jump when she speaks.
+ */
+.chess-coach {
+  width: 100%;
+  min-height: 84px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: end;
+  gap: 10px;
+}
+.chess-coach-who { display: flex; align-items: center; gap: 10px; }
+.chess-coach-avatar { width: 54px; height: 54px; flex: none; border-radius: 50%; box-shadow: 0 0 0 1.5px var(--thread); }
+.chess-coach-name { display: none; flex-direction: column; line-height: 1.2; }
+.chess-coach-name strong { font-size: 16px; }
+.chess-coach-name span { font-size: 12px; color: var(--ink-soft); }
+
+.chess-coach-log { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; min-width: 0; }
+.chess-bubble {
+  max-width: 100%;
+  padding: 9px 13px;
+  border-radius: 16px 16px 16px 5px;
+  font-size: 14px;
+  line-height: 1.36;
+  color: var(--ink);
+  background: var(--surface);
+  box-shadow: 0 0 0 1.5px var(--thread);
+  text-wrap: pretty;
+  -webkit-user-select: text;
+  user-select: text;
+  animation: chess-bubble-in 220ms cubic-bezier(0.2, 0.9, 0.3, 1.1) both;
+}
+/* A stripe names the mood for people who cannot see the owl's eyes well: thicker for bad news. */
+.chess-bubble[data-mood="happy"] { box-shadow: 0 0 0 1.5px var(--thread), inset 3px 0 0 var(--valid); }
+.chess-bubble[data-mood="worried"] { box-shadow: 0 0 0 1.5px var(--thread), inset 5px 0 0 var(--invalid); }
+.chess-bubble[data-mood="thinking"] { box-shadow: 0 0 0 1.5px var(--thread), inset 3px 0 0 var(--hint); }
+.chess-coach-note { font-size: 12px; font-weight: 600; color: var(--ink-soft); padding-left: 4px; }
+
+/* Only the latest thing she said, plus the note under it. */
+.chess-coach-log > .chess-bubble { display: none; }
+.chess-coach-log > .chess-bubble:nth-last-child(1 of .chess-bubble) { display: block; }
+
+.chess-typing { display: flex !important; gap: 4px; align-items: center; min-height: 37px; }
+.chess-typing span { width: 6px; height: 6px; border-radius: 50%; background: var(--ink-faint); animation: chess-typing 900ms ease-in-out infinite; }
+.chess-typing span:nth-child(2) { animation-delay: 150ms; }
+.chess-typing span:nth-child(3) { animation-delay: 300ms; }
+
+/* The board gives up a little height for the coach, who is taller than a status line. */
+.mg-shell:has(.chess-coach) .mg-stage { width: min(100%, max(240px, calc(100dvh - 378px))); }
+
+/* Phones held sideways use the shared two-column shell. The coach takes the status line's place in it. */
+@media (orientation: landscape) and (max-height: 520px) {
+  .chess-coach { grid-area: status; min-height: 0; }
+  .chess-coach-avatar { width: 40px; height: 40px; }
+  .mg-shell:has(.chess-coach) .mg-stage { width: calc(100dvh - 24px); }
+}
+
+/*
+ * Wide screens: the coach moves beside the board, as a chat. Her name shows,
+ * every line stays, and the column scrolls by itself.
+ */
+@media (min-width: 1000px) and (min-height: 521px) {
+  .mg-shell:has(.chess-coach) {
+    max-width: 940px;
+    display: grid;
+    grid-template-columns: minmax(0, 560px) minmax(0, 320px);
+    grid-template-rows: auto auto auto 1fr;
+    grid-template-areas: "header coach" "stage coach" "controls coach" "footer footer";
+    column-gap: 28px;
+    justify-content: center;
+    justify-items: center;
+    align-content: start;
+  }
+  .mg-shell:has(.chess-coach) > * { grid-column: 1 / -1; }
+  .mg-shell:has(.chess-coach) > .mg-header { grid-area: header; }
+  .mg-shell:has(.chess-coach) > .mg-stage { grid-area: stage; width: min(100%, max(240px, calc(100dvh - 268px))); }
+  .mg-shell:has(.chess-coach) > .mg-controls { grid-area: controls; }
+  .mg-shell:has(.chess-coach) > .mg-footer { grid-area: footer; }
+
+  .mg-shell:has(.chess-coach) > .chess-coach {
+    grid-area: coach;
+    align-self: stretch;
+    min-height: 0;
+    max-height: calc(100dvh - 90px);
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+    padding: 16px;
+    border-radius: 22px;
+    background: var(--linen-deep);
+    box-shadow: 0 0 0 1.5px var(--thread);
+  }
+  .chess-coach-name { display: flex; }
+  .chess-coach-log { flex: 1; min-height: 0; overflow-y: auto; gap: 8px; padding: 2px 2px 4px; scrollbar-width: thin; }
+  .chess-coach-log > .chess-bubble { display: block; }
+  /* Older lines step back, so the eye lands on the newest one. */
+  .chess-coach-log > .chess-bubble:not(:nth-last-child(1 of .chess-bubble)) { opacity: 0.72; }
+}
+
+@keyframes chess-capture { from { opacity: 1; } to { opacity: 0; } }
+@keyframes chess-verdict-in { from { opacity: 0; scale: 0.4; } to { opacity: 1; scale: 1; } }
+@keyframes chess-bubble-in { from { opacity: 0; translate: 0 6px; } to { opacity: 1; translate: 0 0; } }
+@keyframes chess-typing { 0%, 100% { opacity: 0.3; translate: 0 0; } 40% { opacity: 1; translate: 0 -3px; } }
