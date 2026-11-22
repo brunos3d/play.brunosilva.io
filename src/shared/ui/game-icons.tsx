@@ -100,7 +100,7 @@ export function SumbreakIcon({ className, title }: Props) {
         <path d="M17.2 17.2a2.9 2.9 0 1 1 5 2.1l-5 4.9h6" />
         <path d="M41.2 17.2a2.9 2.9 0 1 1 5 2.1l-5 4.9h6" />
       </g>
-      <path d="M46.5 38v12M40.5 46l5.5-8h.500M40.5 46h9.5" fill="none" stroke="#f6f1e7" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M46.5 38v12M40.5 46l5.5-8h.5M40.5 46h9.5" fill="none" stroke="#f6f1e7" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
