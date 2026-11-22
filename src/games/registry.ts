@@ -1,5 +1,5 @@
 /** Every game on the platform. The hub, the headers and the footers are built from this list. */
-export const GAME_IDS = ["zip", "patches", "chess", "queens"] as const;
+export const GAME_IDS = ["zip", "patches", "chess", "queens", "sumbreak"] as const;
 export type GameId = (typeof GAME_IDS)[number];
 
 export type GameMeta = {
@@ -52,6 +52,15 @@ export const GAMES: Record<GameId, GameMeta> = {
     description: "Place a queen in every row, column and coloured region so that no two queens touch.",
     path: "/queens",
     mistakesLabel: "Takebacks",
+    hasSizes: true,
+  },
+  sumbreak: {
+    id: "sumbreak",
+    name: "Sumbreak",
+    tagline: "Merge down to one tile",
+    description: "Merge equal neighbours into their sum, in the right order, until a single tile is left.",
+    path: "/sumbreak",
+    mistakesLabel: "Missteps",
     hasSizes: true,
   },
 };

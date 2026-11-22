@@ -18,6 +18,7 @@ const targets = [
   { source: "patches.svg", file: "patches-192.png", size: 192, padding: 0 },
   { source: "chess.svg", file: "chess-192.png", size: 192, padding: 0 },
   { source: "queens.svg", file: "queens-192.png", size: 192, padding: 0 },
+  { source: "sumbreak.svg", file: "sumbreak-192.png", size: 192, padding: 0 },
 ];
 
 async function main(): Promise<void> {

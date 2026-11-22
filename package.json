@@ -24,6 +24,9 @@
     "queens:generate": "tsx scripts/queens/generate.ts",
     "queens:validate": "tsx scripts/queens/validate.ts",
     "queens:benchmark": "tsx scripts/queens/benchmark.ts",
+    "sumbreak:generate": "tsx scripts/sumbreak/generate.ts",
+    "sumbreak:validate": "tsx scripts/sumbreak/validate.ts",
+    "sumbreak:benchmark": "tsx scripts/sumbreak/benchmark.ts",
     "icons": "tsx scripts/make-icons.ts",
     "screenshots": "tsx scripts/make-screenshots.ts",
     "og": "tsx scripts/make-og-images.ts"

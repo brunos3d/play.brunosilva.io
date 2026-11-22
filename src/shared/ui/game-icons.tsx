@@ -87,6 +87,24 @@ export function QueensIcon({ className, title }: Props) {
   );
 }
 
+/** Two equal tiles about to merge, above the tile they make. */
+export function SumbreakIcon({ className, title }: Props) {
+  return (
+    <svg {...frame} className={className} role={title ? "img" : undefined} aria-label={title} aria-hidden={title ? undefined : true}>
+      <rect width="64" height="64" rx="15" fill="#f6f1e7" />
+      <rect x="9" y="9" width="22" height="22" rx="5.5" fill="#a8d3ea" />
+      <rect x="33" y="9" width="22" height="22" rx="5.5" fill="#a8d3ea" />
+      <rect x="9" y="33" width="22" height="22" rx="5.5" fill="none" stroke="#2a2622" strokeOpacity=".3" strokeWidth="1.5" strokeDasharray="3 2.6" />
+      <rect x="33" y="33" width="22" height="22" rx="5.5" fill="#c2553d" />
+      <g fill="none" stroke="#2a2622" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M17.2 17.2a2.9 2.9 0 1 1 5 2.1l-5 4.9h6" />
+        <path d="M41.2 17.2a2.9 2.9 0 1 1 5 2.1l-5 4.9h6" />
+      </g>
+      <path d="M46.5 38v12M40.5 46l5.5-8h.500M40.5 46h9.5" fill="none" stroke="#f6f1e7" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 /** Platform mark: four tiles, one per kind of fabric. */
 export function PlatformIcon({ className, title }: Props) {
   return (
@@ -101,6 +119,6 @@ export function PlatformIcon({ className, title }: Props) {
 }
 
 export function GameIcon({ game, ...props }: Props & { game: GameId }) {
-  const Icon = { zip: ZipIcon, patches: PatchesIcon, chess: ChessIcon, queens: QueensIcon }[game];
+  const Icon = { zip: ZipIcon, patches: PatchesIcon, chess: ChessIcon, queens: QueensIcon, sumbreak: SumbreakIcon }[game];
   return <Icon {...props} />;
 }

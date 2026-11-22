@@ -16,9 +16,9 @@
  *   the failed fetch makes Next.js fall back to a full navigation, which the
  *   cached page answers.
  */
-const CACHE = "minigames-shell-v2";
-const PAGES = ["/", "/zip", "/zip/practice", "/zip/play", "/patches", "/patches/practice", "/patches/play", "/chess", "/chess/practice", "/chess/play", "/queens", "/queens/practice", "/queens/play"];
-const EXTRAS = ["/manifest.webmanifest", "/icons/platform.svg", "/icons/zip.svg", "/icons/patches.svg", "/icons/chess.svg", "/icons/queens.svg", "/icons/icon-192.png", "/icons/icon-512.png"];
+const CACHE = "minigames-shell-v3";
+const PAGES = ["/", "/zip", "/zip/practice", "/zip/play", "/patches", "/patches/practice", "/patches/play", "/chess", "/chess/practice", "/chess/play", "/queens", "/queens/practice", "/queens/play", "/sumbreak", "/sumbreak/practice", "/sumbreak/play"];
+const EXTRAS = ["/manifest.webmanifest", "/icons/platform.svg", "/icons/zip.svg", "/icons/patches.svg", "/icons/chess.svg", "/icons/queens.svg", "/icons/sumbreak.svg", "/icons/icon-192.png", "/icons/icon-512.png"];
 const STATIC_ASSET = /\/_next\/static\/[^"'\\\s)<>]+/g;
 
 async function precache() {

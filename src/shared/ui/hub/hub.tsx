@@ -9,6 +9,8 @@ import { patchesPuzzleId } from "@/games/patches/engine/generator/generate";
 import { getQueensDailyInfo } from "@/games/queens/engine/daily";
 import { queensPuzzleId } from "@/games/queens/engine/generator";
 import { GAME_LIST, type GameId, type GameMeta, PLATFORM_NAME } from "@/games/registry";
+import { getSumbreakDailyInfo } from "@/games/sumbreak/engine/daily";
+import { sumbreakPuzzleId } from "@/games/sumbreak/engine/generator";
 import { getZipDailyInfo } from "@/games/zip/engine/daily";
 import { zipPuzzleId } from "@/games/zip/engine/generator";
 import { clockElapsed, formatTime, restoreClock } from "@/shared/engine/clock";
@@ -26,6 +28,7 @@ const DAILY: Record<GameId, { info: (date: string) => DailyInfo; puzzleId: (seed
   patches: { info: getPatchesDaily, puzzleId: patchesPuzzleId },
   chess: { info: getChessDailyInfo, puzzleId: chessPuzzleId },
   queens: { info: getQueensDailyInfo, puzzleId: queensPuzzleId },
+  sumbreak: { info: getSumbreakDailyInfo, puzzleId: sumbreakPuzzleId },
 };
 
 type Today =

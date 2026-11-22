@@ -68,7 +68,7 @@ test("every game is on the hub from its launch day, numbered from 1", async ({ p
   // 2026-11-23 18:00 UTC is a Monday morning in Pacific time, the day after Chess and Queens launched.
   await page.clock.setFixedTime(new Date("2026-11-23T18:00:00Z"));
   await page.goto("/");
-  for (const game of ["zip", "patches", "chess", "queens"]) await expect(page.getByTestId(`hub-card-${game}`)).toBeVisible();
+  for (const game of ["zip", "patches", "chess", "queens", "sumbreak"]) await expect(page.getByTestId(`hub-card-${game}`)).toBeVisible();
   await expect(page.getByTestId("hub-today-chess")).toContainText("#2");
   await expect(page.getByTestId("hub-today-chess")).toContainText("easy");
   await expect(page.getByTestId("hub-today-queens")).toContainText("#2");

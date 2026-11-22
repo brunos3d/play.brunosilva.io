@@ -13,7 +13,7 @@ type Probe = { tones: number; peaks: number[]; masters: number[]; limiters: numb
  */
 async function installProbe(page: import("@playwright/test").Page): Promise<void> {
   await page.addInitScript(([key]) => {
-    localStorage.setItem(key, JSON.stringify({ sound: true, haptics: false, tutorials: { zip: true, patches: true, chess: true, queens: true } }));
+    localStorage.setItem(key, JSON.stringify({ sound: true, haptics: false, tutorials: { zip: true, patches: true, chess: true, queens: true, sumbreak: true } }));
     const probe = { tones: 0, peaks: [] as number[], masters: [] as number[], limiters: 0, frequencies: [] as number[] };
     (window as unknown as { __audio: typeof probe }).__audio = probe;
 

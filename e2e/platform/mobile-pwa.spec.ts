@@ -4,11 +4,13 @@ import { board as patchesBoard, cellCenter, draw, openPuzzle, practicePuzzle, re
 import { board as zipBoard, cellPoint, drawCells, openZip, visited, zipPuzzle } from "../zip/helpers";
 import { chessPuzzle, openChess, tapMove, verdict as chessVerdict } from "../chess/helpers";
 import { openQueens, placeQueen, queens as placedQueens, queensPuzzle } from "../queens/helpers";
+import { dragMerge, openSumbreak, sumbreakPuzzle, tiles as sumbreakTiles } from "../sumbreak/helpers";
 
 const patches = practicePuzzle("e2e-mobile", "hard", 8);
 const zip = zipPuzzle("e2e-mobile", "hard", 8);
 const chess = chessPuzzle("e2e-mobile", "easy");
 const queens = queensPuzzle("e2e-mobile", "medium", 7);
+const sumbreak = sumbreakPuzzle("e2e-mobile", "medium", 3);
 
 test.beforeEach(async ({ page }) => {
   await skipTutorials(page);
@@ -102,7 +104,7 @@ test("the manifest makes the platform installable", async ({ page, request }) =>
   for (const icon of [...manifest.icons, ...manifest.shortcuts.flatMap((shortcut: { icons: { src: string }[] }) => shortcut.icons)]) {
     expect((await request.get(icon.src)).ok(), icon.src).toBe(true);
   }
-  expect(manifest.shortcuts.map((shortcut: { url: string }) => shortcut.url)).toEqual(["/zip", "/patches", "/chess", "/queens"]);
+  expect(manifest.shortcuts.map((shortcut: { url: string }) => shortcut.url)).toEqual(["/zip", "/patches", "/chess", "/queens", "/sumbreak"]);
 });
 
 test("after one online visit the hub and every game load and play offline", async ({ page, context }) => {
@@ -110,9 +112,9 @@ test("after one online visit the hub and every game load and play offline", asyn
   await page.evaluate(async () => {
     await navigator.serviceWorker.ready;
     for (let i = 0; i < 150; i++) {
-      const keys = await (await caches.open("minigames-shell-v2")).keys();
+      const keys = await (await caches.open("minigames-shell-v3")).keys();
       const has = (suffix: string) => keys.some((key) => new URL(key.url).pathname === suffix);
-      if (navigator.serviceWorker.controller && has("/zip/play") && has("/patches/play") && has("/chess/play") && has("/queens/play") && keys.some((key) => key.url.includes("/_next/static/"))) return;
+      if (navigator.serviceWorker.controller && has("/zip/play") && has("/patches/play") && has("/chess/play") && has("/queens/play") && has("/sumbreak/play") && keys.some((key) => key.url.includes("/_next/static/"))) return;
       await new Promise((resolve) => setTimeout(resolve, 100));
     }
     throw new Error("service worker did not finish precaching");
@@ -138,5 +140,9 @@ test("after one online visit the hub and every game load and play offline", asyn
   await openQueens(page, queens.url);
   await placeQueen(page, queens.puzzle.size, queens.puzzle.solution[0]);
   await expect(placedQueens(page)).toHaveCount(1);
+
+  await openSumbreak(page, sumbreak.url);
+  await dragMerge(page, 3, sumbreak.puzzle.solution[0]);
+  await expect(sumbreakTiles(page)).toHaveCount(8);
   await context.setOffline(false);
 });
