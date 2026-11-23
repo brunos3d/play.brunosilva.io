@@ -12,6 +12,8 @@ generateZipPuzzle("example-seed", "hard");      // Zip, identical every time
 generateChessPuzzle("example-seed", "hard");    // Chess, identical every time
 generateQueensPuzzle("example-seed", "hard");   // Queens, identical every time
 generateSumbreakPuzzle("example-seed", "hard"); // Sumbreak, identical every time
+generateWendPuzzle("example-seed", "hard");     // Wend, identical every time
+generateTermoPuzzle("example-seed", "hard");    // Termo, identical every time
 ```
 
 No generator reads `Math.random()`, `Date.now()`, UUIDs, storage order or the network. `getDailyPuzzle(new Date())` reads the clock only to decide which date to build, and the date then acts as an ordinary seed.
@@ -37,27 +39,31 @@ PATCHES:2026-09-21:1:hard      a daily Patches
 ZIP:lucky:1:hard:8             practice, forced to 8x8
 CHESS:2026-11-23:1:easy        a daily Chess
 QUEENS:lucky:1:expert:10       practice Queens, forced to 10x10
+WEND:2026-11-23:1:easy         a daily Wend
+TERMO:lucky:1:hard             practice Termo, two words at once (Dueto)
 ```
 
 | Field | Rules |
 |---|---|
-| game | `ZIP`, `PATCHES`, `CHESS`, `QUEENS` or `SUMBREAK`. A seed of one game is rejected by the others |
+| game | `ZIP`, `PATCHES`, `CHESS`, `QUEENS`, `SUMBREAK`, `WEND` or `TERMO`. A seed of one game is rejected by the others |
 | `token` | letters, digits, `.`, `_`, `-`. Up to 64 characters. Free text is normalized: `"hello world"` becomes `hello-world` |
 | `version` | generator version, an integer |
 | `difficulty` | `easy`, `medium`, `hard`, `expert` |
-| `size` | optional. Zip 5 to 8, Patches 5 to 10, Queens 5 to 10, Sumbreak 3 to 5. Without it the tier picks the size. Chess seeds never carry one: every board is 8x8 |
+| `size` | optional. Zip 5 to 8, Patches 5 to 10, Queens 5 to 10, Sumbreak 3 to 5, Wend 5 to 8. Without it the tier picks the size. Chess and Termo seeds never carry one: every chess board is 8x8 and every Termo word has five letters |
 
 Each game builds its codec with `createSeedCodec({ prefix, currentVersion, supportedVersions, minSize, maxSize })`. The PRNG key is `<GAME>|v<version>|<token>|<difficulty>|<size or auto>`, so every field that changes the puzzle is in the key and two games never share a stream.
 
 ## Versioning
 
-Each game has its own generator version: `GENERATOR_VERSION` for Patches, currently 1, `ZIP_GENERATOR_VERSION`, currently 2, and `CHESS_GENERATOR_VERSION`, `QUEENS_GENERATOR_VERSION` and `SUMBREAK_GENERATOR_VERSION`, all 1. When a generator change would alter the board a seed produces:
+Each game has its own generator version: `GENERATOR_VERSION` for Patches, currently 1, `ZIP_GENERATOR_VERSION`, currently 2, and `CHESS_GENERATOR_VERSION`, `QUEENS_GENERATOR_VERSION`, `SUMBREAK_GENERATOR_VERSION`, `WEND_GENERATOR_VERSION` and `TERMO_GENERATOR_VERSION`, all 1. When a generator change would alter the board a seed produces:
 
 1. Keep the old code path.
 2. Bump the version.
 3. Add the new number to the codec's `supportedVersions`.
 
 Old links and old dailies then keep their boards. A seed with an unsupported version throws, and the play page shows "This seed cannot be played".
+
+In Wend and Termo the words are part of the generator. Editing a shipped theme of Wend's word bank, or rebuilding Termo's answer list in a different order, changes what a seed builds, so it needs a new version like any other generator change.
 
 Zip went through this once. Version 2 builds themed boards (see `docs/zip/ZIP.md`). Version 1 moved to `engine/generator/v1.ts` untouched, with its own copy of the tier settings, and `supportedVersions` is `[1, 2]`. `ZIP:lucky:1:hard:8` still opens the board it always did, and new practice links carry version 2. A test pins one known board per version.
 
@@ -103,10 +109,14 @@ number     = days since the game's epoch, plus 1
 | Chess | 2026-11-22, the day it joined this platform | not out yet |
 | Queens | 2026-11-22, the day it joined this platform | not out yet |
 | Sumbreak | 2026-11-18, the day LinkedIn's Sumbreak launched | not out yet |
+| Wend | 2026-06-09, the day LinkedIn's Wend launched | #105 |
+| Termo | 2026-11-22, the day it joined this platform | not out yet |
 
-The Zip and Patches launch dates come from press coverage. The numbers were not checked against the counters LinkedIn shows in its own games.
+The Zip and Patches launch dates come from press coverage. The numbers were not checked against the counters LinkedIn shows in its own games. The Wend epoch was checked: LinkedIn's game showed #167 on 2026-11-22, and this epoch gives the same number for that date.
 
-All games share one weekly ramp (`DEFAULT_WEEKLY_SCHEDULE`): Monday easy, Tuesday easy or medium, Wednesday medium, Thursday medium or hard, Friday and Saturday hard, Sunday expert. On mixed days the date picks the tier through the seeded PRNG, per game, so every player gets the same one.
+All games but Termo share one weekly ramp (`DEFAULT_WEEKLY_SCHEDULE`): Monday easy, Tuesday easy or medium, Wednesday medium, Thursday medium or hard, Friday and Saturday hard, Sunday expert. On mixed days the date picks the tier through the seeded PRNG, per game, so every player gets the same one. Termo's daily is one word in six guesses on every day, which is its medium tier. Its two-word and four-word modes have one puzzle per day each, with the seeds `TERMO:<date>-dueto:1:hard` and `TERMO:<date>-quarteto:1:expert`. Those are ordinary seeded puzzles: the same for everyone, but with no number and no streak.
+
+Two games also read the date of a daily seed to keep their content from repeating. Wend walks a shuffled deck of its themes, one a day, so a theme returns only after all the others. Termo deals its daily word from a shuffled deck of the answer list, one card a day, so the word does not come back for over four years. Both are still pure functions of the seed: the deck is shuffled by a fixed key and the date only says where to cut it. A practice seed, whose token is not a date, draws with its own randomness.
 
 Rollover happens at midnight Pacific. `msUntilPacificMidnight` first estimates from wall-clock parts, then corrects against the real date boundary, because the estimate is an hour off on the 23-hour and 25-hour days when daylight saving changes. Tests cover both days and check 400 instants across a year.
 
