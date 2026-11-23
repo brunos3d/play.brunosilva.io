@@ -147,7 +147,7 @@ A drag is many steps but one move, so undo works gesture by gesture. "Backtracks
 - A refused step shakes the board, hatches the cell, plays a sound and names the rule. A finger resting on a forbidden cell complains once, not on every pointer event.
 - A tap on a cell the path cannot reach (not in line with the head, not a diagonal neighbour) is refused the same way. The same cell crossed during a drag stays silent, or a fast diagonal swipe would buzz all the way.
 - The next number wears a pulsing ring, and the head of the path has a marker that shows where to press.
-- A solved board keeps only its answer. The walls and the numbers fade out and the line gets thicker, so what stays is the drawing the path makes. A board that loads already solved appears in that state.
+- A solved board shows its answer. The walls fade out and the line gets thicker, so what stays is the drawing the path makes. The numbers stay, each on the line, so the order in which the path joined them can be read. A board that loads already solved appears in that state.
 - Practice boards have a fifth control, New, that loads another board with a fresh seed and restarts the clock.
 - Keyboard: arrows move the head (the first key puts the path on 1), Backspace takes a step back, Z undoes, H asks for a hint.
 - Sound: each step plays a short tone whose pitch rises an octave as the path fills the board, numbers chime, stepping back plays a low note, and a refused step buzzes.

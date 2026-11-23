@@ -163,8 +163,10 @@ test("solving shows the result, locks the board and offers the next puzzle", asy
   await expect(result(page).getByTestId("game-result-suggestion")).toHaveCount(2);
   await expect(result(page).getByRole("link", { name: "See the other games" })).toHaveAttribute("href", "/");
 
-  // The solved board keeps only the answer: walls and numbers fade out and the line gets thicker.
-  await expect(board(page).locator(".zip-number").first()).toHaveCSS("opacity", "0");
+  // The solved board shows the answer: the walls fade out and the line gets thicker. The numbers stay on the line, so the order of the path can be read.
+  await expect(board(page).locator(".zip-number")).toHaveCount(puzzle.checkpoints.length);
+  await expect(board(page).locator(".zip-number").first()).toHaveCSS("opacity", "1");
+  await expect(board(page).locator(".zip-number").last()).toBeVisible();
   if (puzzle.walls.length > 0) await expect(board(page).getByTestId("zip-wall").first()).toHaveCSS("opacity", "0");
   await expect.poll(async () => Number.parseFloat(await board(page).getByTestId("zip-segment").first().evaluate((line) => getComputedStyle(line).strokeWidth))).toBeGreaterThan(0.4);
 

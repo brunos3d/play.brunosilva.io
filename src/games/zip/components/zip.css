@@ -91,11 +91,12 @@
 .zip-joint { fill: var(--line); }
 
 /*
- * A solved board keeps only its answer. Once the celebration wave has started,
- * the walls and the numbers fade out and the line swells, so what stays is the
- * drawing the path makes. The joints scale by the same factor as the stroke,
- * or the corners would show a notch. A board that loads already solved has
- * nothing to transition from and simply appears in this state.
+ * A solved board shows its answer. Once the celebration wave has started, the
+ * walls fade out and the line swells, so what stays is the drawing the path
+ * makes. The numbers stay, each disc sitting on the line, so the player can see
+ * the order in which the path joined them. The joints scale by the same factor
+ * as the stroke, or the corners would show a notch. A board that loads already
+ * solved has nothing to transition from and simply appears in this state.
  */
 .zip-segment { transition: stroke-width 700ms cubic-bezier(0.3, 0.7, 0.3, 1) 650ms; }
 .zip-joint {
@@ -103,12 +104,10 @@
   transform-origin: center;
   transition: transform 700ms cubic-bezier(0.3, 0.7, 0.3, 1) 650ms;
 }
-.zip-wall,
-.zip-number { transition: opacity 450ms ease 500ms; }
+.zip-wall { transition: opacity 450ms ease 500ms; }
 .mg-board[data-solved="true"] .zip-segment { stroke-width: 0.45; }
 .mg-board[data-solved="true"] .zip-joint { transform: scale(1.5); }
-.mg-board[data-solved="true"] .zip-wall,
-.mg-board[data-solved="true"] .zip-number { opacity: 0; }
+.mg-board[data-solved="true"] .zip-wall { opacity: 0; }
 
 .zip-wall {
   stroke: var(--ink);
