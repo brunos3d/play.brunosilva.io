@@ -1,0 +1,159 @@
+/*
+ * Wend board. Tiles, gaps, radii and the pixel-snapped grid come from the
+ * shared tile board in src/shared/ui/theme.css. This file adds what is unique
+ * to Wend: letters, walls, trails and the word list under the board.
+ */
+
+/*
+ * The word list sits under the board, so the board gives up some height for
+ * it. It never goes below 330px, which is the full width of a small phone: an
+ * 8 by 8 board still needs cells a finger can trace, and a short screen
+ * scrolls to the controls instead.
+ */
+.mg-stage:has(.wend-stage) { width: min(100%, max(330px, calc(100dvh - 520px))); }
+.wend-stage { display: flex; flex-direction: column; gap: 10px; }
+
+.wend-board { cursor: pointer; }
+.wend-board[data-locked="true"] { cursor: default; }
+.wend-board[data-dragging="true"] { cursor: grabbing; }
+
+/* A wall: no tile, only a hollow in the board. Words go around it. */
+.wend-cell[data-wall="true"] { cursor: not-allowed; }
+.wend-cell[data-wall="true"]::before {
+  background: color-mix(in oklab, var(--ink) 16%, var(--board));
+  box-shadow: inset 0 0 0 1.5px color-mix(in oklab, var(--ink) 14%, transparent);
+  background-image: repeating-linear-gradient(45deg, color-mix(in oklab, var(--ink) 10%, transparent) 0 2px, transparent 2px 7px);
+}
+
+.wend-svg {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+
+/* An open trail is pencil: grey, a little thinner, and it says nothing about being right. */
+.wend-trail { --line: color-mix(in oklab, var(--ink) 26%, var(--tile)); }
+.wend-trail[data-active] { --line: color-mix(in oklab, var(--ink) 38%, var(--tile)); }
+.wend-line {
+  fill: none;
+  stroke: var(--line);
+  stroke-width: 0.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.wend-start {
+  fill: var(--line);
+  stroke: color-mix(in oklab, var(--ink) 55%, transparent);
+  stroke-width: 0.045;
+}
+
+/* A found word takes its fabric colour and fills out. */
+.wend-trail[data-found] { --line: var(--word); }
+.wend-trail[data-found] .wend-line { stroke-width: 0.7; }
+.wend-trail[data-found] .wend-start { stroke: color-mix(in oklab, var(--word) 62%, #2a2622); }
+.wend-trail[data-new] .wend-line { animation: wend-found 420ms cubic-bezier(0.3, 0.8, 0.3, 1.2) both; }
+
+.wend-letter {
+  fill: var(--ink);
+  font-size: 0.46px;
+  font-weight: 700;
+  text-anchor: middle;
+  dominant-baseline: central;
+  font-family: var(--font-body), ui-sans-serif, system-ui, sans-serif;
+}
+/* Found words are pastel in both themes, so their letters stay dark. */
+.wend-letter[data-state="found"] { fill: #2a2622; }
+
+.wend-hint {
+  fill: none;
+  stroke: var(--hint);
+  stroke-width: 0.08;
+  animation: hint-pulse 550ms ease-in-out infinite;
+}
+
+/* Keyboard cursor. It only shows while the grid has keyboard focus. */
+.wend-board .mg-grid:focus-visible { outline: none; }
+.wend-cursor {
+  display: none;
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 0.06;
+}
+.wend-board .mg-grid:focus-visible ~ .mg-layer .wend-cursor { display: block; }
+
+.mg-board[data-solved="true"] .wend-line { animation: wend-found 520ms cubic-bezier(0.3, 0.8, 0.3, 1.2) both; }
+
+/* ---------- Under the board ---------- */
+
+.wend-panel { display: flex; flex-direction: column; gap: 8px; }
+
+/* The letters of the trail being drawn, in a line that is easy to read. */
+.wend-tracing {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 3px;
+  min-height: 26px;
+}
+.wend-tracing span:not(.wend-tracing-idle) {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 26px;
+  border-radius: 6px;
+  font-weight: 700;
+  font-size: 15px;
+  background: color-mix(in oklab, var(--ink) 16%, var(--surface));
+}
+.wend-tracing-idle { font-size: 13px; color: var(--ink-faint); }
+
+.wend-list-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 13px;
+  color: var(--ink-soft);
+}
+.wend-list-head strong { color: var(--ink); font-weight: 700; }
+.wend-list-head span:last-child { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+/* One row of blanks per hidden word, stacked from the shortest to the longest, so the list reads as a staircase. */
+.wend-list { display: flex; flex-direction: column; align-items: flex-start; gap: 5px; }
+.wend-row { display: flex; align-items: center; gap: 2px; }
+/* A found word gets a check mark after its last letter. */
+.wend-check {
+  width: 16px;
+  height: 16px;
+  margin-left: 5px;
+  color: var(--valid);
+  animation: wend-slot 260ms cubic-bezier(0.3, 0.8, 0.3, 1.25) both;
+}
+.wend-slot {
+  display: grid;
+  place-items: center;
+  width: 17px;
+  height: 21px;
+  border-radius: 5px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ink);
+  background: color-mix(in oklab, var(--ink) 9%, var(--surface));
+}
+/* A letter a hint revealed, while the word is still open. */
+.wend-slot[data-shown] { box-shadow: inset 0 0 0 1.5px var(--hint); background: var(--surface); }
+.wend-row[data-found] .wend-slot {
+  color: #2a2622;
+  background: var(--word);
+  box-shadow: inset 0 0 0 1.5px color-mix(in oklab, var(--word) 70%, #2a2622 26%);
+  animation: wend-slot 260ms cubic-bezier(0.3, 0.8, 0.3, 1.25) both;
+}
+
+@keyframes wend-found { 0% { stroke-width: 0.5; } 60% { stroke-width: 0.84; } 100% { stroke-width: 0.7; } }
+@keyframes wend-slot { 0% { scale: 0.8; } 60% { scale: 1.08; } 100% { scale: 1; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .wend-trail[data-new] .wend-line,
+  .mg-board[data-solved="true"] .wend-line,
+  .wend-row[data-found] .wend-slot { animation: none; }
+}
