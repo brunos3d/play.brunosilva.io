@@ -12,7 +12,8 @@ import { ConfirmDialog } from "./confirm-dialog";
 import { GameControls, type HiddenControl } from "./game-controls";
 import { GameFooter } from "./game-footer";
 import { GameHeader } from "./game-header";
-import { ShuffleIcon } from "./icons";
+import { ClockIcon, ResetIcon, ShuffleIcon } from "./icons";
+import { useRetry } from "./puzzle-attempts";
 import { type ResultData, ResultDialog } from "./result-dialog";
 import { SettingsDialog } from "./settings-dialog";
 import { type StatusMessage, StatusLine } from "./status-line";
@@ -84,6 +85,8 @@ export function GameFrame({ game, daily, difficulty, size, seed, shareUrl, sessi
   const router = useRouter();
   const [result, setResult] = useState<ResultData | null>(null);
   const [resultOpen, setResultOpen] = useState(false);
+  // Practice only: the game's container offers to start this same puzzle over.
+  const retry = useRetry();
 
   const tutorialOpen = helpOpen || (hydrated && !settings.tutorials[game.id]);
   const closeTutorial = () => {
@@ -165,7 +168,20 @@ export function GameFrame({ game, daily, difficulty, size, seed, shareUrl, sessi
 
       {statusSlot ?? <StatusLine status={status} />}
 
-      {summary ? (
+      {summary && onNext && retry ? (
+        // A finished practice puzzle: look at the result, play the same board again, or move on to another one.
+        <div className="mg-controls w-full grid grid-cols-3 gap-2">
+          <button type="button" className="mg-button" data-layout="stacked" onClick={() => setResultOpen(true)} disabled={!result}>
+            <ClockIcon /> View result
+          </button>
+          <button type="button" className="mg-button" data-layout="stacked" onClick={retry} data-testid="game-retry">
+            <ResetIcon /> Try again
+          </button>
+          <button type="button" className="mg-button" data-layout="stacked" data-variant="primary" onClick={onNext} data-testid="game-new">
+            <ShuffleIcon /> New game
+          </button>
+        </div>
+      ) : summary ? (
         <div className={`mg-controls w-full grid gap-2.5 ${onNext ? "grid-cols-2" : ""}`}>
           <button type="button" className="mg-button" data-variant={onNext ? undefined : "primary"} onClick={() => setResultOpen(true)} disabled={!result}>
             View result
@@ -230,7 +246,7 @@ export function GameFrame({ game, daily, difficulty, size, seed, shareUrl, sessi
       >
         Your progress is saved on this device, but the clock keeps running until the puzzle is solved.
       </ConfirmDialog>
-      <ResultDialog game={game} open={resultOpen} result={result} onClose={() => setResultOpen(false)} onNext={onNext} shareDetail={shareDetail} actions={resultActions} />
+      <ResultDialog game={game} open={resultOpen} result={result} onClose={() => setResultOpen(false)} onNext={onNext} onRetry={onNext && retry ? retry : undefined} shareDetail={shareDetail} actions={resultActions} />
     </main>
   );
 }

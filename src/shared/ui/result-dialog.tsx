@@ -12,7 +12,7 @@ import { type ShareOutcome, share } from "@/shared/platform/sharing";
 import { loadDailyResult } from "@/shared/storage/progress";
 import { Dialog } from "./dialog";
 import { GameIcon } from "./game-icons";
-import { ArrowRightIcon, CheckIcon, FlameIcon, ShareIcon, ShuffleIcon } from "./icons";
+import { ArrowRightIcon, CheckIcon, FlameIcon, ResetIcon, ShareIcon, ShuffleIcon } from "./icons";
 
 export type ResultData = {
   dailyNumber?: number;
@@ -26,6 +26,8 @@ export type ResultData = {
   revealed: boolean;
   /** The game was lost. It reads as its own outcome, but counts like a revealed puzzle. */
   failed?: boolean;
+  /** A practice puzzle played again with "Try again". It sets no best time. */
+  replay?: boolean;
   streak?: StreakSummary;
   best?: { elapsedMs: number; isNew: boolean };
   /** Absolute URL that reopens this puzzle, or the daily page. */
@@ -38,6 +40,8 @@ type Props = {
   result: ResultData | null;
   onClose: () => void;
   onNext?: () => void;
+  /** Practice only: play this same puzzle again from the start. */
+  onRetry?: () => void;
   /** Lines a game adds to its shared result, such as Termo's grid of coloured squares. */
   shareDetail?: () => string | undefined;
   /**
@@ -107,7 +111,7 @@ function headline(result: ResultData): string {
   return "Solved";
 }
 
-export function ResultDialog({ game, open, result, onClose, onNext, shareDetail, actions }: Props) {
+export function ResultDialog({ game, open, result, onClose, onNext, onRetry, shareDetail, actions }: Props) {
   const [shareLabel, setShareLabel] = useState<string | null>(null);
   const suggested = useSuggestedGames(game, open);
 
@@ -145,6 +149,8 @@ export function ResultDialog({ game, open, result, onClose, onNext, shareDetail,
         <div className="mt-2 text-sm font-semibold text-[var(--ink-soft)] flex items-center justify-center gap-1 min-h-5">
           {result.revealed ? (
             <>This one does not count toward your streak or best time.</>
+          ) : result.replay ? (
+            <>A replay does not set a best time.</>
           ) : result.best?.isNew ? (
             <>
               <CheckIcon className="w-4 h-4 text-[var(--valid)]" /> New personal best
@@ -190,6 +196,11 @@ export function ResultDialog({ game, open, result, onClose, onNext, shareDetail,
               </button>
             )
           ))}
+        {onRetry && (
+          <button type="button" className="mg-button" onClick={onRetry} data-testid="game-result-retry">
+            <ResetIcon /> Try again
+          </button>
+        )}
         {!actions &&
           suggested?.map((other) => (
             <Link key={other.id} href={other.path} prefetch={false} className="mg-button justify-between" data-testid="game-result-suggestion">

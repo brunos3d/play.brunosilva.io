@@ -4,6 +4,7 @@ import type { Difficulty } from "@/shared/engine/difficulty";
 import { pacificDateKey } from "@/shared/engine/pacific-time";
 import { computeStreak } from "@/shared/engine/streak";
 import { loadBestTime, loadDailyResult, loadDailyResults, recordBestTime, saveDailyResult, streakDates } from "@/shared/storage/progress";
+import { isReplay } from "@/shared/storage/replays";
 import type { ResultData } from "@/shared/ui/result-dialog";
 
 /** What a game reports when a puzzle ends. */
@@ -33,7 +34,9 @@ type Input = {
  * Turns a finished puzzle into what the result screen shows, and records it.
  * The first result of a daily date is the one that counts, so a replay shows
  * the stored numbers. A revealed puzzle is stored too, which closes the day,
- * but it earns no streak and no best time.
+ * but it earns no streak and no best time. A practice puzzle started over with
+ * "Try again" is a replay: the answer was already seen, so it sets no best time
+ * either.
  */
 export async function buildResult({ game, daily, difficulty, size, seed, summary, record, shareUrl }: Input): Promise<ResultData> {
   let shown = summary;
@@ -47,12 +50,14 @@ export async function buildResult({ game, daily, difficulty, size, seed, summary
     streak = computeStreak(streakDates(await loadDailyResults(game)), pacificDateKey(new Date()));
   }
 
+  const replay = !daily && isReplay(game, seed);
   let best: ResultData["best"];
   if (!shown.revealed) {
-    best = record
-      ? await recordBestTime(game, difficulty, size, shown.elapsedMs, seed).then(({ best: entry, isNew }) => ({ elapsedMs: entry.elapsedMs, isNew }))
-      : await loadBestTime(game, difficulty, size).then((entry) => (entry ? { elapsedMs: entry.elapsedMs, isNew: false } : undefined));
+    best =
+      record && !replay
+        ? await recordBestTime(game, difficulty, size, shown.elapsedMs, seed).then(({ best: entry, isNew }) => ({ elapsedMs: entry.elapsedMs, isNew }))
+        : await loadBestTime(game, difficulty, size).then((entry) => (entry ? { elapsedMs: entry.elapsedMs, isNew: false } : undefined));
   }
 
-  return { ...shown, dailyNumber: daily?.number, difficulty, size, streak, best, shareUrl };
+  return { ...shown, dailyNumber: daily?.number, difficulty, size, streak, best, shareUrl, ...(replay ? { replay: true } : {}) };
 }

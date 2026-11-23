@@ -9,6 +9,7 @@ import { useSettings } from "@/shared/hooks/use-settings";
 import { buildPlayUrl } from "@/shared/platform/share-text";
 import { GameFrame } from "@/shared/ui/game-frame";
 import { GameLoading } from "@/shared/ui/game-loading";
+import { PuzzleAttempts } from "@/shared/ui/puzzle-attempts";
 import { generateFromSpec } from "../../engine/generator/generate";
 import { type PuzzleSpec, patchesSeeds } from "../../engine/seed/spec";
 import type { Puzzle } from "../../engine/types";
@@ -34,7 +35,11 @@ type GameProps = {
 export function PatchesGame({ spec, daily, onNext }: GameProps) {
   const generated = useGeneratedPuzzle(patchesSeeds.format(spec), () => generateFromSpec(spec));
   if (!generated || "error" in generated) return <GameLoading game={GAME} daily={daily} error={generated && "error" in generated ? generated.error : undefined} />;
-  return <GameView key={generated.puzzle.id} spec={spec} puzzle={generated.puzzle} generationMs={generated.generationMs} daily={daily} onNext={onNext} />;
+  return (
+    <PuzzleAttempts game="patches" puzzle={generated.puzzle} enabled={onNext !== undefined}>
+      <GameView key={generated.puzzle.id} spec={spec} puzzle={generated.puzzle} generationMs={generated.generationMs} daily={daily} onNext={onNext} />
+    </PuzzleAttempts>
+  );
 }
 
 type ViewProps = { spec: PuzzleSpec; puzzle: Puzzle; generationMs: number; daily?: DailyInfo; onNext?: () => void };

@@ -9,6 +9,7 @@ import { useSettings } from "@/shared/hooks/use-settings";
 import { buildPlayUrl } from "@/shared/platform/share-text";
 import { GameFrame } from "@/shared/ui/game-frame";
 import { GameLoading } from "@/shared/ui/game-loading";
+import { PuzzleAttempts } from "@/shared/ui/puzzle-attempts";
 import { generateZipFromSpec } from "../../engine/generator";
 import { nextNumber } from "../../engine/rules";
 import { type PuzzleSpec, zipSeeds } from "../../engine/seed";
@@ -29,7 +30,11 @@ type GameProps = { spec: PuzzleSpec; daily?: DailyInfo; onNext?: () => void };
 export function ZipGame({ spec, daily, onNext }: GameProps) {
   const generated = useGeneratedPuzzle(zipSeeds.format(spec), () => generateZipFromSpec(spec));
   if (!generated || "error" in generated) return <GameLoading game={GAME} daily={daily} error={generated && "error" in generated ? generated.error : undefined} />;
-  return <GameView key={generated.puzzle.id} spec={spec} puzzle={generated.puzzle} generationMs={generated.generationMs} daily={daily} onNext={onNext} />;
+  return (
+    <PuzzleAttempts game="zip" puzzle={generated.puzzle} enabled={onNext !== undefined}>
+      <GameView key={generated.puzzle.id} spec={spec} puzzle={generated.puzzle} generationMs={generated.generationMs} daily={daily} onNext={onNext} />
+    </PuzzleAttempts>
+  );
 }
 
 type ViewProps = { spec: PuzzleSpec; puzzle: ZipPuzzle; generationMs: number; daily?: DailyInfo; onNext?: () => void };

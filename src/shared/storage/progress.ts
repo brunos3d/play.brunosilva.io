@@ -1,7 +1,7 @@
 import type { GameId } from "@/games/registry";
 import type { Difficulty } from "@/shared/engine/difficulty";
 import type { DateKey } from "@/shared/engine/pacific-time";
-import { STORES, idbGet, idbGetAll, idbSet } from "./idb";
+import { STORES, idbDelete, idbGet, idbGetAll, idbSet } from "./idb";
 
 /**
  * Storage that every game shares. Keys carry the game id, so one database
@@ -32,6 +32,11 @@ const dailyKey = (game: GameId, date: DateKey): string => `${game}:${date}`;
 
 export function saveBoard(game: GameId, puzzleId: string, snapshot: unknown): Promise<void> {
   return idbSet(STORES.games, boardKey(game, puzzleId), snapshot);
+}
+
+/** Forgets a saved board, so the puzzle opens untouched. "Try again" in practice uses it. */
+export function clearBoard(game: GameId, puzzleId: string): Promise<void> {
+  return idbDelete(STORES.games, boardKey(game, puzzleId));
 }
 
 export function loadBoard(game: GameId, puzzleId: string): Promise<unknown> {

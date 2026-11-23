@@ -9,6 +9,7 @@ import { useSettings } from "@/shared/hooks/use-settings";
 import { buildPlayUrl } from "@/shared/platform/share-text";
 import { GameFrame } from "@/shared/ui/game-frame";
 import { GameLoading } from "@/shared/ui/game-loading";
+import { PuzzleAttempts } from "@/shared/ui/puzzle-attempts";
 import { type StatusMessage, StatusLine } from "@/shared/ui/status-line";
 import { termoDailyVariantFromSpec } from "../../engine/daily";
 import { boardRows, hintLetters, solvedBoards } from "../../engine/game/state";
@@ -41,7 +42,11 @@ type GameProps = {
 export function TermoGame({ spec, daily, onNext }: GameProps) {
   const generated = useGeneratedPuzzle(termoSeeds.format(spec), () => generateTermoFromSpec(spec));
   if (!generated || "error" in generated) return <GameLoading game={GAME} daily={daily} error={generated && "error" in generated ? generated.error : undefined} />;
-  return <GameView key={generated.puzzle.id} spec={spec} puzzle={generated.puzzle} generationMs={generated.generationMs} daily={daily} onNext={onNext} />;
+  return (
+    <PuzzleAttempts game="termo" puzzle={generated.puzzle} enabled={onNext !== undefined}>
+      <GameView key={generated.puzzle.id} spec={spec} puzzle={generated.puzzle} generationMs={generated.generationMs} daily={daily} onNext={onNext} />
+    </PuzzleAttempts>
+  );
 }
 
 type ViewProps = { spec: PuzzleSpec; puzzle: TermoPuzzle; generationMs: number; daily?: DailyInfo; onNext?: () => void };

@@ -9,6 +9,7 @@ import { useSettings } from "@/shared/hooks/use-settings";
 import { buildPlayUrl } from "@/shared/platform/share-text";
 import { GameFrame } from "@/shared/ui/game-frame";
 import { GameLoading } from "@/shared/ui/game-loading";
+import { PuzzleAttempts } from "@/shared/ui/puzzle-attempts";
 import { queensOf } from "../../engine/game/state";
 import { generateQueensFromSpec } from "../../engine/generator";
 import type { UnitNamer } from "../../engine/hint";
@@ -36,7 +37,11 @@ type GameProps = {
 export function QueensGame({ spec, daily, onNext }: GameProps) {
   const generated = useGeneratedPuzzle(queensSeeds.format(spec), () => generateQueensFromSpec(spec));
   if (!generated || "error" in generated) return <GameLoading game={GAME} daily={daily} error={generated && "error" in generated ? generated.error : undefined} />;
-  return <GameView key={generated.puzzle.id} spec={spec} puzzle={generated.puzzle} generationMs={generated.generationMs} daily={daily} onNext={onNext} />;
+  return (
+    <PuzzleAttempts game="queens" puzzle={generated.puzzle} enabled={onNext !== undefined}>
+      <GameView key={generated.puzzle.id} spec={spec} puzzle={generated.puzzle} generationMs={generated.generationMs} daily={daily} onNext={onNext} />
+    </PuzzleAttempts>
+  );
 }
 
 type ViewProps = { spec: PuzzleSpec; puzzle: QueensPuzzle; generationMs: number; daily?: DailyInfo; onNext?: () => void };

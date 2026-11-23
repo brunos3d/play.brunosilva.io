@@ -9,6 +9,7 @@ import { useSettings } from "@/shared/hooks/use-settings";
 import { buildPlayUrl } from "@/shared/platform/share-text";
 import { GameFrame } from "@/shared/ui/game-frame";
 import { GameLoading } from "@/shared/ui/game-loading";
+import { PuzzleAttempts } from "@/shared/ui/puzzle-attempts";
 import { generateSumbreakFromSpec } from "../../engine/generator";
 import { countTiles } from "../../engine/rules";
 import { type PuzzleSpec, sumbreakSeeds } from "../../engine/seed";
@@ -34,7 +35,11 @@ type GameProps = {
 export function SumbreakGame({ spec, daily, onNext }: GameProps) {
   const generated = useGeneratedPuzzle(sumbreakSeeds.format(spec), () => generateSumbreakFromSpec(spec));
   if (!generated || "error" in generated) return <GameLoading game={GAME} daily={daily} error={generated && "error" in generated ? generated.error : undefined} />;
-  return <GameView key={generated.puzzle.id} spec={spec} puzzle={generated.puzzle} generationMs={generated.generationMs} daily={daily} onNext={onNext} />;
+  return (
+    <PuzzleAttempts game="sumbreak" puzzle={generated.puzzle} enabled={onNext !== undefined}>
+      <GameView key={generated.puzzle.id} spec={spec} puzzle={generated.puzzle} generationMs={generated.generationMs} daily={daily} onNext={onNext} />
+    </PuzzleAttempts>
+  );
 }
 
 type ViewProps = { spec: PuzzleSpec; puzzle: SumbreakPuzzle; generationMs: number; daily?: DailyInfo; onNext?: () => void };

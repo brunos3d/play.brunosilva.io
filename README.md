@@ -112,7 +112,7 @@ Old Zip links such as `/hard/42` redirect to the new practice route. The shortcu
 
 **Zip.** Press 1 and drag. The path moves to side neighbours, cannot cross itself or a wall, and must reach the numbers in order. The board is solved when the path covers every cell and ends on the last number. Drag backwards to rewind, or tap a cell on the path to cut it there. Boards go from 5x5 to 8x8.
 
-Boards are themed by their seed. Walls form figures (a cross, a frame, a face, a pinwheel), some cells are blocked and the path goes around them, and the solution is often a drawing of its own: a spiral, a meander, or a path whose second half mirrors the first. Hard and expert boards hide some numbers behind a `?`. When a board is solved, walls and numbers fade out and only the path remains.
+Boards are themed by their seed. Walls form figures (a cross, a frame, a face, a pinwheel), some cells are blocked and the path goes around them, and the solution is often a drawing of its own: a spiral, a meander, or a path whose second half mirrors the first. Hard and expert boards hide some numbers behind a `?`. When a board is solved, the walls fade out and the path stays, with the numbers on it.
 
 **Patches.** Press a clue and drag outward to draw its patch. A clue can give a cell count, a shape (square, tall, wide or any), both, or nothing (it then shows `?`). Patches cannot overlap and every cell must be covered. A patch can be drawn in several strokes: a partial one stays on the board as unfinished, and another drag from the clue or from the patch adds to it. Tap a patch to remove it. Boards go from 5x5 to 10x10.
 
@@ -132,7 +132,7 @@ Wend and Termo speak Portuguese on the board, in their messages and in their tut
 
 All games share the same controls and rules around the board:
 
-- **Undo**, **Hint**, **Reveal** and **Reset**, plus **New** in practice mode, which loads another board and restarts the clock. A hint acts: it removes a mistake if there is one, otherwise it plays the next forced move and says why. Reveal plays the whole solution piece by piece, and that puzzle then earns no streak and no best time. Termo has only Hint and Reveal, because a guess is final.
+- **Undo**, **Hint**, **Reveal** and **Reset**, plus **New** in practice mode, which loads another board and restarts the clock. A hint acts: it removes a mistake if there is one, otherwise it plays the next forced move and says why. Reveal plays the whole solution piece by piece, and that puzzle then earns no streak and no best time. Termo has only Hint and Reveal, because a guess is final. A finished practice puzzle also offers **Try again**: the same board from the start, with a fresh clock. A replay sets no best time, since the answer has been seen.
 - **The clock** starts the first time you see the board and only stops when the puzzle ends. Closing the tab does not pause it.
 - **Daily puzzles** change at midnight Pacific Time and get harder from Monday to Sunday, except in Termo, where the daily is the same game every day. Finishing one extends that game's streak.
 - **Sound and vibration** are on by default and can be turned off in the settings, which apply to every game.
