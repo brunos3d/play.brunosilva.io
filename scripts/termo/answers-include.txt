@@ -1,0 +1,24 @@
+# Less frequent words that are still everyday Portuguese. Past the frequency
+# cut-off of scripts/termo/build-words.ts most dictionary entries are obscure,
+# so from there on a word is an answer only when it is listed here.
+
+voraz reger múmia lixar hífen vazar sarja gêmeo ginga boina untar cisto haras avelã débil algoz ninfa fugaz ostra palmo goela curió
+turvo enjoo sachê crase lotar gelar horda obeso selim mogno pluma trenó murro talco cacho baque zorra junco porre tátil pilão ágata
+remar lince zumba vetar minar toldo rasgo berro domar chita ninar jarro vagem cupim dedão adaga parir glacê clave motim truta socar
+cetro atroz lepra lúpus broto ereto ávido larva magma fêmur raiar aceno cisma sarna ileso pavio forja aorta afago polir rapto canja
+dinda ocaso brita molar calvo sonar caqui alado viril sulco dreno puxão sagaz trufa bardo plebe prumo fedor aipim pequi coeso brado
+bruma velar talão torpe cação burla sisal sósia brabo arado gabar potro vodca pônei pirar derme ralar causo roçar suíno cervo alçar
+ecoar germe taipa mirra treva safar dosar pasmo trapo ébano gambá inato dique chaga sesta banjo falir trena régio demão soldo mimar
+visar quite bocha platô dardo covil xaxim corar pirão dublê rango grude cacto bumbo sarar paiol calço bolar fuçar titio penca jegue
+feder greta ofurô antro pança axila topar pelve tíbia matiz rumar otite paetê bemol vadio carpa húmus lerdo mambo abadá míope latir
+hidra feudo vedar usura taxar filão rimar podar rouco pinha vinco trova bolor apuro tripa cegar orçar quibe lesma viela bucho pífio
+tonel harém tique álibi tenaz sépia ceifa audaz nevar gnomo chulé manco lábia afiar seixo ruela lasca grená dérbi ranço neura gosma
+rubor senil rojão suflê garbo nódoa atear vivaz légua coala torso vesgo rogar dália lesar munir andor musse ilhéu coice blefe mioma
+penar boldo crina douto ameba visco floco hiena fóton casto rúgbi dodói cuspe ácaro deque linfa ábaco dengo álamo agave rinha fitar
+babão logro morsa turfe acaju cidra sifão pajem purga dúbio rédea finta fenol melro zanga vaiar sidra cuíca boiar rumba piche ébrio
+ungir burca lúmen ráfia chiar ogiva meião gongo jorro patuá istmo sovar mudez lhama arpão pária tenro bílis jaspe polca baobá índex
+glosa igapó melar beiço bujão rugir bócio abeto fiapo ático valva ranho cútis beiju ratão gamão limar vizir corça miado zoada uivar
+ovino rublo dedal moela zonzo píton
+
+# Everyday words that the automatic filters take for a verb form or a plural
+antes atrás verão aliás pires lilás tosse beira fatia vigia porão arara passe trava fezes bodas

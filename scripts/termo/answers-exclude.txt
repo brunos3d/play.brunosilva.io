@@ -1,0 +1,35 @@
+# Words the answer list leaves out. They stay valid guesses.
+# scripts/termo/build-words.ts reads this file. Accents are optional here.
+# Review new candidates with: npm run termo:words -- --data <dir> --report
+
+# Contractions and words that only live inside a fixed phrase
+neste deste desta nesta disso nesse dessa nessa nisso disto nisto daqui donde recém invés redor quiçá
+
+# Feminine forms of a word that is already an answer
+nossa mesma santa linda certa velha cheia preta negra longa curta limpa louca ativa justa falsa larga fraca vazia grega alemã pouca
+baixa amada salva posta prima loira bruta chata gorda doida magra plana funda brava ruiva morna mútua farta sueca tensa épica fosca
+tonta surda turca anexa serva loura feita caída
+
+# Verb forms that are not a noun or an adjective in everyday use
+tinha deixa chega torna jogue fique passa tenta custa manda tente corre volte perca volto tento fecha salve chora solta corta chamo
+penso vindo basta trago versa veste beija mando saído corra ataca caído grita chupa pisca pondo monta torço frita morra risca foste
+deita cruza torce canso poupa livra doado sofra cante dobre cuido clama teima brota parta punha findo chuta recua corto moído apaga
+anima corro choca racha talha
+
+# Names of people, places, brands and planets
+jesus maria silva bruno china japão braga cunha vasco sousa bento chico índia césar nunes moura piauí chile egito celso abreu suíça
+marte júlio marta diogo joana laura mauro penha síria corsa opala fusca amaro adobe angra malta diana milão bauru roque hélio amapá
+guiné couto simão timão ibope macau volvo lúcio siena jeová lauro magno veiga dante romeu timor tietê cotia souto elena crato vênus
+fraga ávila tarso gávea capão cairo congo chica mafra póvoa lobão apolo bessa túlio araxá caicó erica babel vilar romão tatuí tróia
+rolim ítalo antão cusco célio tesla guará urano reich quito xangô óscar piraí vanda alana creta avaré dunga bangu áries nobel aedes
+guaçu sírio celta
+
+# Foreign words and spellings from Portugal
+light login flash jeans mouse drive anime color green stand blues queen caput ninja slide short cache cover prime clean staff combo
+trans blush sedan grill paper close remix supra coach match hasta anglo apart strip relax still rouge logar alter mixer hacer timer
+botox ibero error carte gnome novel jumbo train trial input blast modus logon chili ethos trace catch drops coupé front round toner
+facto tecto betão loiça recta quota guião islão
+
+# Prefixes, jargon and words most people would not know
+micro infra ultra multi macro hidro tetra nitro cível tesão ético focal modal diodo sigma seara devir senda xisto marra bamba mento
+areal rabão graal batel cariz frisa basto grado cerro sacra áurea
