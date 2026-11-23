@@ -16,6 +16,8 @@ import { draw, openPuzzle, practicePuzzle, targetsOf } from "../e2e/patches/help
 import { openQueens, placeQueen, queensPuzzle } from "../e2e/queens/helpers";
 import { SETTINGS_KEY } from "../e2e/shared";
 import { openSumbreak, playMerges, sumbreakPuzzle } from "../e2e/sumbreak/helpers";
+import { guess, openTermo, row as termoRow, termoPuzzle, wrongWords } from "../e2e/termo/helpers";
+import { dragPath, foundTrails, openWend, wendPuzzle } from "../e2e/wend/helpers";
 import { drawCells, openZip, zipPuzzle } from "../e2e/zip/helpers";
 
 const BASE_URL = process.env.BASE_URL ?? "http://localhost:3000";
@@ -25,7 +27,7 @@ const PHONE = { width: 390, height: 720 };
 async function newPage(browser: Browser, colorScheme: "light" | "dark", height = PHONE.height): Promise<Page> {
   const context = await browser.newContext({ baseURL: BASE_URL, viewport: { width: PHONE.width, height }, deviceScaleFactor: 2, colorScheme });
   await context.addInitScript(([key]) => {
-    localStorage.setItem(key, JSON.stringify({ sound: false, haptics: false, tutorials: { zip: true, patches: true, chess: true, queens: true, sumbreak: true } }));
+    localStorage.setItem(key, JSON.stringify({ sound: false, haptics: false, tutorials: { zip: true, patches: true, chess: true, queens: true, sumbreak: true, wend: true, termo: true } }));
   }, [SETTINGS_KEY]);
   return context.newPage();
 }
@@ -70,6 +72,26 @@ async function shootGames(browser: Browser, colorScheme: "light" | "dark", suffi
   await playMerges(page, sumbreak.puzzle, sumbreak.puzzle.solution.slice(0, 5));
   await settle(page);
   await page.screenshot({ path: resolve(OUT, `sumbreak${suffix}.png`) });
+
+  // Three words found and a fourth half traced.
+  const wend = wendPuzzle("readme", "hard");
+  await openWend(page, wend.url);
+  for (const word of wend.puzzle.words.slice(0, 3)) await dragPath(page, wend.puzzle.size, word.path);
+  await foundTrails(page).nth(2).waitFor();
+  await dragPath(page, wend.puzzle.size, wend.puzzle.words[3].path.slice(0, 4));
+  await settle(page);
+  await page.screenshot({ path: resolve(OUT, `wend${suffix}.png`) });
+
+  // Two words at once, three guesses in.
+  const termo = termoPuzzle("readme", "hard");
+  await openTermo(page, termo.url);
+  for (const [index, word] of wrongWords(termo.puzzle, 3).entries()) {
+    await guess(page, word);
+    await termoRow(page, index).and(page.locator('[data-kind="played"]')).first().waitFor();
+  }
+  // The tiles of the last row turn over one after the other. Wait for all five.
+  await page.waitForTimeout(1_500);
+  await page.screenshot({ path: resolve(OUT, `termo${suffix}.png`) });
 
   await page.context().close();
 }

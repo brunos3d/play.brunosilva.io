@@ -105,6 +105,51 @@ export function SumbreakIcon({ className, title }: Props) {
   );
 }
 
+/** Letter tiles with one word traced through them. */
+export function WendIcon({ className, title }: Props) {
+  return (
+    <svg {...frame} className={className} role={title ? "img" : undefined} aria-label={title} aria-hidden={title ? undefined : true}>
+      <rect width="64" height="64" rx="15" fill="#f6f1e7" />
+      <g fill="#e9e0cf">
+        {[0, 1, 2].flatMap((row) => [0, 1, 2].map((column) => <rect key={`${row}-${column}`} x={9 + column * 16} y={9 + row * 16} width="14" height="14" rx="3.5" />))}
+      </g>
+      <path d="M16 48V32h16V16h16" fill="none" stroke="#a8d3ea" strokeWidth="11" strokeLinecap="round" strokeLinejoin="round" />
+      <g fill="none" stroke="#2a2622" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M13 51.5l3-7.5 3 7.5M14.2 49h3.6" />
+        <path d="M13.2 28.5h3.3a2 2 0 0 0 0-4h-3.3v8h3.9a2 2 0 0 0 0-4" />
+        <path d="M34.8 29.4a3.6 3.6 0 1 0 0 5.2" />
+        <path d="M29.5 12v8h2.2a4 4 0 0 0 0-8z" />
+        <path d="M50.3 12h-4.3v8h4.3M46 16h3.4" />
+      </g>
+    </svg>
+  );
+}
+
+/** One guess: a letter in place, a letter out of place and a letter that is not in the word. */
+export function TermoIcon({ className, title }: Props) {
+  return (
+    <svg {...frame} className={className} role={title ? "img" : undefined} aria-label={title} aria-hidden={title ? undefined : true}>
+      <rect width="64" height="64" rx="15" fill="#f6f1e7" />
+      <g fill="#e9e0cf">
+        <rect x="9" y="9" width="14" height="14" rx="3.5" />
+        <rect x="25" y="9" width="14" height="14" rx="3.5" />
+        <rect x="41" y="9" width="14" height="14" rx="3.5" />
+        <rect x="9" y="41" width="14" height="14" rx="3.5" />
+        <rect x="25" y="41" width="14" height="14" rx="3.5" />
+        <rect x="41" y="41" width="14" height="14" rx="3.5" />
+      </g>
+      <rect x="9" y="25" width="14" height="14" rx="3.5" fill="#7fb069" />
+      <rect x="25" y="25" width="14" height="14" rx="3.5" fill="#e8b84a" />
+      <rect x="41" y="25" width="14" height="14" rx="3.5" fill="#2a2622" />
+      <g fill="none" stroke="#2a2622" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M13 28.2h6M16 28.2v7.6" />
+        <path d="M34.3 28.2h-4.3v7.6h4.3M30 32h3.4" />
+      </g>
+      <path d="M45.2 35.8v-7.6h3a2.3 2.3 0 0 1 0 4.6h-3M48.4 32.8l2.4 3" fill="none" stroke="#f6f1e7" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 /** Platform mark: four tiles, one per kind of fabric. */
 export function PlatformIcon({ className, title }: Props) {
   return (
@@ -119,6 +164,6 @@ export function PlatformIcon({ className, title }: Props) {
 }
 
 export function GameIcon({ game, ...props }: Props & { game: GameId }) {
-  const Icon = { zip: ZipIcon, patches: PatchesIcon, chess: ChessIcon, queens: QueensIcon, sumbreak: SumbreakIcon }[game];
+  const Icon = { zip: ZipIcon, patches: PatchesIcon, chess: ChessIcon, queens: QueensIcon, sumbreak: SumbreakIcon, wend: WendIcon, termo: TermoIcon }[game];
   return <Icon {...props} />;
 }

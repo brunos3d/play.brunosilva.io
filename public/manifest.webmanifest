@@ -2,7 +2,7 @@
   "id": "/",
   "name": "Minigames",
   "short_name": "Minigames",
-  "description": "Small daily logic puzzles: Zip, Patches, Chess, Queens and Sumbreak. A new board for every game each day.",
+  "description": "Small daily puzzles: Zip, Patches, Chess, Queens, Sumbreak, Wend and Termo. A new board for every game each day.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
@@ -21,6 +21,8 @@
     { "name": "Today's Patches", "url": "/patches", "icons": [{ "src": "/icons/patches-192.png", "sizes": "192x192", "type": "image/png" }] },
     { "name": "Today's Chess", "url": "/chess", "icons": [{ "src": "/icons/chess-192.png", "sizes": "192x192", "type": "image/png" }] },
     { "name": "Today's Queens", "url": "/queens", "icons": [{ "src": "/icons/queens-192.png", "sizes": "192x192", "type": "image/png" }] },
-    { "name": "Today's Sumbreak", "url": "/sumbreak", "icons": [{ "src": "/icons/sumbreak-192.png", "sizes": "192x192", "type": "image/png" }] }
+    { "name": "Today's Sumbreak", "url": "/sumbreak", "icons": [{ "src": "/icons/sumbreak-192.png", "sizes": "192x192", "type": "image/png" }] },
+    { "name": "Today's Wend", "url": "/wend", "icons": [{ "src": "/icons/wend-192.png", "sizes": "192x192", "type": "image/png" }] },
+    { "name": "Today's Termo", "url": "/termo", "icons": [{ "src": "/icons/termo-192.png", "sizes": "192x192", "type": "image/png" }] }
   ]
 }

@@ -7,6 +7,8 @@ export type ShareableResult = {
   /** Daily puzzle number. Missing for practice puzzles. */
   dailyNumber?: number;
   difficulty: Difficulty;
+  /** What the game calls this tier, when it has its own names. Termo says "Dueto" where others say "Hard". */
+  difficultyLabel?: string;
   /** Board edge length. Missing for games whose boards all have one size. */
   size?: number;
   elapsedMs: number;
@@ -15,6 +17,8 @@ export type ShareableResult = {
   mistakes: number;
   /** Current daily streak. Only shown for daily puzzles. */
   streak?: number;
+  /** Extra lines from the game, placed under the title. Termo puts its grid of coloured squares here. */
+  detail?: string;
 };
 
 const capitalize = (text: string): string => text.charAt(0).toUpperCase() + text.slice(1);
@@ -29,11 +33,11 @@ const capitalize = (text: string): string => text.charAt(0).toUpperCase() + text
  *   Streak: 12
  */
 export function buildShareText(result: ShareableResult): string {
-  const title =
-    result.dailyNumber !== undefined
-      ? `${result.gameName} #${result.dailyNumber}`
-      : `${result.gameName} ${capitalize(result.difficulty)}${result.size === undefined ? "" : ` ${result.size}x${result.size}`}`;
-  const lines = [title, formatTime(result.elapsedMs), `Hints: ${result.hintsUsed}`, `${result.mistakesLabel}: ${result.mistakes}`];
+  const tier = capitalize(result.difficultyLabel ?? result.difficulty);
+  // A tier named like the game itself, as Termo's one-word mode is, would read "Termo Termo".
+  const practiceTitle = tier === result.gameName ? result.gameName : `${result.gameName} ${tier}`;
+  const title = result.dailyNumber !== undefined ? `${result.gameName} #${result.dailyNumber}` : `${practiceTitle}${result.size === undefined ? "" : ` ${result.size}x${result.size}`}`;
+  const lines = [title, ...(result.detail ? [result.detail] : []), formatTime(result.elapsedMs), `Hints: ${result.hintsUsed}`, `${result.mistakesLabel}: ${result.mistakes}`];
   if (result.dailyNumber !== undefined && result.streak !== undefined) lines.push(`Streak: ${result.streak}`);
   return lines.join("\n");
 }

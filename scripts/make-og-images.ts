@@ -33,19 +33,23 @@ const cards: Card[] = [
     path: "",
     // Every game icon, staggered and slightly turned, so that each one stays readable.
     art: `<div class="quad">${[
-      ["zip", -84, -150, -6],
-      ["patches", 92, -138, 5],
-      ["chess", -160, 28, 4],
-      ["queens", 14, 40, -5],
-      ["sumbreak", 150, 168, 6],
+      ["zip", -82, -176, -6],
+      ["patches", 76, -164, 5],
+      ["chess", -150, -14, 4],
+      ["queens", -2, -2, -5],
+      ["sumbreak", 146, 8, 6],
+      ["wend", -78, 152, 5],
+      ["termo", 80, 164, -4],
     ]
-      .map(([name, x, y, turn]) => `<div class="tile tiny" style="transform: translate(${x}px, ${y}px) rotate(${turn}deg)">${icon(String(name))}</div>`)
+      .map(([name, x, y, turn]) => `<div class="tile mini" style="transform: translate(${x}px, ${y}px) rotate(${turn}deg)">${icon(String(name))}</div>`)
       .join("")}</div>`,
   },
   { file: "zip.png", title: GAMES.zip.name, headline: GAMES.zip.tagline, description: `${GAMES.zip.description} A new board every day.`, path: GAMES.zip.path, art: singleArt("zip") },
   { file: "patches.png", title: GAMES.patches.name, headline: GAMES.patches.tagline, description: `${GAMES.patches.description} A new board every day.`, path: GAMES.patches.path, art: singleArt("patches") },
   { file: "chess.png", title: GAMES.chess.name, headline: GAMES.chess.tagline, description: "Mate, win material or save the position, with a coach at your side. A new puzzle every day.", path: GAMES.chess.path, art: singleArt("chess") },
   { file: "sumbreak.png", title: GAMES.sumbreak.name, headline: GAMES.sumbreak.tagline, description: "Merge equal neighbours into their sum, in the right order. A new board every day.", path: GAMES.sumbreak.path, art: singleArt("sumbreak") },
+  { file: "wend.png", title: GAMES.wend.name, headline: GAMES.wend.tagline, description: "Trace the hidden Portuguese words through neighbouring letters. A new themed board every day.", path: GAMES.wend.path, art: singleArt("wend") },
+  { file: "termo.png", title: GAMES.termo.name, headline: GAMES.termo.tagline, description: "Guess the hidden Portuguese word. Each guess shows how close you are. A new word every day.", path: GAMES.termo.path, art: singleArt("termo") },
   { file: "queens.png", title: GAMES.queens.name, headline: "One queen per row, column and colour", description: "Place the queens so that no two touch. A new board every day.", path: GAMES.queens.path, art: singleArt("queens") },
 ];
 
@@ -73,6 +77,7 @@ const page = (card: Card): string => `<!doctype html>
   .tile.small { width: 236px; height: 236px; border-radius: 56px; }
   .tile svg { width: 100%; height: 100%; display: block; }
   .tile.tiny { width: 154px; height: 154px; border-radius: 38px; }
+  .tile.mini { width: 132px; height: 132px; border-radius: 33px; }
   .quad { display: grid; }
   .quad .tile { grid-area: 1 / 1; }
   /* A strip of fabric along the bottom edge, one swatch per palette colour. */

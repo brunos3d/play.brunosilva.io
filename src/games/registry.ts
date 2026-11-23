@@ -1,5 +1,7 @@
+import type { Difficulty } from "@/shared/engine/difficulty";
+
 /** Every game on the platform. The hub, the headers and the footers are built from this list. */
-export const GAME_IDS = ["zip", "patches", "chess", "queens", "sumbreak"] as const;
+export const GAME_IDS = ["zip", "patches", "chess", "queens", "sumbreak", "wend", "termo"] as const;
 export type GameId = (typeof GAME_IDS)[number];
 
 export type GameMeta = {
@@ -13,7 +15,16 @@ export type GameMeta = {
   mistakesLabel: string;
   /** False when every board has the same size, as in chess. The size is then left out of headers, results and the practice setup. */
   hasSizes: boolean;
+  /**
+   * Names shown in place of "easy", "medium", "hard" and "expert". Termo's
+   * tiers are modes that players know by name: Termo, Dueto and Quarteto.
+   * Seeds keep the four tiers either way.
+   */
+  difficultyLabels?: Record<Difficulty, string>;
 };
+
+/** What the interface calls a tier of a game. */
+export const difficultyLabel = (game: GameMeta, difficulty: Difficulty): string => game.difficultyLabels?.[difficulty] ?? difficulty;
 
 export const PLATFORM_NAME = "Minigames";
 
@@ -62,6 +73,26 @@ export const GAMES: Record<GameId, GameMeta> = {
     path: "/sumbreak",
     mistakesLabel: "Missteps",
     hasSizes: true,
+  },
+  wend: {
+    id: "wend",
+    name: "Wend",
+    tagline: "Hidden words, every letter",
+    description: "Trace the hidden Portuguese words through neighbouring letters until every letter is used.",
+    path: "/wend",
+    mistakesLabel: "Erased",
+    hasSizes: true,
+  },
+  termo: {
+    id: "termo",
+    name: "Termo",
+    tagline: "Five letters, six guesses",
+    description: "Guess the hidden Portuguese word. Every guess shows which letters are right, misplaced or absent.",
+    path: "/termo",
+    mistakesLabel: "Misses",
+    hasSizes: false,
+    // The same table as TERMO_MODE_NAMES in the game's engine. A unit test keeps the two in step.
+    difficultyLabels: { easy: "Termo", medium: "Termo", hard: "Dueto", expert: "Quarteto" },
   },
 };
 

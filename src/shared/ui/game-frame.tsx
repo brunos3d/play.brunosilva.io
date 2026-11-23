@@ -9,7 +9,7 @@ import { useHydrated, useSettings } from "@/shared/hooks/use-settings";
 import { type FinishSummary, buildResult } from "@/shared/platform/results";
 import type { Settings } from "@/shared/storage/settings";
 import { ConfirmDialog } from "./confirm-dialog";
-import { GameControls } from "./game-controls";
+import { GameControls, type HiddenControl } from "./game-controls";
 import { GameFooter } from "./game-footer";
 import { GameHeader } from "./game-header";
 import { ShuffleIcon } from "./icons";
@@ -28,6 +28,8 @@ export type GameSession = {
   hintsUsed: number;
   canUndo: boolean;
   canReset: boolean;
+  /** The player has put something on the board. Leaving then asks first. Defaults to "there is something to undo or reset". */
+  started?: boolean;
   /** Set once the puzzle has ended, by solving it or by revealing it. */
   summary: FinishSummary | null;
   /** True when it ended in this session. False when a finished board was reopened. */
@@ -56,6 +58,12 @@ type FrameProps = {
   tutorial: (props: { open: boolean; settings: Settings; onClose: () => void }) => ReactNode;
   debug?: ReactNode;
   onNext?: () => void;
+  /** Controls that make no sense in this game. Termo has no undo and no reset: a guess is final. */
+  hiddenControls?: readonly HiddenControl[];
+  /** Lines the game adds to the shared result. */
+  shareDetail?: () => string | undefined;
+  /** The game's own links on the result screen, in place of the practice button and the suggested games. */
+  resultActions?: ReactNode;
 };
 
 /** Lets the solve animation finish before the result covers the board. */
@@ -66,7 +74,7 @@ const RESULT_DELAY_MS = 1_000;
  * line, the four controls, dialogs, keyboard shortcuts, the result flow and the
  * moment the clock starts.
  */
-export function GameFrame({ game, daily, difficulty, size, seed, shareUrl, session, idleText, board, statusSlot, tutorial, debug, onNext }: FrameProps) {
+export function GameFrame({ game, daily, difficulty, size, seed, shareUrl, session, idleText, board, statusSlot, tutorial, debug, onNext, hiddenControls, shareDetail, resultActions }: FrameProps) {
   const { settings, update, markTutorialSeen } = useSettings();
   const hydrated = useHydrated();
   const [helpOpen, setHelpOpen] = useState(false);
@@ -109,7 +117,7 @@ export function GameFrame({ game, daily, difficulty, size, seed, shareUrl, sessi
   }, [summary]);
 
   // Leaving a board the player has started asks first: the clock keeps running while they are away.
-  const inProgress = session.ready && !summary && (session.canUndo || session.canReset);
+  const inProgress = session.ready && !summary && (session.started ?? (session.canUndo || session.canReset));
   const handleHome = (event: MouseEvent<HTMLAnchorElement>) => {
     // A modified click opens the hub in another tab, and this one stays on the puzzle.
     if (!inProgress || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) return;
@@ -179,6 +187,7 @@ export function GameFrame({ game, daily, difficulty, size, seed, shareUrl, sessi
           onReveal={() => setConfirmOpen(true)}
           onReset={session.reset}
           onNewGame={onNext}
+          hidden={hiddenControls}
         />
       )}
 
@@ -221,7 +230,7 @@ export function GameFrame({ game, daily, difficulty, size, seed, shareUrl, sessi
       >
         Your progress is saved on this device, but the clock keeps running until the puzzle is solved.
       </ConfirmDialog>
-      <ResultDialog game={game} open={resultOpen} result={result} onClose={() => setResultOpen(false)} onNext={onNext} />
+      <ResultDialog game={game} open={resultOpen} result={result} onClose={() => setResultOpen(false)} onNext={onNext} shareDetail={shareDetail} actions={resultActions} />
     </main>
   );
 }

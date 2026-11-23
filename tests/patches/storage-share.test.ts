@@ -111,5 +111,8 @@ describe("seeds and share URLs", () => {
     expect(buildShareText({ gameName: "Patches", difficulty: "hard", size: 8, elapsedMs: 125_000, hintsUsed: 2, mistakesLabel: "Redraws", mistakes: 0, streak: 4 })).toBe(
       "Patches Hard 8x8\n02:05\nHints: 2\nRedraws: 0",
     );
+    // A game may name its own tiers and add lines of its own. A tier named like the game is not said twice.
+    expect(buildShareText({ gameName: "Termo", difficulty: "hard", difficultyLabel: "Dueto", detail: "2/7 3/7", elapsedMs: 61_000, hintsUsed: 0, mistakesLabel: "Misses", mistakes: 1 })).toBe("Termo Dueto\n2/7 3/7\n01:01\nHints: 0\nMisses: 1");
+    expect(buildShareText({ gameName: "Termo", difficulty: "medium", difficultyLabel: "Termo", elapsedMs: 61_000, hintsUsed: 0, mistakesLabel: "Misses", mistakes: 1 }).split("\n")[0]).toBe("Termo");
   });
 });

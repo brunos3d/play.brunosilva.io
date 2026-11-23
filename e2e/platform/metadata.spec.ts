@@ -7,6 +7,8 @@ const PAGES = [
   { path: "/chess", image: "/og/chess.png", title: /Chess/ },
   { path: "/queens", image: "/og/queens.png", title: /Queens/ },
   { path: "/sumbreak", image: "/og/sumbreak.png", title: /Sumbreak/ },
+  { path: "/wend", image: "/og/wend.png", title: /Wend/ },
+  { path: "/termo", image: "/og/termo.png", title: /Termo/ },
 ];
 
 for (const entry of PAGES) {

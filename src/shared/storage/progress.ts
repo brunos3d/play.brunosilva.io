@@ -21,6 +21,8 @@ export type DailyResult = {
   moves: number;
   /** The player asked for the solution. The day is over, but it earns no streak and no best time. */
   revealed: boolean;
+  /** The game was lost. Only games that can be lost set it, and `revealed` is true with it. */
+  failed?: boolean;
 };
 
 export type BestTime = { key: string; elapsedMs: number; seed: string };

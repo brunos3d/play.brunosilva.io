@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import type { MouseEvent } from "react";
-import type { GameMeta } from "@/games/registry";
+import { type GameMeta, difficultyLabel } from "@/games/registry";
 import { formatTime } from "@/shared/engine/clock";
 import type { Difficulty } from "@/shared/engine/difficulty";
 import { GameIcon } from "./game-icons";
@@ -67,7 +67,7 @@ export function GameHeader({ game, mode, numberLabel, difficulty, size, elapsedM
         <div className="flex items-center gap-2">
           {difficulty && size && (
             <span className="mg-chip">
-              {difficulty}
+              {difficultyLabel(game, difficulty)}
               {game.hasSizes && ` ${size}×${size}`}
             </span>
           )}

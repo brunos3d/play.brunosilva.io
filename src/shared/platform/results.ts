@@ -7,7 +7,15 @@ import { loadBestTime, loadDailyResult, loadDailyResults, recordBestTime, saveDa
 import type { ResultData } from "@/shared/ui/result-dialog";
 
 /** What a game reports when a puzzle ends. */
-export type FinishSummary = { elapsedMs: number; hintsUsed: number; mistakes: number; moves: number; revealed: boolean };
+export type FinishSummary = {
+  elapsedMs: number;
+  hintsUsed: number;
+  mistakes: number;
+  moves: number;
+  revealed: boolean;
+  /** The game ended in a loss, as when Termo runs out of guesses. It is stored like a revealed puzzle: no streak, no best time. Always comes with `revealed`. */
+  failed?: boolean;
+};
 
 type Input = {
   game: GameId;
@@ -35,7 +43,7 @@ export async function buildResult({ game, daily, difficulty, size, seed, summary
     const stored = record
       ? await saveDailyResult({ game, date: daily.date, number: daily.number, difficulty: daily.difficulty, seed: daily.seed, ...summary })
       : await loadDailyResult(game, daily.date);
-    if (stored) shown = { elapsedMs: stored.elapsedMs, hintsUsed: stored.hintsUsed, mistakes: stored.mistakes, moves: stored.moves, revealed: stored.revealed };
+    if (stored) shown = { elapsedMs: stored.elapsedMs, hintsUsed: stored.hintsUsed, mistakes: stored.mistakes, moves: stored.moves, revealed: stored.revealed, ...(stored.failed ? { failed: true } : {}) };
     streak = computeStreak(streakDates(await loadDailyResults(game)), pacificDateKey(new Date()));
   }
 

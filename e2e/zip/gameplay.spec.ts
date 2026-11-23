@@ -158,7 +158,10 @@ test("solving shows the result, locks the board and offers the next puzzle", asy
   await expect(result(page)).toBeVisible();
   await expect(result(page)).toContainText("Flawless");
   await expect(result(page)).toContainText("Backtracks");
+  // The result suggests two games that are still open today. The rest are on the hub.
   await expect(result(page).getByRole("link", { name: /Play today's Patches/ })).toBeVisible();
+  await expect(result(page).getByTestId("game-result-suggestion")).toHaveCount(2);
+  await expect(result(page).getByRole("link", { name: "See the other games" })).toHaveAttribute("href", "/");
 
   // The solved board keeps only the answer: walls and numbers fade out and the line gets thicker.
   await expect(board(page).locator(".zip-number").first()).toHaveCSS("opacity", "0");

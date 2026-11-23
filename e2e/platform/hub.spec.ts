@@ -42,6 +42,9 @@ test("the hub follows a daily puzzle from running clock to solved, with the stre
   await openZip(page, "/zip");
   await drawCells(page, puzzle.width, puzzle.solution.slice(4));
   await expect(page.getByTestId("game-result")).toBeVisible();
+  // The result suggests the next two games still open today, and the hub for the rest.
+  await expect(page.getByTestId("game-result-suggestion")).toHaveCount(2);
+  await expect(page.getByTestId("game-result").getByRole("link", { name: "See the other games" })).toBeVisible();
 
   await page.goto("/");
   await expect(page.getByTestId("hub-today-zip")).toContainText("Solved in");
@@ -68,10 +71,13 @@ test("every game is on the hub from its launch day, numbered from 1", async ({ p
   // 2026-11-23 18:00 UTC is a Monday morning in Pacific time, the day after Chess and Queens launched.
   await page.clock.setFixedTime(new Date("2026-11-23T18:00:00Z"));
   await page.goto("/");
-  for (const game of ["zip", "patches", "chess", "queens", "sumbreak"]) await expect(page.getByTestId(`hub-card-${game}`)).toBeVisible();
+  for (const game of ["zip", "patches", "chess", "queens", "sumbreak", "wend", "termo"]) await expect(page.getByTestId(`hub-card-${game}`)).toBeVisible();
   await expect(page.getByTestId("hub-today-chess")).toContainText("#2");
   await expect(page.getByTestId("hub-today-chess")).toContainText("easy");
   await expect(page.getByTestId("hub-today-queens")).toContainText("#2");
+  // Wend counts from the day LinkedIn's Wend launched, and Termo from its own first day here.
+  await expect(page.getByTestId("hub-today-wend")).toContainText("#168");
+  await expect(page.getByTestId("hub-today-termo")).toContainText("#2");
   await page.getByTestId("hub-card-chess").getByRole("link", { name: /Play today's puzzle/ }).click();
   await expect(page).toHaveURL(/\/chess$/);
   await expect(page.getByTestId("chess-board")).toBeVisible();

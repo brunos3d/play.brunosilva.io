@@ -8,9 +8,13 @@ import { getDailyInfo as getPatchesDaily } from "@/games/patches/engine/daily/sc
 import { patchesPuzzleId } from "@/games/patches/engine/generator/generate";
 import { getQueensDailyInfo } from "@/games/queens/engine/daily";
 import { queensPuzzleId } from "@/games/queens/engine/generator";
-import { GAME_LIST, type GameId, type GameMeta, PLATFORM_NAME } from "@/games/registry";
+import { GAME_LIST, type GameId, type GameMeta, PLATFORM_NAME, difficultyLabel } from "@/games/registry";
 import { getSumbreakDailyInfo } from "@/games/sumbreak/engine/daily";
 import { sumbreakPuzzleId } from "@/games/sumbreak/engine/generator";
+import { getTermoDailyInfo } from "@/games/termo/engine/daily";
+import { termoPuzzleId } from "@/games/termo/engine/seed";
+import { getWendDailyInfo } from "@/games/wend/engine/daily";
+import { wendPuzzleId } from "@/games/wend/engine/seed";
 import { getZipDailyInfo } from "@/games/zip/engine/daily";
 import { zipPuzzleId } from "@/games/zip/engine/generator";
 import { clockElapsed, formatTime, restoreClock } from "@/shared/engine/clock";
@@ -29,6 +33,9 @@ const DAILY: Record<GameId, { info: (date: string) => DailyInfo; puzzleId: (seed
   chess: { info: getChessDailyInfo, puzzleId: chessPuzzleId },
   queens: { info: getQueensDailyInfo, puzzleId: queensPuzzleId },
   sumbreak: { info: getSumbreakDailyInfo, puzzleId: sumbreakPuzzleId },
+  // These two keep their word lists out of the hub: the daily schedule and the puzzle id live in modules that do not import the generator.
+  wend: { info: getWendDailyInfo, puzzleId: wendPuzzleId },
+  termo: { info: getTermoDailyInfo, puzzleId: termoPuzzleId },
 };
 
 type Today =
@@ -36,14 +43,16 @@ type Today =
   /** The clock started and keeps running, even with the game closed. */
   | { state: "running"; startedAt: number }
   | { state: "solved"; elapsedMs: number }
-  | { state: "revealed" };
+  | { state: "revealed" }
+  /** Lost, as when Termo runs out of guesses. */
+  | { state: "failed" };
 
 type CardData = { today: Today; streak: number };
 
 async function loadCard(game: GameId, daily: DailyInfo): Promise<CardData> {
   const [result, results, board] = await Promise.all([loadDailyResult(game, daily.date), loadDailyResults(game), loadBoard(game, DAILY[game].puzzleId(daily.seed))]);
   const streak = computeStreak(streakDates(results), daily.date).current;
-  if (result) return { streak, today: result.revealed ? { state: "revealed" } : { state: "solved", elapsedMs: result.elapsedMs } };
+  if (result) return { streak, today: result.failed ? { state: "failed" } : result.revealed ? { state: "revealed" } : { state: "solved", elapsedMs: result.elapsedMs } };
   const saved = (board ?? {}) as { startedAt?: unknown; finishedMs?: unknown };
   const clock = restoreClock(saved.startedAt, saved.finishedMs);
   return { streak, today: clock.startedAt !== null && clock.finishedMs === null ? { state: "running", startedAt: clock.startedAt } : { state: "new" } };
@@ -73,13 +82,13 @@ function TodayLine({ today, now }: { today: Today | undefined; now: number }) {
   }
   return (
     <span className="flex items-center gap-1.5 text-[var(--ink-soft)]">
-      <RevealIcon className="w-4 h-4" /> Solution revealed
+      <RevealIcon className="w-4 h-4" /> {today.state === "failed" ? "Not solved" : "Solution revealed"}
     </span>
   );
 }
 
 function GameCard({ game, daily, data, now }: { game: GameMeta; daily: DailyInfo | null; data: CardData | undefined; now: number }) {
-  const done = data?.today.state === "solved" || data?.today.state === "revealed";
+  const done = data?.today.state === "solved" || data?.today.state === "revealed" || data?.today.state === "failed";
   return (
     <article className="mg-card" data-testid={`hub-card-${game.id}`}>
       <div className="flex items-start gap-4">
@@ -99,7 +108,7 @@ function GameCard({ game, daily, data, now }: { game: GameMeta; daily: DailyInfo
       </div>
 
       <div className="flex items-center justify-between gap-2 text-sm min-h-6" data-testid={`hub-today-${game.id}`}>
-        <span className="font-semibold tabular-nums">{daily ? <>#{daily.number} · <span className="capitalize">{daily.difficulty}</span></> : " "}</span>
+        <span className="font-semibold tabular-nums">{daily ? <>#{daily.number} · <span className="capitalize">{difficultyLabel(game, daily.difficulty)}</span></> : " "}</span>
         {daily && <TodayLine today={data?.today} now={now} />}
       </div>
 

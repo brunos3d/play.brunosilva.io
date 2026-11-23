@@ -1,15 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
-import type { GameMeta } from "@/games/registry";
-import { GAME_LIST } from "@/games/registry";
+import { type ReactNode, useEffect, useState } from "react";
+import { GAME_LIST, type GameMeta, difficultyLabel } from "@/games/registry";
 import { formatTime } from "@/shared/engine/clock";
 import type { Difficulty } from "@/shared/engine/difficulty";
-import { msUntilPacificMidnight } from "@/shared/engine/pacific-time";
+import { msUntilPacificMidnight, pacificDateKey } from "@/shared/engine/pacific-time";
 import type { StreakSummary } from "@/shared/engine/streak";
 import { buildShareText } from "@/shared/platform/share-text";
 import { type ShareOutcome, share } from "@/shared/platform/sharing";
+import { loadDailyResult } from "@/shared/storage/progress";
 import { Dialog } from "./dialog";
 import { GameIcon } from "./game-icons";
 import { ArrowRightIcon, CheckIcon, FlameIcon, ShareIcon, ShuffleIcon } from "./icons";
@@ -24,16 +24,56 @@ export type ResultData = {
   moves: number;
   /** The player asked for the solution. No best time, no streak credit, nothing to share. */
   revealed: boolean;
+  /** The game was lost. It reads as its own outcome, but counts like a revealed puzzle. */
+  failed?: boolean;
   streak?: StreakSummary;
   best?: { elapsedMs: number; isNew: boolean };
   /** Absolute URL that reopens this puzzle, or the daily page. */
   shareUrl: string;
 };
 
-type Props = { game: GameMeta; open: boolean; result: ResultData | null; onClose: () => void; onNext?: () => void };
+type Props = {
+  game: GameMeta;
+  open: boolean;
+  result: ResultData | null;
+  onClose: () => void;
+  onNext?: () => void;
+  /** Lines a game adds to its shared result, such as Termo's grid of coloured squares. */
+  shareDetail?: () => string | undefined;
+  /**
+   * Where the game itself wants to send the player next. It takes the place of
+   * the practice button and of the suggested games, so the list stays short.
+   * Termo links to the day's Dueto and Quarteto here.
+   */
+  actions?: ReactNode;
+};
 
 const SHARE_LABEL: Record<ShareOutcome, string> = { shared: "Shared", copied: "Copied to clipboard", cancelled: "Share result", failed: "Could not share" };
 const SHARE_LABEL_RESET_MS = 2_500;
+/** How many other games the result screen suggests. The rest are one tap away, on the hub. */
+const SUGGESTIONS = 2;
+
+/**
+ * The other games whose daily puzzle has not been finished today, in hub
+ * order, at most `SUGGESTIONS` of them. Null until storage has answered, so
+ * the list never flashes games that then go away.
+ */
+function useSuggestedGames(current: GameMeta, open: boolean): GameMeta[] | null {
+  const [suggested, setSuggested] = useState<GameMeta[] | null>(null);
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    const today = pacificDateKey(new Date());
+    const others = GAME_LIST.filter((entry) => entry.id !== current.id);
+    void Promise.all(others.map((entry) => loadDailyResult(entry.id, today).catch(() => undefined))).then((results) => {
+      if (!cancelled) setSuggested(others.filter((_, index) => !results[index]).slice(0, SUGGESTIONS));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [current.id, open]);
+  return suggested;
+}
 
 function formatCountdown(ms: number): string {
   const totalSeconds = Math.floor(ms / 1000);
@@ -60,14 +100,16 @@ function NextPuzzleCountdown() {
 }
 
 function headline(result: ResultData): string {
+  if (result.failed) return "Out of guesses";
   if (result.revealed) return "Solution revealed";
   if (result.hintsUsed === 0 && result.mistakes === 0) return "Flawless";
   if (result.hintsUsed === 0) return "Solved without hints";
   return "Solved";
 }
 
-export function ResultDialog({ game, open, result, onClose, onNext }: Props) {
+export function ResultDialog({ game, open, result, onClose, onNext, shareDetail, actions }: Props) {
   const [shareLabel, setShareLabel] = useState<string | null>(null);
+  const suggested = useSuggestedGames(game, open);
 
   useEffect(() => {
     if (shareLabel === null) return;
@@ -84,16 +126,15 @@ export function ResultDialog({ game, open, result, onClose, onNext }: Props) {
   }
 
   const isDaily = result.dailyNumber !== undefined;
-  const others = GAME_LIST.filter((entry) => entry.id !== game.id);
   const handleShare = async () => {
-    const text = buildShareText({ ...result, size: game.hasSizes ? result.size : undefined, gameName: game.name, mistakesLabel: game.mistakesLabel, streak: result.streak?.current });
+    const text = buildShareText({ ...result, size: game.hasSizes ? result.size : undefined, gameName: game.name, difficultyLabel: difficultyLabel(game, result.difficulty), mistakesLabel: game.mistakesLabel, streak: result.streak?.current, detail: shareDetail?.() });
     setShareLabel(SHARE_LABEL[await share({ title: game.name, text, url: result.shareUrl })]);
   };
 
   return (
     <Dialog open={open} onClose={onClose} title={headline(result)} testId="game-result">
       <p className="text-sm text-[var(--ink-soft)] -mt-2 mb-4">
-        {isDaily ? `${game.name} #${result.dailyNumber}` : "Practice puzzle"} · <span className="capitalize">{result.difficulty}</span>
+        {isDaily ? `${game.name} #${result.dailyNumber}` : "Practice puzzle"} · <span className="capitalize">{difficultyLabel(game, result.difficulty)}</span>
         {game.hasSizes && ` · ${result.size}×${result.size}`}
       </p>
 
@@ -131,30 +172,38 @@ export function ResultDialog({ game, open, result, onClose, onNext }: Props) {
       )}
 
       <div className="flex flex-col gap-2.5">
-        {!result.revealed && (
+        {/* A lost game is shared too: its grid says how close it came. A revealed one has nothing to show. */}
+        {(!result.revealed || result.failed) && (
           <button type="button" className="mg-button" data-variant="primary" onClick={handleShare}>
             <ShareIcon /> <span aria-live="polite">{shareLabel ?? "Share result"}</span>
           </button>
         )}
-        {isDaily ? (
-          <Link href={`${game.path}/practice`} prefetch={false} className="mg-button">
-            <ShuffleIcon /> Keep playing in Practice
+        {actions ??
+          (isDaily ? (
+            <Link href={`${game.path}/practice`} prefetch={false} className="mg-button">
+              <ShuffleIcon /> Keep playing in Practice
+            </Link>
+          ) : (
+            onNext && (
+              <button type="button" className="mg-button" data-variant={result.revealed ? "primary" : undefined} onClick={onNext}>
+                <ShuffleIcon /> Next puzzle
+              </button>
+            )
+          ))}
+        {!actions &&
+          suggested?.map((other) => (
+            <Link key={other.id} href={other.path} prefetch={false} className="mg-button justify-between" data-testid="game-result-suggestion">
+              <span className="flex items-center gap-2.5">
+                <GameIcon game={other.id} className="w-7 h-7 rounded-[7px]" /> Play today&apos;s {other.name}
+              </span>
+              <ArrowRightIcon />
+            </Link>
+          ))}
+        {suggested && (
+          <Link href="/" prefetch={false} className="mg-button justify-between" data-testid="game-result-all">
+            {!actions && suggested.length === 0 ? "All games" : "See the other games"} <ArrowRightIcon />
           </Link>
-        ) : (
-          onNext && (
-            <button type="button" className="mg-button" data-variant={result.revealed ? "primary" : undefined} onClick={onNext}>
-              <ShuffleIcon /> Next puzzle
-            </button>
-          )
         )}
-        {others.map((other) => (
-          <Link key={other.id} href={other.path} prefetch={false} className="mg-button justify-between">
-            <span className="flex items-center gap-2.5">
-              <GameIcon game={other.id} className="w-7 h-7 rounded-[7px]" /> Play today&apos;s {other.name}
-            </span>
-            <ArrowRightIcon />
-          </Link>
-        ))}
         {isDaily && <NextPuzzleCountdown />}
       </div>
     </Dialog>
