@@ -27,7 +27,7 @@ Every game gets one new board per day, the same for every player, plus unlimited
     <th width="33%">Patches</th>
   </tr>
   <tr>
-    <td><img alt="Hub with the first two of the four games, today's status and the streak" src="./.github/screenshots/hub.png" /></td>
+    <td><img alt="Hub with the first two of the seven games, today's status and the streak" src="./.github/screenshots/hub.png" /></td>
     <td><img alt="Zip board with blocked cells, a hidden number and the path drawn through the first four numbers" src="./.github/screenshots/zip.png" /></td>
     <td><img alt="Patches board with most of its patches placed" src="./.github/screenshots/patches.png" /></td>
   </tr>
@@ -62,13 +62,26 @@ Every game gets one new board per day, the same for every player, plus unlimited
 <table>
   <tr>
     <th width="33%">Wend</th>
-    <th width="33%">Termo</th>
-    <th width="33%">Termo, dark theme</th>
+    <th width="33%">Wend, dark theme</th>
+    <th width="33%"></th>
   </tr>
   <tr>
     <td><img alt="Wend board with three words found in colour and a fourth half traced in grey" src="./.github/screenshots/wend.png" /></td>
+    <td><img alt="Wend in the dark theme" src="./.github/screenshots/wend-dark.png" /></td>
+    <td></td>
+  </tr>
+</table>
+
+<table>
+  <tr>
+    <th width="33%">Termo</th>
+    <th width="33%">Termo, dark theme</th>
+    <th width="33%"></th>
+  </tr>
+  <tr>
     <td><img alt="Termo with two words to find and three guesses played" src="./.github/screenshots/termo.png" /></td>
     <td><img alt="Termo in the dark theme" src="./.github/screenshots/termo-dark.png" /></td>
+    <td></td>
   </tr>
 </table>
 
