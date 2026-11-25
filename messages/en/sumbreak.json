@@ -1,1 +1,52 @@
-{}
+{
+  "board": {
+    "label": "Sumbreak board, {size} by {size}. Arrow keys move. Enter picks up a tile, and Enter on an equal neighbour drops it there.",
+    "tutorialLabel": "Tutorial board, {size} by {size}",
+    "cell": "Row {row}, column {column}.",
+    "empty": "Empty.",
+    "pickedUp": "Picked up.",
+    "partner": "Can take the tile you picked up."
+  },
+  "idle": {
+    "start": "Drag a number onto an equal neighbour. They merge into their sum, and the last tile will be {total}.",
+    "progress": "{left} tiles left. The last one will be {total}."
+  },
+  "status": {
+    "solved": "Solved. One tile left.",
+    "revealed": "Solution revealed.",
+    "revealing": "Revealing the solution.",
+    "undone": "Last merge undone.",
+    "reset": "Board reset. The clock keeps running.",
+    "stuck": "No merges left. Undo, or ask for a hint to go back to the last position that can be finished."
+  },
+  "error": {
+    "empty-source": "There is no tile to move there.",
+    "not-adjacent": "Only neighbours merge: side by side, or one above the other.",
+    "empty-target": "Tiles do not move into empty cells. A tile only merges into an equal neighbour.",
+    "different": "Numbers must be identical: {from} and {to} do not merge."
+  },
+  "hint": {
+    "merge": "The smallest number goes first. Drop the {value} in row {row}, column {column} onto the {value} {direction, select, right {to its right} left {to its left} below {below it} other {above it}}: {why, select, onlyPair {it is the only pair of them.} onlySafe {of the {total} ways to merge the {value}s, it is the only one that leaves a board that can be finished.} other {{alive} of the {total} ways to merge the {value}s leave a board that can be finished, and this is one.}}",
+    "deadEnd": {
+      "odd-count": "There {count, plural, =1 {is one {smallest}} other {are # {smallest}s}} left, and the smallest number can only pair up with itself. The board goes back to the last position that can still be finished.",
+      "split": "The tiles are split into groups that no longer touch, and tiles never move. The board goes back to the last position that can still be finished.",
+      "lonely": "A {smallest} has no equal neighbour left, and nothing can bring one to it. The board goes back to the last position that can still be finished.",
+      "search": "From here every order of merges gets stuck. The board goes back to the last position that can still be finished."
+    }
+  },
+  "tutorial": {
+    "title": "How to play Sumbreak",
+    "steps": {
+      "merge": {
+        "title": "Merge equal neighbours",
+        "body": "Drag a number onto a neighbour that holds the same number, or tap one and then the other. They become one tile with their sum. Start with the two 1s."
+      },
+      "order": {
+        "title": "The order is the puzzle",
+        "body": "The tile you drop on keeps its place, the other cell stays empty, and nothing slides. A 2 that ends up far from the other 2 is stuck for good. Keep merging, and use Undo if you strand a tile."
+      }
+    },
+    "doneTitle": "That is the whole game",
+    "doneBody": "One tile left, holding the sum of all the others. A merge that looks fine can still ruin the board, and the game only tells you when you get stuck or ask for a hint. The clock starts when you first see a board and only stops when it is solved."
+  }
+}

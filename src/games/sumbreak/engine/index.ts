@@ -8,4 +8,5 @@ export * from "./generator";
 export * from "./generator/v1";
 export * from "./daily";
 export * from "./hint";
+export * from "./text";
 export * from "./game/state";

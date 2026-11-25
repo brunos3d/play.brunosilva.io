@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import dynamic from "next/dynamic";
 import { useState } from "react";
 import { GAMES } from "@/games/registry";
@@ -13,6 +14,7 @@ import { PuzzleAttempts } from "@/shared/ui/puzzle-attempts";
 import { generateSumbreakFromSpec } from "../../engine/generator";
 import { countTiles } from "../../engine/rules";
 import { type PuzzleSpec, sumbreakSeeds } from "../../engine/seed";
+import { tileText } from "../../engine/text";
 import type { SumbreakPuzzle } from "../../engine/types";
 import { useSumbreakGame } from "../../hooks/use-sumbreak-game";
 import { SumbreakBoard } from "../board/sumbreak-board";
@@ -45,12 +47,13 @@ export function SumbreakGame({ spec, daily, onNext }: GameProps) {
 type ViewProps = { spec: PuzzleSpec; puzzle: SumbreakPuzzle; generationMs: number; daily?: DailyInfo; onNext?: () => void };
 
 function GameView({ spec, puzzle, generationMs, daily, onNext }: ViewProps) {
+  const t = useTranslations("sumbreak");
   const { settings } = useSettings();
   const [showSolution, setShowSolution] = useState(false);
   const game = useSumbreakGame({ puzzle, settings });
 
   const left = countTiles(game.game.cells);
-  const idleText = game.game.history.length === 0 ? `Drag a number onto an equal neighbour. They merge into their sum, and the last tile will be ${puzzle.total}.` : `${left} tiles left. The last one will be ${puzzle.total}.`;
+  const idleText = game.game.history.length === 0 ? t("idle.start", { total: tileText(puzzle.total) }) : t("idle.progress", { left, total: tileText(puzzle.total) });
 
   return (
     <GameFrame
@@ -74,7 +77,7 @@ function GameView({ spec, puzzle, generationMs, daily, onNext }: ViewProps) {
           stuck={game.stuck}
           shakeSignal={game.shakeSignal}
           refusedCell={game.refusedCell}
-          label={`Sumbreak board, ${puzzle.size} by ${puzzle.size}. Arrow keys move. Enter picks up a tile, and Enter on an equal neighbour drops it there.`}
+          label={t("board.label", { size: puzzle.size })}
           onMerge={game.merge}
         />
       }

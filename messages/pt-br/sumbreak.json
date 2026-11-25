@@ -1,1 +1,52 @@
-{}
+{
+  "board": {
+    "label": "Tabuleiro do Sumbreak, {size} por {size}. As setas movem o cursor. Enter pega uma peça, e Enter em uma vizinha igual solta a peça ali.",
+    "tutorialLabel": "Tabuleiro do tutorial, {size} por {size}",
+    "cell": "Linha {row}, coluna {column}.",
+    "empty": "Vazia.",
+    "pickedUp": "Peça na mão.",
+    "partner": "Pode receber a peça que você pegou."
+  },
+  "idle": {
+    "start": "Arraste um número para cima de um vizinho igual. Os dois se juntam na soma, e a última peça será {total}.",
+    "progress": "Restam {left} peças. A última será {total}."
+  },
+  "status": {
+    "solved": "Resolvido. Sobrou uma peça só.",
+    "revealed": "Solução revelada.",
+    "revealing": "Revelando a solução.",
+    "undone": "Última junção desfeita.",
+    "reset": "Tabuleiro reiniciado. O relógio continua correndo.",
+    "stuck": "Não há mais nada para juntar. Desfaça, ou peça uma dica para voltar à última posição que ainda pode ser terminada."
+  },
+  "error": {
+    "empty-source": "Não há nenhuma peça ali para mover.",
+    "not-adjacent": "Só peças vizinhas se juntam: lado a lado, ou uma em cima da outra.",
+    "empty-target": "As peças não se movem para casas vazias. Uma peça só se junta a uma vizinha igual.",
+    "different": "Os números precisam ser iguais: {from} e {to} não se juntam."
+  },
+  "hint": {
+    "merge": "O menor número vai primeiro. Solte o {value} da linha {row}, coluna {column}, sobre o {value} {direction, select, right {à direita dele} left {à esquerda dele} below {abaixo dele} other {acima dele}}: {why, select, onlyPair {é o único par deles.} onlySafe {das {total} maneiras de juntar os {value}, é a única que deixa um tabuleiro que ainda pode ser terminado.} other {{alive} das {total} maneiras de juntar os {value} deixam um tabuleiro que ainda pode ser terminado, e esta é uma delas.}}",
+    "deadEnd": {
+      "odd-count": "{count, plural, =1 {Sobrou só uma peça com o número {smallest}} other {Sobraram # peças com o número {smallest}}}, e o menor número só forma par com outro igual. O tabuleiro volta para a última posição que ainda pode ser terminada.",
+      "split": "As peças ficaram divididas em grupos que não se tocam mais, e as peças nunca se movem. O tabuleiro volta para a última posição que ainda pode ser terminada.",
+      "lonely": "Um {smallest} ficou sem nenhum vizinho igual, e nada pode trazer um até ele. O tabuleiro volta para a última posição que ainda pode ser terminada.",
+      "search": "Daqui, qualquer ordem de junções acaba travando. O tabuleiro volta para a última posição que ainda pode ser terminada."
+    }
+  },
+  "tutorial": {
+    "title": "Como jogar Sumbreak",
+    "steps": {
+      "merge": {
+        "title": "Junte vizinhos iguais",
+        "body": "Arraste um número para cima de um vizinho com o mesmo número, ou toque em um e depois no outro. Os dois viram uma peça só, com a soma. Comece pelos dois 1."
+      },
+      "order": {
+        "title": "A ordem é o desafio",
+        "body": "A peça que recebe a outra fica onde está, a outra casa fica vazia, e nada desliza. Um 2 que acaba longe do outro 2 fica preso de vez. Continue juntando, e use Desfazer se uma peça ficar isolada."
+      }
+    },
+    "doneTitle": "O jogo é só isso",
+    "doneBody": "Sobra uma peça só, com a soma de todas as outras. Uma junção que parece boa ainda pode estragar o tabuleiro, e o jogo só avisa quando você trava ou pede uma dica. O relógio começa quando você vê o tabuleiro pela primeira vez e só para quando ele é resolvido."
+  }
+}

@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { type CSSProperties, type KeyboardEvent, type PointerEvent, useEffect, useMemo, useRef, useState } from "react";
 import type { BoardTile } from "../../engine/game/state";
 import type { Merge } from "../../engine/types";
@@ -45,6 +46,7 @@ type Drag = { id: number; dx: number; dy: number };
  * into another and the other one growing.
  */
 export function SumbreakBoard({ size, tiles, lastMerge, hinted, locked, solved, stuck, shakeSignal, refusedCell, label, onMerge }: BoardProps) {
+  const t = useTranslations("sumbreak.board");
   const boardRef = useRef<HTMLDivElement>(null);
   const gridRef = useRef<HTMLDivElement>(null);
   // Source of truth for the handlers. React batches pointermove updates, so state would lag behind fast input.
@@ -216,10 +218,10 @@ export function SumbreakBoard({ size, tiles, lastMerge, hinted, locked, solved, 
             {Array.from({ length: size }, (_, column) => {
               const cell = row * size + column;
               const tile = tileAt.get(cell);
-              const parts = [`Row ${row + 1}, column ${column + 1}.`, tile ? `${tile.value}.` : "Empty."];
-              if (cell === selected) parts.push("Picked up.");
+              const parts = [t("cell", { row: row + 1, column: column + 1 }), tile ? `${tile.value}.` : t("empty")];
+              if (cell === selected) parts.push(t("pickedUp"));
               const partner = selected !== null && cell !== selected && tile?.value === selectedValue && adjacent(selected, cell);
-              if (partner) parts.push("Can take the tile you picked up.");
+              if (partner) parts.push(t("partner"));
               return (
                 <div
                   key={cell}

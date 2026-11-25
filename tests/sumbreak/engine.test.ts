@@ -14,6 +14,7 @@ import {
   isSolved,
   isStuck,
   legalMerges,
+  mergeErrorText,
   replayMerges,
   sumbreakDailyDateFromSpec,
   sumbreakPuzzleId,
@@ -21,6 +22,7 @@ import {
   validateSumbreakPuzzle,
 } from "@/games/sumbreak/engine";
 import { createRng, hashHex } from "@/shared/engine/prng";
+import { translator } from "../i18n";
 
 /**
  * 3x3 with one way through:
@@ -43,6 +45,10 @@ const LINKEDIN_4 = [1, 1, 1, 512, 1, 4, 1, 256, 2, 8, 1, 128, 4, 8, 32, 64];
 
 const BULK = Number(process.env.SUMBREAK_BULK ?? 60);
 
+/** The English sentences, as a player with the interface in English reads them. */
+const t = translator("sumbreak");
+const pt = translator("sumbreak", "pt-br");
+
 describe("rules", () => {
   it("merges equal side neighbours into the tile that was dropped on", () => {
     expect(checkMerge(3, CHAIN, { from: 1, to: 0 })).toBeNull();
@@ -51,8 +57,7 @@ describe("rules", () => {
   });
 
   it("refuses everything else and names the rule", () => {
-    expect(checkMerge(3, CHAIN, { from: 0, to: 3 })?.code).toBe("different");
-    expect(checkMerge(3, CHAIN, { from: 0, to: 3 })?.message).toContain("1 and 2 do not merge");
+    expect(checkMerge(3, CHAIN, { from: 0, to: 3 })).toEqual({ code: "different", values: { from: 1, to: 2 } });
     // Diagonal, far away, wrapping around a row end, and onto itself.
     expect(checkMerge(3, CHAIN, { from: 0, to: 4 })?.code).toBe("not-adjacent");
     expect(checkMerge(3, CHAIN, { from: 0, to: 8 })?.code).toBe("not-adjacent");
@@ -63,6 +68,23 @@ describe("rules", () => {
     expect(checkMerge(3, CHAIN, { from: 2, to: 1 })?.code).toBe("empty-source");
     expect(checkMerge(3, CHAIN, { from: -1, to: 0 })?.code).toBe("empty-source");
     expect(checkMerge(3, CHAIN, { from: 0, to: 9 })?.code).toBe("empty-source");
+  });
+
+  it("says why in the player's language", () => {
+    const different = checkMerge(3, CHAIN, { from: 0, to: 3 })!;
+    expect(mergeErrorText(t, different)).toBe("Numbers must be identical: 1 and 2 do not merge.");
+    expect(mergeErrorText(pt, different)).toBe("Os números precisam ser iguais: 1 e 2 não se juntam.");
+    // A number is written the way its tile shows it, without grouped digits.
+    const large = checkMerge(3, [1024, 2048, 0, 0, 0, 0, 0, 0, 0], { from: 0, to: 1 })!;
+    expect(mergeErrorText(t, large)).toBe("Numbers must be identical: 1024 and 2048 do not merge.");
+    expect(mergeErrorText(pt, large)).toBe("Os números precisam ser iguais: 1024 e 2048 não se juntam.");
+
+    expect(mergeErrorText(t, { code: "not-adjacent" })).toBe("Only neighbours merge: side by side, or one above the other.");
+    expect(mergeErrorText(t, { code: "empty-target" })).toBe("Tiles do not move into empty cells. A tile only merges into an equal neighbour.");
+    expect(mergeErrorText(t, { code: "empty-source" })).toBe("There is no tile to move there.");
+    expect(mergeErrorText(pt, { code: "not-adjacent" })).toBe("Só peças vizinhas se juntam: lado a lado, ou uma em cima da outra.");
+    expect(mergeErrorText(pt, { code: "empty-target" })).toBe("As peças não se movem para casas vazias. Uma peça só se junta a uma vizinha igual.");
+    expect(mergeErrorText(pt, { code: "empty-source" })).toBe("Não há nenhuma peça ali para mover.");
   });
 
   it("lists legal merges in both directions and knows when a board is stuck or solved", () => {

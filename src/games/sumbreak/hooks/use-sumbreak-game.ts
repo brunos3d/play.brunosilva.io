@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useGameClock } from "@/shared/hooks/use-game-clock";
 import { type SoundName, playSound } from "@/shared/platform/audio";
@@ -10,8 +11,9 @@ import type { Settings } from "@/shared/storage/settings";
 import { IDLE_STATUS, type StatusMessage } from "@/shared/ui/status-line";
 import { type SumbreakState, beginSumbreakReveal, canUndoSumbreak, createSumbreakGame, isSumbreakLocked, mergeTiles, playMerge, recordSumbreakHint, resetSumbreak, rewindTo, tilesOnBoard, undoSumbreak } from "../engine/game/state";
 import { getSumbreakHint } from "../engine/hint";
-import { isStuck } from "../engine/rules";
+import { type MergeError, isStuck } from "../engine/rules";
 import { SumbreakSolver } from "../engine/solver";
+import { hintText, mergeErrorText } from "../engine/text";
 import type { Merge, SumbreakShape } from "../engine/types";
 import { fromSumbreakSnapshot, toSumbreakSnapshot } from "../storage/progress";
 
@@ -26,18 +28,18 @@ const REVEAL_STEP_MS = 420;
 /** How long a refused cell stays marked. */
 const REFUSED_MS = 450;
 
-const STUCK_TEXT = "No merges left. Undo, or ask for a hint to go back to the last position that can be finished.";
-
 type Options = { puzzle: PlayableSumbreak; settings: Settings; persist?: boolean };
 
 const summarize = (state: SumbreakState, elapsedMs: number): FinishSummary => ({ elapsedMs, hintsUsed: state.hintsUsed, mistakes: state.mistakes, moves: state.moves, revealed: state.revealed });
 
 /**
  * Glue between the pure Sumbreak engine and React: the clock, storage, sound
- * and the pauses of hints and reveals. Mount it with `key={puzzle.id}` so a new
+ * and the pauses of hints and reveals. Its sentences come from the "sumbreak"
+ * messages of the page's locale. Mount it with `key={puzzle.id}` so a new
  * puzzle starts from a clean slate.
  */
 export function useSumbreakGame({ puzzle, settings, persist = true }: Options) {
+  const t = useTranslations("sumbreak");
   const [game, setGame] = useState<SumbreakState>(() => createSumbreakGame(puzzle.id, puzzle));
   const [ready, setReady] = useState(!persist);
   const [busy, setBusy] = useState(false);
@@ -115,10 +117,10 @@ export function useSumbreakGame({ puzzle, settings, persist = true }: Options) {
       setHinted(null);
       setEndedNow(true);
       setSummary(summarize(state, elapsedMs));
-      setStatus({ kind: "success", text: state.revealed ? "Solution revealed." : "Solved. One tile left." });
+      setStatus({ kind: "success", text: t(state.revealed ? "status.revealed" : "status.solved") });
       feedback("complete", "complete");
     },
-    [feedback, finishClock, save, setBusyNow],
+    [feedback, finishClock, save, setBusyNow, t],
   );
 
   const begin = useCallback(() => {
@@ -127,15 +129,15 @@ export function useSumbreakGame({ puzzle, settings, persist = true }: Options) {
   }, [beginClock, save]);
 
   const refuse = useCallback(
-    (cell: number, message: string) => {
-      setStatus({ kind: "invalid", text: message });
+    (cell: number, error: MergeError) => {
+      setStatus({ kind: "invalid", text: mergeErrorText(t, error) });
       setShakeSignal((signal) => signal + 1);
       setRefusedCell(cell);
       window.clearTimeout(refusedTimer.current);
       refusedTimer.current = window.setTimeout(() => setRefusedCell(null), REFUSED_MS);
       feedback("invalid", "invalid");
     },
-    [feedback],
+    [feedback, t],
   );
 
   /** The player drops one tile onto another. */
@@ -144,7 +146,7 @@ export function useSumbreakGame({ puzzle, settings, persist = true }: Options) {
       if (busyRef.current || isSumbreakLocked(gameRef.current)) return;
       const result = mergeTiles(puzzle, gameRef.current, { from, to });
       if (!result.ok) {
-        if (result.error) refuse(to, result.error.message);
+        if (result.error) refuse(to, result.error);
         return;
       }
       setHinted(null);
@@ -156,19 +158,19 @@ export function useSumbreakGame({ puzzle, settings, persist = true }: Options) {
         return;
       }
       if (isStuck(puzzle.size, result.state.cells)) {
-        setStatus({ kind: "invalid", text: STUCK_TEXT });
+        setStatus({ kind: "invalid", text: t("status.stuck") });
         feedback("invalid", "invalid");
       } else {
         setStatus(IDLE_STATUS);
       }
     },
-    [end, feedback, mergeSound, puzzle, refuse, save, show],
+    [end, feedback, mergeSound, puzzle, refuse, save, show, t],
   );
 
   const runReveal = useCallback(() => {
     setBusyNow(true);
     setHinted(null);
-    setStatus({ kind: "info", text: "Revealing the solution." });
+    setStatus({ kind: "info", text: t("status.revealing") });
     // The solution starts from a board that can be finished, so a broken one goes back first.
     const state = gameRef.current;
     if (state.brokenAt !== null) show(rewindTo(puzzle, state, state.brokenAt), null);
@@ -186,7 +188,7 @@ export function useSumbreakGame({ puzzle, settings, persist = true }: Options) {
       later(REVEAL_STEP_MS, step);
     };
     later(REVEAL_STEP_MS, step);
-  }, [end, later, mergeSound, puzzle, setBusyNow, show]);
+  }, [end, later, mergeSound, puzzle, setBusyNow, show, t]);
 
   // Restore saved progress.
   useEffect(() => {
@@ -201,14 +203,14 @@ export function useSumbreakGame({ puzzle, settings, persist = true }: Options) {
         restoreClock(restored.clock);
         if (restored.state.status === "solved") setSummary(summarize(restored.state, restored.clock.finishedMs ?? 0));
         else if (restored.state.revealed) runReveal();
-        else if (isStuck(puzzle.size, restored.state.cells)) setStatus({ kind: "invalid", text: STUCK_TEXT });
+        else if (isStuck(puzzle.size, restored.state.cells)) setStatus({ kind: "invalid", text: t("status.stuck") });
       }
       setReady(true);
     });
     return () => {
       cancelled = true;
     };
-    // Runs once per puzzle. runReveal and restoreClock are stable for the puzzle's lifetime.
+    // Runs once per puzzle. runReveal, restoreClock and the translator are stable for the puzzle's lifetime.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [persist, puzzle]);
 
@@ -219,9 +221,9 @@ export function useSumbreakGame({ puzzle, settings, persist = true }: Options) {
     setHinted(null);
     show(next, null);
     save();
-    setStatus({ kind: "info", text: "Last merge undone." });
+    setStatus({ kind: "info", text: t("status.undone") });
     feedback("back", "remove");
-  }, [feedback, puzzle, save, show]);
+  }, [feedback, puzzle, save, show, t]);
 
   const reset = useCallback(() => {
     if (busyRef.current) return;
@@ -230,9 +232,9 @@ export function useSumbreakGame({ puzzle, settings, persist = true }: Options) {
     setHinted(null);
     show(next, null);
     save();
-    setStatus({ kind: "info", text: "Board reset. The clock keeps running." });
+    setStatus({ kind: "info", text: t("status.reset") });
     feedback("remove", "remove");
-  }, [feedback, puzzle, save, show]);
+  }, [feedback, puzzle, save, show, t]);
 
   /**
    * A hint acts. On a board that can no longer be finished it says what went
@@ -244,7 +246,7 @@ export function useSumbreakGame({ puzzle, settings, persist = true }: Options) {
     const hint = getSumbreakHint(puzzle, gameRef.current);
     if (hint.kind === "complete") return;
     show(recordSumbreakHint(gameRef.current), null);
-    setStatus({ kind: "hint", text: hint.message });
+    setStatus({ kind: "hint", text: hintText(t, hint) });
     feedback("hint", "hint");
     setBusyNow(true);
 
@@ -268,7 +270,7 @@ export function useSumbreakGame({ puzzle, settings, persist = true }: Options) {
       if (next.status === "solved") end(next);
       else setBusyNow(false);
     });
-  }, [end, feedback, later, mergeSound, puzzle, save, setBusyNow, show]);
+  }, [end, feedback, later, mergeSound, puzzle, save, setBusyNow, show, t]);
 
   const reveal = useCallback(() => {
     if (busyRef.current || isSumbreakLocked(gameRef.current)) return;

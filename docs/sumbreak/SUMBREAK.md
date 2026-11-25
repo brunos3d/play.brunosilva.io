@@ -34,7 +34,7 @@ The rules live in one file, `engine/rules.ts`.
 4. Nothing slides. A tile never moves into an empty cell and never reaches across one.
 5. The puzzle is solved when one tile is left.
 
-`checkMerge(size, cells, merge)` returns null or the rule that refuses the merge, with a sentence for the UI: `different`, `not-adjacent`, `empty-target`, `empty-source`. `isStuck` is true when more than one tile is left and no merge is legal.
+`checkMerge(size, cells, merge)` returns null or the rule that refuses the merge, as a code: `different`, `not-adjacent`, `empty-target`, `empty-source`. `different` also carries the two numbers. `mergeErrorText` in `engine/text.ts` turns the code into the sentence the status line shows. `isStuck` is true when more than one tile is left and no merge is legal.
 
 Rule 3 is what makes it a puzzle. Merging A onto B and B onto A give the same number in different places, and only one of them may leave it next to its next partner.
 
@@ -120,6 +120,7 @@ No board was invalid. Hard and expert boards never repeated. About one easy boar
 - **Missteps.** A legal merge is always played, even when it leaves a board that cannot be finished. The player is not told at the time, as on LinkedIn. `brokenAt` remembers the last good position, and the result screen counts each such merge under "Missteps".
 - **Stuck.** With no merge left the tiles lose their colour and the status line says so.
 - **Hint.** On a board that can no longer be finished, the hint names what went wrong (an odd count, a stranded tile, two groups, or a dead end only search can see) and takes the board back to the last position that can be finished. Otherwise it points at the next merge, says how many of the ways to merge the smallest number were safe, and plays it.
+- **Text.** The engine holds no sentences. `getSumbreakHint` returns data: for a merge the number, its row and column, the direction of the drop and the counts of safe ways, and for a dead end the reason, the smallest number and how many tiles hold it. `hintText` in `engine/text.ts` builds the sentence with a translator for the `sumbreak` messages (see `docs/I18N.md`). A tile's number goes into a message as text, so 1024 is never written "1,024".
 - **Undo** takes back one merge. **Reset** returns to the starting board. **Reveal** goes back to the last good position if needed and plays a solution.
 - **Keyboard.** Arrow keys move a cursor, Enter picks up a tile and Enter on a neighbour drops it there.
 

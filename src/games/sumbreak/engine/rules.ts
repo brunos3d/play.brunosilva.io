@@ -12,7 +12,13 @@ import type { Merge } from "./types";
  * 5. The puzzle is solved when one tile is left.
  */
 export type MergeErrorCode = "empty-source" | "empty-target" | "not-adjacent" | "different";
-export type MergeError = { code: MergeErrorCode; message: string };
+
+/**
+ * Why a merge is refused, as data: the rule that stops it and the numbers its
+ * sentence needs. For "different", `values` holds the two numbers, `from` and
+ * `to`. The sentence itself is built in ./text.ts, in the player's language.
+ */
+export type MergeError = { code: MergeErrorCode; values?: Record<string, number> };
 
 const neighbourCache = new Map<number, number[][]>();
 
@@ -35,14 +41,14 @@ export function neighboursOf(size: number): number[][] {
   return table;
 }
 
-/** Null when the merge is legal, or the rule that refuses it with a sentence for the UI. */
+/** Null when the merge is legal, or the rule that refuses it. */
 export function checkMerge(size: number, cells: readonly number[], merge: Merge): MergeError | null {
   const { from, to } = merge;
   const inside = (cell: number) => Number.isInteger(cell) && cell >= 0 && cell < size * size;
-  if (!inside(from) || !inside(to) || cells[from] === 0) return { code: "empty-source", message: "There is no tile to move there." };
-  if (from === to || !neighboursOf(size)[from].includes(to)) return { code: "not-adjacent", message: "Only neighbours merge: side by side, or one above the other." };
-  if (cells[to] === 0) return { code: "empty-target", message: "Tiles do not move into empty cells. A tile only merges into an equal neighbour." };
-  if (cells[from] !== cells[to]) return { code: "different", message: `Numbers must be identical: ${cells[from]} and ${cells[to]} do not merge.` };
+  if (!inside(from) || !inside(to) || cells[from] === 0) return { code: "empty-source" };
+  if (from === to || !neighboursOf(size)[from].includes(to)) return { code: "not-adjacent" };
+  if (cells[to] === 0) return { code: "empty-target" };
+  if (cells[from] !== cells[to]) return { code: "different", values: { from: cells[from], to: cells[to] } };
   return null;
 }
 

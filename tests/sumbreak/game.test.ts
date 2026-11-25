@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { SUMBREAK_TUTORIAL_PUZZLE } from "@/games/sumbreak/components/tutorial/tutorial-puzzle";
 import {
+  type SumbreakHint,
   type SumbreakShape,
   type SumbreakState,
   beginSumbreakReveal,
@@ -8,6 +9,7 @@ import {
   createSumbreakGame,
   generateSumbreakPuzzle,
   getSumbreakHint,
+  hintText,
   mergeTiles,
   playMerge,
   recordSumbreakHint,
@@ -18,6 +20,7 @@ import {
   validateSumbreakPuzzle,
 } from "@/games/sumbreak/engine";
 import { fromSumbreakSnapshot, toSumbreakSnapshot } from "@/games/sumbreak/storage/progress";
+import { translator } from "../i18n";
 
 /**
  *   1  1  .
@@ -37,6 +40,12 @@ const row = (...values: number[]): number[] => [...values, ...new Array<number>(
 /** Four 1s in the top row of a 4x4. The first merge is fine either way. The second has to bring the two 2s side by side. */
 const FOUR_ONES: SumbreakShape = { size: 4, cells: row(1, 1, 1, 1) };
 const RUNNING = { startedAt: 1_790_000_000_000, finishedMs: null };
+
+/** The English sentences, as a player with the interface in English reads them. */
+const t = translator("sumbreak");
+const pt = translator("sumbreak", "pt-br");
+const BACK = "The board goes back to the last position that can still be finished.";
+const VOLTA = "O tabuleiro volta para a última posição que ainda pode ser terminada.";
 
 const play = (shape: SumbreakShape, merges: readonly { from: number; to: number }[], start = createSumbreakGame("p", shape)): SumbreakState => {
   let state = start;
@@ -117,8 +126,9 @@ describe("game state", () => {
 describe("hints", () => {
   it("plays the next merge of a solution and says how many ways were safe", () => {
     const hint = getSumbreakHint(SHAPE, createSumbreakGame("p", SHAPE));
-    expect(hint).toMatchObject({ kind: "merge", merge: { from: 1, to: 0 } });
-    expect(hint.kind === "merge" && hint.message).toBe("The smallest number goes first. Drop the 1 in row 1, column 2 onto the 1 to its left: of the 2 ways to merge the 1s, it is the only one that leaves a board that can be finished.");
+    expect(hint).toEqual({ kind: "merge", merge: { from: 1, to: 0 }, value: 1, row: 1, column: 2, direction: "left", total: 2, alive: 1 });
+    expect(hintText(t, hint)).toBe("The smallest number goes first. Drop the 1 in row 1, column 2 onto the 1 to its left: of the 2 ways to merge the 1s, it is the only one that leaves a board that can be finished.");
+    expect(hintText(pt, hint)).toBe("O menor número vai primeiro. Solte o 1 da linha 1, coluna 2, sobre o 1 à esquerda dele: das 2 maneiras de juntar os 1, é a única que deixa um tabuleiro que ainda pode ser terminado.");
     // Following hints solves the board.
     let state = createSumbreakGame("p", SHAPE);
     for (let step = 0; step < 6; step++) {
@@ -128,19 +138,51 @@ describe("hints", () => {
     }
     expect(state.status).toBe("solved");
     expect(getSumbreakHint(SHAPE, state).kind).toBe("complete");
+    expect(hintText(t, getSumbreakHint(SHAPE, state))).toBe("");
+  });
+
+  it("phrases every direction and every count of safe ways, in both languages", () => {
+    const merge = (values: Partial<Extract<SumbreakHint, { kind: "merge" }>>): SumbreakHint => ({ kind: "merge", merge: { from: 0, to: 1 }, value: 2, row: 2, column: 1, direction: "right", total: 1, alive: 1, ...values });
+    expect(hintText(t, merge({}))).toBe("The smallest number goes first. Drop the 2 in row 2, column 1 onto the 2 to its right: it is the only pair of them.");
+    expect(hintText(pt, merge({}))).toBe("O menor número vai primeiro. Solte o 2 da linha 2, coluna 1, sobre o 2 à direita dele: é o único par deles.");
+
+    // A tile's number is written as the tile shows it, without grouped digits.
+    const several = merge({ value: 1024, row: 1, column: 3, direction: "below", total: 4, alive: 2 });
+    expect(hintText(t, several)).toBe("The smallest number goes first. Drop the 1024 in row 1, column 3 onto the 1024 below it: 2 of the 4 ways to merge the 1024s leave a board that can be finished, and this is one.");
+    expect(hintText(pt, several)).toBe("O menor número vai primeiro. Solte o 1024 da linha 1, coluna 3, sobre o 1024 abaixo dele: 2 das 4 maneiras de juntar os 1024 deixam um tabuleiro que ainda pode ser terminado, e esta é uma delas.");
+
+    const above = merge({ value: 4, row: 3, column: 2, direction: "above", total: 3, alive: 1 });
+    expect(hintText(t, above)).toBe("The smallest number goes first. Drop the 4 in row 3, column 2 onto the 4 above it: of the 3 ways to merge the 4s, it is the only one that leaves a board that can be finished.");
+    expect(hintText(pt, above)).toBe("O menor número vai primeiro. Solte o 4 da linha 3, coluna 2, sobre o 4 acima dele: das 3 maneiras de juntar os 4, é a única que deixa um tabuleiro que ainda pode ser terminado.");
   });
 
   it("names a dead end and points at the last position that can be finished", () => {
     const lonely = getSumbreakHint(SHAPE, play(SHAPE, [{ from: 0, to: 1 }]));
-    expect(lonely).toMatchObject({ kind: "dead-end", keep: 0, reason: "lonely" });
-    expect(lonely.kind === "dead-end" && lonely.message).toContain("A 2 has no equal neighbour left");
+    expect(lonely).toEqual({ kind: "dead-end", keep: 0, reason: "lonely", smallest: 2, count: 2 });
+    expect(hintText(t, lonely)).toBe(`A 2 has no equal neighbour left, and nothing can bring one to it. ${BACK}`);
+    expect(hintText(pt, lonely)).toBe(`Um 2 ficou sem nenhum vizinho igual, e nada pode trazer um até ele. ${VOLTA}`);
 
     const apart = getSumbreakHint(FOUR_ONES, play(FOUR_ONES, [{ from: 0, to: 1 }, { from: 2, to: 3 }]));
     expect(apart).toMatchObject({ kind: "dead-end", keep: 1 });
 
     // Merging the 2s before the 1s leaves a 4 the 1s can never grow into.
     const early: SumbreakShape = { size: 4, cells: row(1, 1, 2, 2) };
-    expect(getSumbreakHint(early, play(early, [{ from: 2, to: 3 }]))).toMatchObject({ kind: "dead-end", keep: 0, reason: "split" });
+    const split = getSumbreakHint(early, play(early, [{ from: 2, to: 3 }]));
+    expect(split).toMatchObject({ kind: "dead-end", keep: 0, reason: "split" });
+    expect(hintText(t, split)).toBe(`The tiles are split into groups that no longer touch, and tiles never move. ${BACK}`);
+    expect(hintText(pt, split)).toBe(`As peças ficaram divididas em grupos que não se tocam mais, e as peças nunca se movem. ${VOLTA}`);
+  });
+
+  it("counts the smallest number in one tile or in several, in both languages", () => {
+    const odd = (count: number): SumbreakHint => ({ kind: "dead-end", keep: 0, reason: "odd-count", smallest: 1, count });
+    expect(hintText(t, odd(1))).toBe(`There is one 1 left, and the smallest number can only pair up with itself. ${BACK}`);
+    expect(hintText(t, odd(3))).toBe(`There are 3 1s left, and the smallest number can only pair up with itself. ${BACK}`);
+    expect(hintText(pt, odd(1))).toBe(`Sobrou só uma peça com o número 1, e o menor número só forma par com outro igual. ${VOLTA}`);
+    expect(hintText(pt, odd(3))).toBe(`Sobraram 3 peças com o número 1, e o menor número só forma par com outro igual. ${VOLTA}`);
+
+    const search: SumbreakHint = { kind: "dead-end", keep: 2, reason: "search", smallest: 2, count: 2 };
+    expect(hintText(t, search)).toBe(`From here every order of merges gets stuck. ${BACK}`);
+    expect(hintText(pt, search)).toBe(`Daqui, qualquer ordem de junções acaba travando. ${VOLTA}`);
   });
 
   it("solves generated boards of every tier by hints alone", () => {
@@ -150,6 +192,9 @@ describe("hints", () => {
       for (let step = 0; step < puzzle.size * puzzle.size; step++) {
         const hint = getSumbreakHint(puzzle, state);
         if (hint.kind !== "merge") break;
+        // Every hint a real board produces has a sentence in both languages. A missing key or value would throw.
+        expect(hintText(t, hint)).toContain("The smallest number goes first.");
+        expect(hintText(pt, hint)).toContain("O menor número vai primeiro.");
         state = playMerge(puzzle, state, hint.merge);
       }
       expect(state.status, difficulty).toBe("solved");

@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
-import { type Merge, SumbreakSolver, applyMerge, legalMerges } from "@/games/sumbreak/engine";
-import { confirmReveal, result, seconds, skipTutorials, status, timer, watchConsole } from "../shared";
+import { type Merge, SumbreakSolver, applyMerge, createSumbreakGame, getSumbreakHint, legalMerges } from "@/games/sumbreak/engine";
+import { SETTINGS_KEY, confirmReveal, inLocale, result, seconds, skipTutorials, status, timer, watchConsole } from "../shared";
 import { board, dragMerge, openSumbreak, playMerges, sumbreakPuzzle, tapCell, tapMerge, tileAt, tiles } from "./helpers";
 
 const SIZE = 3;
@@ -202,4 +202,95 @@ test("the tutorial teaches on its own board and can be skipped", async ({ page }
   await tutorial.getByRole("button", { name: "Skip" }).click();
   await expect(tutorial).toBeHidden();
   await expect(board(page)).toHaveAttribute("data-locked", "false");
+});
+
+test.describe("in Portuguese", () => {
+  const portuguese = inLocale("pt-br", url);
+
+  test("the board, the status line, a refusal and a merge read in Portuguese", async ({ page }) => {
+    const problems = watchConsole(page);
+    await openSumbreak(page, portuguese);
+    await expect(page).toHaveURL(/\/pt-br\/sumbreak\/play/);
+    await expect(page.locator("html")).toHaveAttribute("lang", "pt-BR");
+    await expect(status(page)).toHaveText(`Arraste um número para cima de um vizinho igual. Os dois se juntam na soma, e a última peça será ${puzzle.total}.`);
+    await expect(board(page).getByRole("grid")).toHaveAccessibleName("Tabuleiro do Sumbreak, 3 por 3. As setas movem o cursor. Enter pega uma peça, e Enter em uma vizinha igual solta a peça ali.");
+    await expect(board(page).getByRole("gridcell").first()).toHaveAttribute("aria-label", `Linha 1, coluna 1. ${puzzle.cells[0] === 0 ? "Vazia" : puzzle.cells[0]}.`);
+
+    await dragMerge(page, SIZE, mismatch!);
+    await expect(status(page)).toHaveText(`Os números precisam ser iguais: ${puzzle.cells[mismatch!.from]} e ${puzzle.cells[mismatch!.to]} não se juntam.`);
+    await expect(status(page)).toHaveAttribute("data-kind", "invalid");
+
+    // A tile that was picked up says so, and so does the equal neighbour that can take it.
+    const first = solution[0];
+    await tapCell(page, SIZE, first.from);
+    await expect(board(page).locator(`#sumbreak-cell-${first.from}`)).toHaveAttribute("aria-label", /Peça na mão\.$/);
+    await expect(board(page).locator(`#sumbreak-cell-${first.to}`)).toHaveAttribute("aria-label", /Pode receber a peça que você pegou\.$/);
+    await tapCell(page, SIZE, first.to);
+    await expect(tiles(page)).toHaveCount(8);
+    await expect(status(page)).toHaveText(`Restam 8 peças. A última será ${puzzle.total}.`);
+
+    await page.getByRole("button", { name: "Desfazer" }).click();
+    await expect(status(page)).toHaveText("Última junção desfeita.");
+    await playMerges(page, puzzle, solution.slice(0, 2));
+    await page.getByRole("button", { name: "Reiniciar" }).click();
+    await expect(status(page)).toHaveText("Tabuleiro reiniciado. O relógio continua correndo.");
+    await expect(tiles(page)).toHaveCount(9);
+
+    await playMerges(page, puzzle, solution);
+    await expect(board(page)).toHaveAttribute("data-solved", "true");
+    await expect(status(page)).toHaveText("Resolvido. Sobrou uma peça só.");
+    await expect(result(page).getByText("Tropeços")).toBeVisible();
+    expect(problems).toEqual([]);
+  });
+
+  test("a hint explains the next merge and a dead end in Portuguese", async ({ page }) => {
+    await openSumbreak(page, portuguese);
+    const hint = getSumbreakHint(puzzle, createSumbreakGame(puzzle.id, puzzle));
+    if (hint.kind !== "merge") throw new Error("the fixture board needs a first merge");
+    const direction = { right: "à direita dele", left: "à esquerda dele", below: "abaixo dele", above: "acima dele" }[hint.direction];
+
+    await page.getByRole("button", { name: /^Dica/ }).click();
+    await expect(status(page)).toHaveAttribute("data-kind", "hint");
+    await expect(status(page)).toContainText(`O menor número vai primeiro. Solte o ${hint.value} da linha ${hint.row}, coluna ${hint.column}, sobre o ${hint.value} ${direction}: `);
+    await expect(status(page)).toContainText(hint.total === 1 ? "é o único par deles." : "tabuleiro que ainda pode ser terminado");
+    await expect(tiles(page)).toHaveCount(8);
+    await expect(page.getByRole("button", { name: "Dica. 1 usada." })).toBeVisible();
+
+    // Back to the start, then into the trap: the hint names the dead end and takes the board back.
+    await page.getByRole("button", { name: "Reiniciar" }).click();
+    await expect(tiles(page)).toHaveCount(9);
+    await tapMerge(page, SIZE, trap!);
+    await expect(tiles(page)).toHaveCount(8);
+    await page.getByRole("button", { name: /^Dica/ }).click();
+    await expect(status(page)).toContainText("O tabuleiro volta para a última posição que ainda pode ser terminada.");
+    await expect(tiles(page)).toHaveCount(9);
+
+    await page.getByRole("button", { name: "Revelar" }).click();
+    await page.getByTestId("game-confirm").getByRole("button", { name: "Revelar" }).click();
+    await expect(status(page)).toHaveText(/Revelando a solução\.|Solução revelada\./);
+    await expect(tiles(page)).toHaveCount(1, { timeout: 15_000 });
+    await expect(status(page)).toHaveText("Solução revelada.");
+  });
+
+  test("the tutorial teaches in Portuguese", async ({ page }) => {
+    await page.addInitScript((key) => localStorage.setItem(key, JSON.stringify({ sound: false, haptics: false, tutorials: {} })), SETTINGS_KEY);
+    await page.goto(portuguese);
+    const tutorial = page.getByTestId("game-tutorial");
+    await expect(tutorial).toContainText("Como jogar Sumbreak");
+    await expect(tutorial).toContainText("1. Junte vizinhos iguais");
+    await expect(tutorial).toContainText("Comece pelos dois 1.");
+    await expect(tutorial.getByRole("grid")).toHaveAccessibleName("Tabuleiro do tutorial, 3 por 3");
+    await expect(tutorial.getByRole("button", { name: "Desfazer" })).toBeDisabled();
+
+    // The hint plays the one safe merge of the two 1s and says why, which moves the lesson on.
+    await tutorial.getByRole("button", { name: /^Dica/ }).click();
+    await expect(tutorial).toContainText("O menor número vai primeiro. Solte o 1 da linha 1, coluna 2, sobre o 1 à esquerda dele: das 2 maneiras de juntar os 1, é a única que deixa um tabuleiro que ainda pode ser terminado.");
+    await expect(tutorial.getByTestId("sumbreak-tile")).toHaveCount(6);
+    await expect(tutorial).toContainText("2. A ordem é o desafio");
+
+    await tutorial.getByRole("button", { name: "Pular" }).click();
+    await expect(tutorial).toBeHidden();
+    await expect(board(page)).toHaveAttribute("data-locked", "false");
+    await expect(status(page)).toContainText("Arraste um número para cima de um vizinho igual.");
+  });
 });

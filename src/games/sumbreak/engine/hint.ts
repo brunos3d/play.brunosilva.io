@@ -2,29 +2,29 @@ import type { SumbreakState } from "./game/state";
 import { type DeadReason, SumbreakSolver } from "./solver";
 import type { Merge, SumbreakShape } from "./types";
 
+/** Where the tile a merge lands on sits, seen from the tile that moves. */
+export type MergeDirection = "right" | "left" | "below" | "above";
+
+/** What a hint does, as data. ./text.ts turns it into the sentence the player reads. */
 export type SumbreakHint =
   | { kind: "complete" }
-  /** The board cannot be finished any more. `keep` is how many merges to keep: the position right before the one that broke it. */
-  | { kind: "dead-end"; keep: number; reason: DeadReason; message: string }
-  /** The next merge of a solution, with why it is safe. */
-  | { kind: "merge"; merge: Merge; message: string };
+  /**
+   * The board cannot be finished any more. `keep` is how many merges to keep:
+   * the position right before the one that broke it. `smallest` is the smallest
+   * number on the board and `count` how many tiles hold it, which is what the
+   * reasons "odd-count" and "lonely" talk about.
+   */
+  | { kind: "dead-end"; keep: number; reason: DeadReason; smallest: number; count: number }
+  /**
+   * The next merge of a solution, with what makes it safe. The tile that moves
+   * holds `value` and sits on `row` and `column`, both 1-based. Of the `total`
+   * ways to merge the smallest number, `alive` leave a board that can be finished.
+   */
+  | { kind: "merge"; merge: Merge; value: number; row: number; column: number; direction: MergeDirection; total: number; alive: number };
 
-const place = (size: number, cell: number): string => `row ${Math.floor(cell / size) + 1}, column ${(cell % size) + 1}`;
-
-function direction(size: number, merge: Merge): string {
+function directionOf(size: number, merge: Merge): MergeDirection {
   const step = merge.to - merge.from;
-  return step === 1 ? "to its right" : step === -1 ? "to its left" : step === size ? "below it" : "above it";
-}
-
-const BACK = "The board goes back to the last position that can still be finished.";
-
-function deadEndMessage(reason: DeadReason, cells: readonly number[]): string {
-  const smallest = Math.min(...cells.filter((value) => value !== 0));
-  const count = cells.filter((value) => value === smallest).length;
-  if (reason === "odd-count") return `There ${count === 1 ? "is one" : `are ${count}`} ${smallest}${count === 1 ? "" : "s"} left, and the smallest number can only pair up with itself. ${BACK}`;
-  if (reason === "split") return `The tiles are split into groups that no longer touch, and tiles never move. ${BACK}`;
-  if (reason === "lonely") return `A ${smallest} has no equal neighbour left, and nothing can bring one to it. ${BACK}`;
-  return `From here every order of merges gets stuck. ${BACK}`;
+  return step === 1 ? "right" : step === -1 ? "left" : step === size ? "below" : "above";
 }
 
 /**
@@ -38,14 +38,21 @@ export function getSumbreakHint(shape: SumbreakShape, state: SumbreakState): Sum
   const solver = new SumbreakSolver(shape.size);
   if (state.brokenAt !== null) {
     const reason = solver.quickDeadReason(state.cells) ?? "search";
-    return { kind: "dead-end", keep: state.brokenAt, reason, message: deadEndMessage(reason, state.cells) };
+    const smallest = Math.min(...state.cells.filter((value) => value !== 0));
+    return { kind: "dead-end", keep: state.brokenAt, reason, smallest, count: state.cells.filter((value) => value === smallest).length };
   }
   const solution = solver.solve(state.cells);
   if (!solution || solution.length === 0) return { kind: "complete" };
   const merge = solution[0];
-  const value = state.cells[merge.from];
   const { total, alive } = solver.options(state.cells);
-  const lead = `The smallest number goes first. Drop the ${value} in ${place(shape.size, merge.from)} onto the ${value} ${direction(shape.size, merge)}`;
-  const why = total === 1 ? "it is the only pair of them." : alive === 1 ? `of the ${total} ways to merge the ${value}s, it is the only one that leaves a board that can be finished.` : `${alive} of the ${total} ways to merge the ${value}s leave a board that can be finished, and this is one.`;
-  return { kind: "merge", merge, message: `${lead}: ${why}` };
+  return {
+    kind: "merge",
+    merge,
+    value: state.cells[merge.from],
+    row: Math.floor(merge.from / shape.size) + 1,
+    column: (merge.from % shape.size) + 1,
+    direction: directionOf(shape.size, merge),
+    total,
+    alive,
+  };
 }
