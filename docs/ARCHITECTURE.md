@@ -1,18 +1,24 @@
 # Architecture
 
-This repository is a small platform of daily logic puzzles. It currently holds seven games, Zip, Patches, Chess, Queens, Sumbreak, Wend and Termo, and is built so that the next one needs no changes to the others. It is a Next.js 16 app (React 19, TypeScript strict, Tailwind 4) with no server state: every puzzle is generated in the browser and all progress stays on the device.
+This repository is a small platform of daily logic puzzles. It currently holds seven games, Zip, Patches, Chess, Queens, Sumbreak, Wend and Termo, and is built so that the next one needs no changes to the others. It is a Next.js 16 app (React 19, TypeScript strict, Tailwind 4). Every puzzle is generated in the browser and all progress stays on the device. The site reads in two languages ([I18N.md](I18N.md)), and two features use a server and a database: challenge rooms ([MULTIPLAYER.md](MULTIPLAYER.md)) and the ranking ([ONLINE.md](ONLINE.md)).
 
 ## Layout
 
 ```
 src/
-  proxy.ts                redirects the shortcut domains to the canonical one
+  proxy.ts                redirects the shortcut domains to the canonical one, and a path without a locale to the visitor's
+  i18n/                   locales, detection, navigation, message loading, the game language
   app/                    routes only, no logic
-    page.tsx              hub
-    zip/ patches/ chess/ queens/ sumbreak/ wend/ termo/   daily (index), play (seeded), practice (setup)
-    [difficulty]/[seed]/  redirect for old Zip links
+    [locale]/             every page: the document itself is built here, once per locale
+      page.tsx            hub
+      zip/ patches/ chess/ queens/ sumbreak/ wend/ termo/   daily (index), play (seeded), practice (setup)
+      rooms/new/ rooms/[code]/ ranking/                     challenge rooms and the ranking
+      [...rest]/          old Zip links, and the 404 of everything else
+    api/                  route handlers: session, rooms, scores, ranking
+  server/                 database access, players, rooms, scores (server only)
   games/
-    registry.ts           id, name, tagline, route and wording of every game
+    registry.ts           id, route and shape of every game
+    codecs.ts             the seed format of every game, by id
     zip/      engine/ components/ hooks/ storage/
     patches/  engine/ components/ hooks/ storage/
     chess/    engine/ components/ hooks/ storage/
@@ -24,8 +30,10 @@ src/
     engine/               prng, seed codec, daily schedule, Pacific time, streak, clock, difficulty
     storage/              IndexedDB wrapper, settings, progress (boards, daily results, best times)
     platform/             audio, haptics, share, result builder, service worker registration
-    hooks/                settings store, game clock, daily date, deferred generation
+    hooks/                settings store, game clock, daily date, deferred generation, game language, game text
+    online/               challenge rooms, ranking and player profile: rules, client, screens
     ui/                   theme.css, icons, dialogs, header, controls, status line, result, practice setup, hub
+messages/                 en/ and pt-br/, one JSON file per namespace
 public/                   sw.js, manifest.webmanifest, icons/
 scripts/                  one folder of CLI tools per game, shared/, make-icons.ts
 tests/                    shared/ and one folder per game (Vitest)
@@ -38,10 +46,10 @@ The UI never decides a rule. A board turns pointer and key events into a rectang
 
 ## Adding a game
 
-1. Add an entry to `games/registry.ts`. `hasSizes: false` is for a game whose boards all have one size, as in chess: the size then stays out of headers, results, share text and the practice setup.
+1. Add an entry to `games/registry.ts` and to `games/codecs.ts`, and the game's name, tagline, description, mistake label and practice blurb to `messages/<locale>/games.json`. `hasSizes: false` is for a game whose boards all have one size, as in chess: the size then stays out of headers, results, share text and the practice setup.
 2. Create `games/<id>/engine` with a seed codec (`createSeedCodec`), a generator, a daily config and a pure game state.
-3. Write a hook that returns a `GameSession` (see below) and a board component.
-4. Add `app/<id>/` with the three routes, an icon in `public/icons/` and in `shared/ui/game-icons.tsx`, and the routes to `PAGES` in `public/sw.js`. Bump the cache name there, so installed copies fetch the new pages.
+3. Write a hook that returns a `GameSession` (see below) and a board component. Put every sentence in `messages/<locale>/<id>.json` and add the namespace to `i18n/messages.ts`. The engine returns data, and a `text.ts` next to it builds the sentences (see [I18N.md](I18N.md)).
+4. Add `app/[locale]/<id>/` with the three routes, an icon in `public/icons/` and in `shared/ui/game-icons.tsx`, and the routes to `ROUTES` in `public/sw.js`. Bump the cache name there, so installed copies fetch the new pages.
 5. Register today's daily info in the hub's `DAILY` table.
 6. Add a shortcut to `public/manifest.webmanifest`, an icon target to `scripts/make-icons.ts`, a card to `scripts/make-og-images.ts`, and the game to `skipTutorials` in `e2e/shared.ts`.
 
@@ -82,7 +90,7 @@ The frame takes an optional `onNext`. Practice pages pass it, and the frame then
 
 ## The way home
 
-The game's mark and name in the header are one link to the hub, because that is where players look for it first. The grid icon on the right does the same. Both go through the frame: once the player has made a move on an unfinished board (`started`, or else `canUndo` or `canReset`), the frame asks "Leave this puzzle?" before navigating, and says why it asks: the board is saved, but the clock keeps running. A board that is untouched or already finished leaves at once, and a modified click (new tab) is never intercepted.
+The game's mark and name in the header are one link to the hub, because that is where players look for it first. The right side of the header holds help, the theme button, the language menu and the settings. The link goes through the frame: once the player has made a move on an unfinished board (`started`, or else `canUndo` or `canReset`), the frame asks "Leave this puzzle?" before navigating, and says why it asks: the board is saved, but the clock keeps running. A board that is untouched or already finished leaves at once, and a modified click (new tab) is never intercepted.
 
 ## Platform rules shared by every game
 
@@ -111,9 +119,11 @@ One IndexedDB database, `minigames`, with keys that carry the game id:
 | Data | Store | Key |
 |---|---|---|
 | Board, undo history, counters, clock | `games` | `<game>:<puzzle id>` |
-| Daily results | `daily` | `<game>:<Pacific date>` |
+| Daily results | `daily` | `<game>:<Pacific date>`, or `<game>@<language>:<Pacific date>` for a game with one daily per language |
 | Best times | `stats` | `best:<game>:<difficulty>:<size>` |
-| Sound, vibration, tutorials seen | localStorage `minigames:settings:v1` | |
+| Sound, vibration, theme, game language, tutorials seen | localStorage `minigames:settings:v1` | |
+| Interface language | cookie `NEXT_LOCALE` | |
+| Who the device is, for rooms and the ranking | cookie `play_player` (httpOnly) | |
 
 The hub reads `startedAt` and `finishedMs` from the top level of a board snapshot to show a running clock, so every game's snapshot carries them there.
 
@@ -123,7 +133,7 @@ Boards are saved when the clock starts, after every move (in Zip after every ges
 
 ## Visual system
 
-`shared/ui/theme.css` defines the tokens on `:root` (linen, ink, thread, accent, with a dark scheme), the page shell, buttons, dialogs, the status line and the tile board. The display face is Fraunces and the text face is Bricolage Grotesque, both self-hosted by `next/font`. Icons are hand-drawn SVG components in `shared/ui/icons.tsx`. No icon library is used.
+`shared/ui/theme.css` defines the tokens on `:root` (linen, ink, thread, accent) and again under `:root[data-theme="dark"]`, plus the page shell, buttons, dialogs, the status line and the tile board. The theme is a setting: `system`, `light` or `dark`. An inline script in `<head>` resolves it and sets `data-theme` before the first paint, and `ThemeSync` keeps it current, so the stylesheets have no `prefers-color-scheme` rule. The display face is Fraunces and the text face is Bricolage Grotesque, both self-hosted by `next/font`. Icons are hand-drawn SVG components in `shared/ui/icons.tsx`. No icon library is used.
 
 All boards are DOM, not canvas: `role="gridcell"` elements in a CSS grid with absolutely positioned layers on top, sized in percent. Every cell draws a rounded tile, and patches, previews, hints and visited Zip cells use the same `--tile-gap` and `--tile-radius`, which scale with the cell through container query units. The board width is rounded down with CSS `round()` to a whole number of pixels per cell, and the left margin is rounded too, because plain centring leaves half a pixel on each side whenever the leftover width is odd. E2e tests assert an integer grid origin and integer cell size at seven viewport sizes for both games.
 
@@ -151,13 +161,15 @@ The platform lives at `play.brunosilva.io`, defined once as `SITE_ORIGIN` in `sh
 | `zip.brunosilva.io/play?seed=...` | `play.brunosilva.io/zip/play?seed=...` |
 | `zip.brunosilva.io/hard/42` (old Zip link) | `play.brunosilva.io/hard/42`, which redirects again to `/zip/play` |
 
+The target never has a locale: this redirect is permanent and cached, and the locale depends on the visitor. On the canonical address the proxy then adds it in a second step, a 307 (see [I18N.md](I18N.md)).
+
 The rule is the pure function `resolveHostRedirect`, unit tested, and an e2e test drives the real proxy in the production server. The host is read from `x-forwarded-host` first, which is where Vercel's edge puts the public host. The target origin is a constant, so a forged header can only send a visitor to this site. Any other host (the canonical one, Vercel previews, localhost) is served normally. Adding a shortcut domain is one line in `GAME_HOSTS`.
 
 All three domains have to be attached to the same Vercel project for the proxy to see the requests. Browser storage is per origin, so progress made on `zip.brunosilva.io` before the move does not follow the player to `play.brunosilva.io`.
 
 ## Open Graph images
 
-The hub and each game have their own 1200x630 image: `public/og/home.png`, `zip.png`, `patches.png`, `chess.png`, `queens.png`, `sumbreak.png`, `wend.png` and `termo.png`. They are static files, rendered once by `npm run og` and committed, so nothing is generated per request or per build. The script lays out an HTML card (title and tagline on the left, the game's icon on the right) with the site's fonts and the SVG marks from `public/icons`, and takes a screenshot with Playwright's Chromium. Texts come from `games/registry.ts`, so the images are re-rendered only when a name, a tagline or an icon changes.
+The hub and each game have their own 1200x630 image: `public/og/home.png`, `zip.png`, `patches.png`, `chess.png`, `queens.png`, `sumbreak.png`, `wend.png` and `termo.png`. They are static files, rendered once by `npm run og` and committed, so nothing is generated per request or per build. The script lays out an HTML card (title and tagline on the left, the game's icon on the right) with the site's fonts and the SVG marks from `public/icons`, and takes a screenshot with Playwright's Chromium. Texts come from `messages/en/games.json`, so the images are re-rendered only when a name, a tagline or an icon changes. The images are in English, and both locales link to them.
 
 A child route segment replaces its parent's `openGraph` metadata as a whole, so each game layout repeats every field. An e2e test checks the tags on all eight pages and reads the PNG header of each file to confirm its size.
 
@@ -165,12 +177,12 @@ A child route segment replaces its parent's `openGraph` metadata as a whole, so 
 
 `public/sw.js` is registered in production with scope `/`.
 
-- Install: fetch the sixteen pages (the hub and three per game), cache them, then cache every `/_next/static/...` URL found in their HTML. This covers the first visit, when the page loaded before the worker could see its requests.
-- Navigations: network first, cached page as fallback. The query string is ignored on fallback, because `/zip/play?seed=...` is one page for every seed.
+- Precache: the page tells the worker its locale, and the worker fetches the hub and the three pages of each game in that locale, caches them, then caches every `/_next/static/...` URL found in their HTML. This covers the first visit, when the page loaded before the worker could see its requests. The other locale is cached page by page if the player switches.
+- Navigations: network first, cached page as fallback. The query string is ignored on fallback, because `/en/zip/play?seed=...` is one page for every seed. A path without a locale, such as the start URL, is answered offline with the page of the locale used last.
 - Hashed static files, icons and the manifest: cache first.
 - React Server Component payloads are never cached. They share a URL with the HTML, and serving one for the other would break the app. Offline, Next.js falls back to a full navigation, which the cached page answers.
 
-Fonts are self-hosted under `/_next/static`, and audio is synthesized with Web Audio, so there are no extra files to cache. An e2e test loads the hub once, goes offline, reloads it, then opens one unseen seed per game and plays a move in each.
+Fonts are self-hosted under `/_next/static`, and audio is synthesized with Web Audio, so there are no extra files to cache. An e2e test loads the hub once, goes offline, reloads it, then opens one unseen seed per game and plays a move in each. Challenge rooms and the ranking need the network and are not cached.
 
 `public/manifest.webmanifest` installs the platform as one app with a shortcut to each daily. `npm run icons` renders the PNGs from the SVG marks in `public/icons/`.
 
