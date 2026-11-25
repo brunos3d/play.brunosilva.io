@@ -387,16 +387,18 @@ test.describe("what a player downloads", () => {
     expect(await banksFetched(page, scripts)).toEqual(["en", "pt-br"]);
   });
 
-  test("the hub and the practice setup fetch no word bank at all", async ({ page }) => {
+  test("the hub and the practice setup only fetch the bank of the player's game language, for offline play", async ({ page }) => {
     await skipTutorials(page);
     const scripts = watchScripts(page);
     await page.goto("/");
     await expect(page.getByTestId("hub-card-wend")).toBeVisible();
     await expect(page.getByTestId("hub-today-wend")).toContainText("#");
+    // No page's own scripts hold a bank. The hub fetches the one of the player's game language in the background, so the game works offline later.
+    await expect(page.locator("html")).toHaveAttribute("data-offline-words", "pt-br", { timeout: 20_000 });
     await page.goto("/wend/practice");
     await expect(page.getByTestId("game-start")).toBeVisible();
     // Give prefetches of the links on screen time to finish.
     await page.waitForLoadState("networkidle");
-    expect(await banksFetched(page, scripts)).toEqual([]);
+    expect(await banksFetched(page, scripts)).toEqual(["pt-br"]);
   });
 });

@@ -41,6 +41,10 @@ test.describe("a path without a locale", () => {
     const portuguese = await request.get("/en/zip", { headers: { "x-vercel-ip-country": "BR", "accept-language": "pt-BR" }, maxRedirects: 0 });
     expect(portuguese.status()).toBe(200);
     expect(portuguese.headers()["set-cookie"]).toContain("NEXT_LOCALE=en");
+    // A visitor who already chose keeps their choice: a page of the other locale, fetched in the background or opened from a link, does not overwrite it.
+    const chosen = await request.get("/en/zip", { headers: { cookie: "NEXT_LOCALE=pt-br" }, maxRedirects: 0 });
+    expect(chosen.status()).toBe(200);
+    expect(chosen.headers()["set-cookie"] ?? "").not.toContain("NEXT_LOCALE");
     for (const file of ["/sw.js", "/manifest.webmanifest", "/icons/zip.svg", "/og/home.png"]) {
       expect((await request.get(file, { headers: { "accept-language": "pt-BR" }, maxRedirects: 0 })).status(), file).toBe(200);
     }

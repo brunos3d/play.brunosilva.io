@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server";
-import { LOCALE_COOKIE, LOCALE_COOKIE_MAX_AGE, localeOfPath, localizePath } from "@/i18n/config";
+import { LOCALE_COOKIE, LOCALE_COOKIE_MAX_AGE, isLocale, localeOfPath, localizePath } from "@/i18n/config";
 import { detectLocale } from "@/i18n/detect";
 import { isPagePath, resolveHostRedirect } from "@/shared/platform/site";
 
@@ -18,7 +18,8 @@ import { isPagePath, resolveHostRedirect } from "@/shared/platform/site";
  *    one detected from Vercel's country header and from Accept-Language (see
  *    i18n/detect.ts). That covers the bare domain, the PWA start URL and every
  *    link shared before the site had languages. A path that names a locale is
- *    served as it is, and the choice is remembered in the cookie.
+ *    served as it is. It becomes the visitor's stored choice only when they
+ *    have none yet. After that, the language switcher is what changes it.
  *
  * Files (the service worker, the manifest, icons, images) have no locale and
  * pass through the second step untouched.
@@ -44,7 +45,9 @@ export function proxy(request: NextRequest) {
   const named = localeOfPath(pathname);
   if (named) {
     const response = NextResponse.next();
-    if (stored !== named) rememberLocale(response, named);
+    // A first visit through a link that names a locale starts in that locale. A stored choice is never overwritten here:
+    // pages of the other locale are also fetched in the background (prefetches, the service worker), and those must not undo what the visitor picked.
+    if (!isLocale(stored)) rememberLocale(response, named);
     return response;
   }
 

@@ -120,8 +120,9 @@ test("a shared English seed opens English words for a player who plays in Portug
   await guess(page, answer);
   await expect(status(page)).toContainText("You got it in 2 guesses.");
   await expect(result(page)).toBeVisible();
-  // The seed decided the language, so the Portuguese list was never fetched.
-  expect(await lists()).toEqual(["en"]);
+  // The seed decided the language of the puzzle. The Portuguese list is only there as the background download of the player's own game language, kept for offline play.
+  await expect(page.locator("html")).toHaveAttribute("data-offline-words", "pt-br", { timeout: 20_000 });
+  expect(await lists()).toEqual(["en", "pt-br"]);
 
   // "New" keeps the language of the puzzle on screen, not the one in the settings.
   await result(page).getByRole("button", { name: "Close" }).click();
@@ -383,14 +384,16 @@ test("a puzzle that is already in the language just picked stays where it is", a
   await expect(row(page, 0)).toHaveAttribute("data-kind", "played");
 });
 
-test("each word list is fetched only when its language is played, and the hub and the setup screen fetch none", async ({ page, browser }) => {
+test("each word list is fetched only when its language is played, and the hub only fetches the player's own for offline play", async ({ page, browser }) => {
   const lists = watchWordLists(page);
   await page.goto("/");
   await expect(page.getByTestId("hub-card-termo")).toBeVisible();
   await expect(page.getByTestId("hub-today-termo")).toBeVisible();
+  // No page's own scripts hold a list. The hub fetches the one of the player's game language in the background, so the game works offline later. The other language stays on the server.
+  await expect(page.locator("html")).toHaveAttribute("data-offline-words", "pt-br", { timeout: 20_000 });
   await page.goto("/termo/practice");
   await expect(page.getByTestId("game-language")).toBeVisible();
-  expect(await lists()).toEqual([]);
+  expect(await lists()).toEqual(["pt-br"]);
 
   // A Portuguese puzzle fetches the Portuguese list and nothing of the English one.
   await openTermo(page, portuguese.url);
