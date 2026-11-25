@@ -1,9 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useSyncExternalStore } from "react";
+import { SEED_CODECS } from "@/games/codecs";
 import { useRouter } from "@/i18n/navigation";
 import { online } from "./api";
-import { nextRound, normalizeRoomCode, roomPath, roundPath } from "./rooms";
+import { nextRound, normalizeRoomCode, roomPath, roundPath, roundSpec } from "./rooms";
 import type { RoomPlayer, RoomState } from "./types";
 import { useRoom } from "./use-room";
 
@@ -112,7 +113,8 @@ export function useRace(): Race | null {
     if (!target || !room) return false;
     if (!you || room.status === "lobby" || you.gaveUp || target.round >= room.rounds.length) return true;
     if (target.round > you.results.length) return true;
-    return !roundPath(room.code, room.rounds, target.round).includes(`seed=${new URLSearchParams(search).get("seed") === null ? "\u0000" : encodeURIComponent(new URLSearchParams(search).get("seed") as string)}&`);
+    const round = room.rounds[target.round];
+    return new URLSearchParams(search).get("seed") !== SEED_CODECS[round.game].format(roundSpec(round));
   }, [room, search, target, you]);
   useEffect(() => {
     if (misplaced && target) router.replace(roomPath(target.code));

@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { type MouseEvent, type ReactNode, useEffect, useState } from "react";
+import { type MouseEvent, type ReactNode, useEffect, useRef, useState } from "react";
 import type { GameMeta } from "@/games/registry";
 import { useRouter } from "@/i18n/navigation";
 import type { DailyInfo } from "@/shared/engine/daily";
@@ -143,18 +143,22 @@ export function GameFrame({ game, daily, difficulty, size, seed, shareUrl, sessi
 
   // Race flow. The round is reported once the room knows who is asking. A board that was already reported, reopened with the
   // back button or after a reload, is not played twice: the player is sent on to where they belong.
-  const raceYou = race?.you;
-  const raceRound = race?.round;
-  const finishRound = race?.finishRound;
-  const moveOn = race?.moveOn;
-  const roundPlayed = raceYou !== undefined && raceYou !== null && raceRound !== undefined && raceYou.results.length > raceRound;
+  const raceKnowsPlayer = Boolean(race?.you);
+  const roundPlayed = Boolean(race?.you && race.you.results.length > race.round);
+  // The latest race and round state, for the timeout below: it must fire once per ended round, whatever re-renders in between.
+  const raceRef = useRef({ race, roundPlayed });
   useEffect(() => {
-    if (!summary || !raceYou || !finishRound || !moveOn) return;
-    const timeout = window.setTimeout(() => (roundPlayed ? moveOn() : finishRound({ solved: !summary.revealed, hints: summary.hintsUsed })), RESULT_DELAY_MS);
+    raceRef.current = { race, roundPlayed };
+  });
+  useEffect(() => {
+    if (!summary || !raceKnowsPlayer) return;
+    const timeout = window.setTimeout(() => {
+      const current = raceRef.current;
+      if (current.roundPlayed) current.race?.moveOn();
+      else current.race?.finishRound({ solved: !summary.revealed, hints: summary.hintsUsed });
+    }, RESULT_DELAY_MS);
     return () => window.clearTimeout(timeout);
-    // Runs once per ended round: `roundPlayed` flips to true as a result of the report itself.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [summary, raceYou === null || raceYou === undefined, finishRound, moveOn]);
+  }, [summary, raceKnowsPlayer]);
 
   // Leaving a board the player has started asks first: the clock keeps running while they are away.
   const inProgress = session.ready && !summary && (session.started ?? (session.canUndo || session.canReset));
