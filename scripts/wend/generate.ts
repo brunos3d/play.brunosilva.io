@@ -1,11 +1,14 @@
 /**
- * npm run wend:generate -- --seed 12345 --difficulty hard [--size 7] [--solution] [--json]
- * npm run wend:generate -- --date 2026-11-23 [--solution]
+ * npm run wend:generate -- --seed 12345 --difficulty hard [--size 7] [--lang en] [--solution] [--json]
+ * npm run wend:generate -- --date 2026-11-23 [--lang en] [--solution]
+ * The words are Portuguese unless --lang says otherwise. A canonical seed
+ * given to --seed keeps the language it names.
  */
 import { generateWendFromSpec, getWendDailyPuzzle, validateWendPuzzle, wendSeeds } from "@/games/wend/engine";
 import type { WendPuzzle } from "@/games/wend/engine";
 import { isDifficulty } from "@/shared/engine/difficulty";
 import { parseArgs } from "../shared/cli";
+import { languageArg } from "./language";
 
 const args = parseArgs(process.argv.slice(2));
 const difficulty = typeof args.difficulty === "string" ? args.difficulty : "medium";
@@ -14,9 +17,11 @@ if (!isDifficulty(difficulty)) {
   process.exit(1);
 }
 
+const language = languageArg(args.lang);
+
 function build(): WendPuzzle {
-  if (typeof args.date === "string") return getWendDailyPuzzle(args.date).puzzle;
-  return generateWendFromSpec(wendSeeds.resolve({ seed: typeof args.seed === "string" ? args.seed : "1", difficulty, size: typeof args.size === "string" ? args.size : null }));
+  if (typeof args.date === "string") return getWendDailyPuzzle(args.date, language).puzzle;
+  return generateWendFromSpec(wendSeeds.resolve({ seed: typeof args.seed === "string" ? args.seed : "1", difficulty, size: typeof args.size === "string" ? args.size : null, lang: language }));
 }
 
 const started = performance.now();
@@ -30,6 +35,7 @@ const check = validateWendPuzzle(puzzle);
 
 console.log(`seed        ${puzzle.seed}`);
 console.log(`id          ${puzzle.id}`);
+console.log(`language    ${puzzle.language}`);
 console.log(`board       ${puzzle.size}x${puzzle.size}, ${puzzle.metadata.walls} walls, ${puzzle.words.length} words`);
 console.log(`theme       ${puzzle.theme}${puzzle.themeShown ? "" : " (hidden until the first word is found)"}`);
 console.log(`lengths     ${puzzle.words.map((word) => word.text.length).join(", ")}`);

@@ -1,8 +1,9 @@
+import { LEGACY_WORD_LANGUAGE } from "@/i18n/game-language";
 import { dateKeyToDayNumber, isDateKey } from "@/shared/engine/pacific-time";
 import { type Rng, createRng } from "@/shared/engine/prng";
 import { WEND_MAX_WORD, WEND_TIERS, type WendTier } from "../config";
 import { countBends, neighboursOf } from "../grid";
-import { type PuzzleSpec, wendSeeds } from "../seed";
+import { type PuzzleSpec, wendLanguage, wendSeeds } from "../seed";
 import { SolverBudgetExceeded, solveWend } from "../solver";
 import { type BankWord, type Theme, wendThemes } from "../themes";
 import type { WendWord } from "../types";
@@ -26,16 +27,27 @@ const NODE_BUDGET = 150_000;
 const MIN_WORD = 3;
 
 /**
- * The themes in the order this seed tries them. A daily seed (its token is a
- * date) walks through one shuffled deck of all themes, one card a day, and
- * starts over at the end, so a theme comes back only after all the others had
- * their day. Any other seed shuffles the deck with its own randomness.
+ * Seeds the shuffle of the daily theme deck. Each language has a deck of its
+ * own, as long as its bank. Portuguese keeps the key the game shipped with, so
+ * its daily themes stay the ones they always were.
  */
-function themeOrder(spec: PuzzleSpec, rng: Rng): number[] {
-  const indices = wendThemes().map((_, index) => index);
+function themeDeckKey(spec: PuzzleSpec): string {
+  const language = wendLanguage(spec);
+  return `WEND|themes|v${spec.version}${language === LEGACY_WORD_LANGUAGE ? "" : `|${language}`}`;
+}
+
+/**
+ * The themes in the order this seed tries them, as indices into the bank of
+ * the seed's language. A daily seed (its token is a date) walks through one
+ * shuffled deck of all themes, one card a day, and starts over at the end, so
+ * a theme comes back only after all the others had their day. Any other seed
+ * shuffles the deck with its own randomness.
+ */
+function themeOrder(spec: PuzzleSpec, rng: Rng, themeCount: number): number[] {
+  const indices = Array.from({ length: themeCount }, (_, index) => index);
   if (!isDateKey(spec.token)) return rng.shuffle(indices);
   const day = dateKeyToDayNumber(spec.token);
-  const deck = createRng(`WEND|themes|v${spec.version}`).shuffle(indices);
+  const deck = createRng(themeDeckKey(spec)).shuffle(indices);
   const start = ((day % indices.length) + indices.length) % indices.length;
   // The fallbacks start half a deck away. The next cards belong to the coming days, and a theme that cannot fill today's board should not take one of them.
   const far = (start + Math.floor(indices.length / 2)) % indices.length;
@@ -184,14 +196,18 @@ function build(rng: Rng, theme: Theme, tier: WendTier, size: number, pass: numbe
  * them along one scrambled path, and keeps the board only if the words fit in
  * exactly one way. Each try has its own random stream, so the result depends on
  * the seed alone.
+ *
+ * The words come from the bank of the seed's language, which has to be in
+ * memory. `themes` replaces that bank: tests pass a single theme to see whether
+ * it can fill a board on its own.
  */
-export function generateWendV1(spec: PuzzleSpec): GeneratedBoard {
+export function generateWendV1(spec: PuzzleSpec, themes: readonly Theme[] = wendThemes(wendLanguage(spec))): GeneratedBoard {
+  if (themes.length === 0) throw new RangeError("The word bank has no themes.");
   const key = wendSeeds.rngKey(spec);
   const rng = createRng(key);
   const tier = WEND_TIERS[spec.difficulty];
   const size = spec.size ?? rng.pick(tier.sizes);
-  const order = themeOrder(spec, rng);
-  const themes = wendThemes();
+  const order = themeOrder(spec, rng, themes.length);
 
   let attempt = 0;
   for (const group of PASS_GROUPS) {

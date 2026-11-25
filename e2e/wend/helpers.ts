@@ -1,10 +1,26 @@
 import { type Page, expect } from "@playwright/test";
 import { type WendPuzzle, generateWendFromSpec, wendSeeds } from "@/games/wend/engine";
 
-export function wendPuzzle(seed: string, difficulty: string, size?: number): { puzzle: WendPuzzle; url: string } {
-  const puzzle = generateWendFromSpec(wendSeeds.resolve({ seed, difficulty, size }));
+export type WendLanguage = "en" | "pt-br";
+
+/**
+ * The puzzle a seed builds and the address that opens it. Portuguese unless a
+ * language is given, as a seed without a language is. It stays synchronous:
+ * the engine's index, imported above, has every word bank in memory, so a test
+ * does not wait for one the way the browser does.
+ */
+export function wendPuzzle(seed: string, difficulty: string, size?: number, language?: WendLanguage): { puzzle: WendPuzzle; url: string } {
+  const puzzle = generateWendFromSpec(wendSeeds.resolve({ seed, difficulty, size, lang: language }));
   return { puzzle, url: `/wend/play?seed=${encodeURIComponent(puzzle.seed)}` };
 }
+
+/** The letters on the board, row by row, with # for a wall: the same string `lettersOf` gives for a puzzle. */
+export const boardLetters = (page: Page, testId = "wend-board"): Promise<string> =>
+  page
+    .getByTestId(testId)
+    .locator("[data-testid^='wend-cell-']")
+    .evaluateAll((cells) => cells.map((cell) => cell.getAttribute("data-letter") ?? "#").join(""));
+export const lettersOf = (puzzle: { letters: readonly string[] }): string => puzzle.letters.map((letter) => letter || "#").join("");
 
 export const board = (page: Page) => page.getByTestId("wend-board");
 export const trails = (page: Page) => board(page).getByTestId("wend-trail");

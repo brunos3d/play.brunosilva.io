@@ -1,17 +1,20 @@
 /**
- * npm run wend:benchmark -- [--count 200] [--size 7]
- * Generates many puzzles per tier and reports speed and shape.
+ * npm run wend:benchmark -- [--count 200] [--size 7] [--lang en]
+ * Generates many puzzles per tier and reports speed and shape. The words are
+ * Portuguese unless --lang says otherwise.
  */
-import { DIFFICULTIES, generateWendPuzzle, validateWendPuzzle } from "@/games/wend/engine";
+import { DIFFICULTIES, WEND_BANKS, generateWendPuzzle, validateWendPuzzle } from "@/games/wend/engine";
 import { parseArgs, percentile } from "../shared/cli";
+import { languageArg } from "./language";
 
 const args = parseArgs(process.argv.slice(2));
 const count = Number(args.count ?? 200);
 const size = typeof args.size === "string" ? Number(args.size) : undefined;
+const language = languageArg(args.lang);
 const mean = (values: number[]): number => values.reduce((sum, value) => sum + value, 0) / Math.max(1, values.length);
 const p95 = (values: number[]): number => percentile([...values].sort((a, b) => a - b), 0.95);
 
-console.log(`Wend benchmark, ${count} puzzles per tier\n`);
+console.log(`Wend benchmark, ${language}, ${WEND_BANKS[language].length} themes, ${count} puzzles per tier\n`);
 for (const difficulty of DIFFICULTIES) {
   const times: number[] = [];
   const attempts: number[] = [];
@@ -22,10 +25,17 @@ for (const difficulty of DIFFICULTIES) {
   const boards = new Set<string>();
   const sizes = new Map<number, number>();
   let invalid = 0;
+  let failed = 0;
   let repeatedLengths = 0;
   for (let index = 0; index < count; index++) {
     const started = performance.now();
-    const puzzle = generateWendPuzzle(`bench-${index}`, difficulty, size === undefined ? {} : { size });
+    let puzzle;
+    try {
+      puzzle = generateWendPuzzle(`bench-${index}`, difficulty, { language, ...(size === undefined ? {} : { size }) });
+    } catch {
+      failed++;
+      continue;
+    }
     times.push(performance.now() - started);
     attempts.push(puzzle.metadata.attempts);
     bends.push(puzzle.metadata.bendiness);
@@ -37,7 +47,7 @@ for (const difficulty of DIFFICULTIES) {
     if (new Set(puzzle.words.map((word) => word.text.length)).size !== puzzle.words.length) repeatedLengths++;
     if (!validateWendPuzzle(puzzle).ok) invalid++;
   }
-  const busiest = [...themes.entries()].sort((a, b) => b[1] - a[1])[0];
+  const busiest = [...themes.entries()].sort((a, b) => b[1] - a[1])[0] ?? ["none", 0];
   console.log(
     [
       difficulty.padEnd(7),
@@ -53,6 +63,7 @@ for (const difficulty of DIFFICULTIES) {
       `themes ${themes.size} (most used: ${busiest[0]}, ${busiest[1]})`,
       `distinct ${boards.size}`,
       `invalid ${invalid}`,
+      `failed ${failed}`,
     ].join(" | "),
   );
 }

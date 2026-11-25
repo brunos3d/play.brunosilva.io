@@ -1,10 +1,11 @@
+import type { GameLanguage } from "@/i18n/game-language";
 import type { Difficulty } from "@/shared/engine/difficulty";
 
 /** A hidden word and the cells it runs through, in reading order. */
 export type WendWord = {
   /** Plain capitals, A to Z. This is what the board shows, one letter per cell. */
   text: string;
-  /** The word as it is spelled, with its accents, in capitals. Shown once the word is found. */
+  /** The word as it is spelled, in capitals, with the accents a Portuguese word has. Shown once the word is found. */
   display: string;
   path: readonly number[];
 };
@@ -23,8 +24,10 @@ export type WendPuzzle = WendShape & {
   /** Canonical seed. It rebuilds this exact puzzle. */
   seed: string;
   version: number;
+  /** The language of the words and of the theme. It comes from the seed, not from the player's settings. */
+  language: GameLanguage;
   difficulty: Difficulty;
-  /** What the hidden words have in common. */
+  /** What the hidden words have in common, in the language of the words. */
   theme: string;
   /** False on the harder tiers: the theme then shows only after the first word is found. */
   themeShown: boolean;

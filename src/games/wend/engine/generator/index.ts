@@ -1,3 +1,4 @@
+import type { GameLanguage } from "@/i18n/game-language";
 import type { DailyInfo } from "@/shared/engine/daily";
 import type { Difficulty } from "@/shared/engine/difficulty";
 import { type DateKey, pacificDateKey } from "@/shared/engine/pacific-time";
@@ -5,28 +6,34 @@ import { normalizeToken } from "@/shared/engine/seed-codec";
 import { WEND_TIERS } from "../config";
 import { WEND_DAILY_CONFIG, getWendDailyInfo } from "../daily";
 import { cellSetKey, isPath } from "../grid";
-import { type PuzzleSpec, WEND_GENERATOR_VERSION, wendPuzzleId, wendSeeds } from "../seed";
+import { type PuzzleSpec, WEND_GENERATOR_VERSION, wendLanguage, wendPuzzleId, wendSeeds } from "../seed";
 import { SolverBudgetExceeded, solveWend } from "../solver";
+import { type Theme, loadWendBank } from "../themes";
 import type { WendPuzzle, WendShape } from "../types";
 import { type GeneratedBoard, generateWendV1 } from "./v1";
 
-const VERSIONS: Record<number, (spec: PuzzleSpec) => GeneratedBoard> = { 1: generateWendV1 };
+const VERSIONS: Record<number, (spec: PuzzleSpec, themes?: readonly Theme[]) => GeneratedBoard> = { 1: generateWendV1 };
 
 /**
  * Builds the puzzle for a spec. The output depends only on the spec: the PRNG
- * is keyed by token, version, difficulty and size, each try has its own stream,
- * and the solver works on a node budget, never on a clock.
+ * is keyed by token, version, difficulty, size and language, each try has its
+ * own stream, and the solver works on a node budget, never on a clock.
+ *
+ * The words are in the language of the spec, and that language's bank must be
+ * in memory: this function throws if it is not. The app calls `loadWendPuzzle`,
+ * which fetches the bank first. `themes` stands in for the bank in tests.
  */
-export function generateWendFromSpec(spec: PuzzleSpec): WendPuzzle {
+export function generateWendFromSpec(spec: PuzzleSpec, themes?: readonly Theme[]): WendPuzzle {
   if (!wendSeeds.isSupportedVersion(spec.version)) throw new RangeError(`Generator version ${spec.version} is not available in this build.`);
   if (spec.size !== undefined && !wendSeeds.isBoardSize(spec.size)) throw new RangeError(`Board size ${spec.size} is out of range.`);
 
-  const board = VERSIONS[spec.version](spec);
+  const board = VERSIONS[spec.version](spec, themes);
   const shareSeed = wendSeeds.format({ ...spec, token: normalizeToken(spec.token) });
   return {
     id: wendPuzzleId(shareSeed),
     seed: shareSeed,
     version: spec.version,
+    language: wendLanguage(spec),
     size: board.size,
     letters: board.letters,
     words: board.words,
@@ -44,14 +51,26 @@ export function generateWendFromSpec(spec: PuzzleSpec): WendPuzzle {
   };
 }
 
-export function generateWendPuzzle(seed: string | number, difficulty: Difficulty, options: { size?: number; version?: number } = {}): WendPuzzle {
-  return generateWendFromSpec({ token: normalizeToken(seed), version: options.version ?? WEND_GENERATOR_VERSION, difficulty, ...(options.size !== undefined ? { size: options.size } : {}) });
+/**
+ * Downloads the word bank of the spec's language, if it is not here yet, and
+ * builds the puzzle. This is how the app generates: only the language being
+ * played is ever fetched.
+ */
+export async function loadWendPuzzle(spec: PuzzleSpec): Promise<WendPuzzle> {
+  await loadWendBank(wendLanguage(spec));
+  return generateWendFromSpec(spec);
 }
 
-/** Daily puzzle for a Pacific calendar date, or for the Pacific date of an instant. */
-export function getWendDailyPuzzle(when: DateKey | Date, config = WEND_DAILY_CONFIG): { info: DailyInfo; puzzle: WendPuzzle } {
+/** Portuguese unless `language` says otherwise, as a seed without a language is. */
+export function generateWendPuzzle(seed: string | number, difficulty: Difficulty, options: { size?: number; version?: number; language?: GameLanguage | null } = {}): WendPuzzle {
+  const spec: PuzzleSpec = { token: normalizeToken(seed), version: options.version ?? WEND_GENERATOR_VERSION, difficulty, ...(options.size !== undefined ? { size: options.size } : {}) };
+  return generateWendFromSpec(wendSeeds.withLanguage(spec, options.language));
+}
+
+/** Daily puzzle of a language for a Pacific calendar date, or for the Pacific date of an instant. Portuguese when no language is given. */
+export function getWendDailyPuzzle(when: DateKey | Date, language?: GameLanguage | null, config = WEND_DAILY_CONFIG): { info: DailyInfo; puzzle: WendPuzzle } {
   const date = typeof when === "string" ? when : pacificDateKey(when);
-  const info = getWendDailyInfo(date, null, config);
+  const info = getWendDailyInfo(date, language, config);
   return { info, puzzle: generateWendFromSpec(info.spec) };
 }
 

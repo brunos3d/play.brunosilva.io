@@ -11,7 +11,7 @@ import { GameFrame } from "@/shared/ui/game-frame";
 import { GameLoading } from "@/shared/ui/game-loading";
 import { PuzzleAttempts } from "@/shared/ui/puzzle-attempts";
 import { foundWords } from "../../engine/game/state";
-import { generateWendFromSpec } from "../../engine/generator";
+import { loadWendPuzzle } from "../../engine/generator";
 import { type PuzzleSpec, wendSeeds } from "../../engine/seed";
 import type { WendPuzzle } from "../../engine/types";
 import { useWendGame } from "../../hooks/use-wend-game";
@@ -34,8 +34,13 @@ type GameProps = {
   onNext?: () => void;
 };
 
+/**
+ * Builds the puzzle of a spec and plays it. The words are in the language the
+ * spec names. Their word bank is downloaded here, on first use, so a player
+ * only ever fetches the language they play in.
+ */
 export function WendGame({ spec, daily, onNext }: GameProps) {
-  const generated = useGeneratedPuzzle(wendSeeds.format(spec), () => generateWendFromSpec(spec));
+  const generated = useGeneratedPuzzle(wendSeeds.format(spec), () => loadWendPuzzle(spec));
   if (!generated || "error" in generated) return <GameLoading game={GAME} daily={daily} error={generated && "error" in generated ? generated.error : undefined} />;
   return (
     <PuzzleAttempts game="wend" puzzle={generated.puzzle} enabled={onNext !== undefined}>

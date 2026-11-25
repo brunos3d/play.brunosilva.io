@@ -240,7 +240,7 @@ export function useWendGame({ puzzle, settings, persist = true }: Options) {
     let cancelled = false;
     void loadBoard("wend", puzzle.id).then((snapshot) => {
       if (cancelled) return;
-      const restored = fromWendSnapshot(puzzle.id, puzzle, snapshot);
+      const restored = fromWendSnapshot(puzzle.id, puzzle, snapshot, puzzle.seed);
       if (restored) {
         gameRef.current = restored.state;
         setGame(restored.state);

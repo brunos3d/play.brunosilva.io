@@ -20,6 +20,7 @@ export default function WendDebugPanel({ puzzle, generationMs, showSolution, onT
     ["seed", puzzle.seed],
     ["puzzle id", puzzle.id],
     ["generator version", puzzle.version],
+    ["language", puzzle.language],
     ["board", `${puzzle.size}x${puzzle.size}, ${puzzle.metadata.walls} walls, ${puzzle.words.length} words`],
     ["difficulty", puzzle.difficulty],
     ["theme", `${puzzle.theme}${puzzle.themeShown ? "" : " (hidden at first)"}`],

@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
+  WEND_BANKS,
   WEND_DAILY_CONFIG,
   WEND_MAX_SIZE,
   WEND_MAX_WORD,
   WEND_MIN_SIZE,
-  WEND_THEMES,
   WEND_TIERS,
   type WendShape,
   cellSetKey,
@@ -20,6 +20,7 @@ import {
   solveWend,
   validateWendPuzzle,
   wendDailyDateFromSpec,
+  wendLanguage,
   wendPuzzleId,
   wendSeeds,
   wendThemes,
@@ -38,33 +39,20 @@ const LINKEDIN_167: { size: number; letters: string[]; words: string[] } = {
   words: ["HEAVY", "TOPPLE", "LANDING", "DOWNHILL", "IMBALANCE", "DESCENDANT"],
 };
 
-describe("word bank", () => {
-  it("holds single words of 3 to 12 plain letters, each once per theme", () => {
-    for (const theme of WEND_THEMES) {
-      const seen = new Set<string>();
-      for (const word of theme.words.split(" ")) {
-        const plain = plainLetters(word);
-        expect(plain, `${theme.title}: ${word}`).toMatch(/^[A-Z]{3,12}$/);
-        expect(seen.has(plain), `${theme.title}: ${word} twice`).toBe(false);
-        seen.add(plain);
-      }
-    }
-  });
-
-  it("has unique theme titles, and every theme can fill every tier's own board", () => {
-    expect(new Set(WEND_THEMES.map((theme) => theme.title)).size).toBe(WEND_THEMES.length);
-    for (const theme of wendThemes()) {
-      const lengths = [...theme.byLength.keys()];
-      // Enough different lengths for the smallest recipe: an easy board needs four of them between 3 and 7.
-      expect(lengths.filter((length) => length >= 3 && length <= 7).length, theme.title).toBeGreaterThanOrEqual(4);
-    }
-  });
-
+// The rules every word bank follows are in bank.test.ts, for both languages.
+describe("letters", () => {
   it("strips accents for the board and keeps them for display", () => {
     expect(plainLetters("maçã")).toBe("MACA");
     expect(plainLetters("Ônibus")).toBe("ONIBUS");
-    const fruit = wendThemes().find((theme) => theme.title === "Frutas");
+    const fruit = wendThemes("pt-br").find((theme) => theme.title === "Frutas");
     expect(fruit?.byLength.get(4)).toContainEqual({ text: "MACA", display: "MAÇÃ" });
+  });
+
+  it("reads English words through the same functions, with nothing to strip", () => {
+    expect(plainLetters("pear")).toBe("PEAR");
+    const fruit = wendThemes("en").find((theme) => theme.title === "Fruits");
+    expect(fruit?.byLength.get(4)).toContainEqual({ text: "PEAR", display: "PEAR" });
+    for (const theme of wendThemes("en")) for (const words of theme.byLength.values()) for (const word of words) expect(word.display).toBe(word.text);
   });
 });
 
@@ -149,7 +137,7 @@ describe("generator", () => {
 
   it("takes all its words from one theme, with their accents", () => {
     const puzzle = generateWendPuzzle("theme-check", "hard");
-    const theme = WEND_THEMES.find((entry) => entry.title === puzzle.theme);
+    const theme = WEND_BANKS["pt-br"].find((entry) => entry.title === puzzle.theme);
     const bank = new Set(theme?.words.split(" ").map((word) => word.toUpperCase()));
     for (const word of puzzle.words) {
       expect(bank.has(word.display), word.display).toBe(true);
@@ -164,6 +152,30 @@ describe("generator", () => {
     expect(first.id).toBe(wendPuzzleId(first.seed));
     expect(generateWendPuzzle("example-seed", "hard").letters).not.toEqual(first.letters);
     expect(generateWendPuzzle("another-seed", "medium").letters).not.toEqual(first.letters);
+  });
+
+  it("still builds, letter for letter, the Portuguese boards it built before the game had two languages", () => {
+    const board = (seed: string) => {
+      const puzzle = generateWendFromSpec(wendSeeds.parse(seed)!);
+      return { id: puzzle.id, theme: puzzle.theme, letters: puzzle.letters.map((letter) => letter || "#").join(""), words: puzzle.words.map((word) => word.display) };
+    };
+    expect(board("WEND:e2e-wend-1:1:easy")).toEqual({ id: "wend-3ba3266f135a", theme: "No banheiro", letters: "OLAMINOLMNIC#OAAVOT##ASAB", words: ["VASO", "BATOM", "LÂMINA", "COLÔNIA"] });
+    expect(board("WEND:example-seed:1:medium")).toEqual({ id: "wend-5aa89a2eb1f6", theme: "Instrumentos musicais", letters: "NETEOAIRALCLAS#VIONFONAOPETEAGMORTGO", words: ["AGOGÔ", "VIOLÃO", "SANFONA", "TROMPETE", "CLARINETE"] });
+    expect(board("WEND:theme-check:1:hard")).toEqual({
+      id: "wend-2691597e8cf6",
+      theme: "Na horta",
+      letters: "ORACSABLECAERAAB#LCRA#OLCAESASAH#TLAP#OBEARGOFRAS",
+      words: ["SALSA", "CEBOLA", "ASPARGO", "ESCAROLA", "BETERRABA", "ALCACHOFRA"],
+    });
+    expect(board("WEND:sized-0:1:expert:8")).toEqual({
+      id: "wend-47114a899b93",
+      theme: "Cinema e teatro",
+      letters: "ATSGEEGAAGIAMMUITONNTNQAORSOEA#MREAR#R#FPPTIOUGIE#NEMUCOSNEPSUSD",
+      words: ["SUSPENSE", "FIGURANTE", "MAQUIAGEM", "PERSONAGEM", "DOCUMENTÁRIO", "PROTAGONISTA"],
+    });
+    // A seed that names Portuguese is the same seed.
+    expect(generateWendFromSpec(wendSeeds.resolve({ seed: "example-seed", difficulty: "medium", lang: "pt-br" }))).toEqual(generateWendPuzzle("example-seed", "medium"));
+    expect(generateWendPuzzle("example-seed", "medium").language).toBe("pt-br");
   });
 
   it("honours a board size picked by hand, in every tier", () => {
@@ -194,6 +206,69 @@ describe("generator", () => {
   });
 });
 
+describe("English puzzles", () => {
+  it("builds valid boards from the English bank in every tier", () => {
+    const bank = new Map(WEND_BANKS.en.map((theme) => [theme.title, new Set(theme.words.split(" ").map((word) => word.toUpperCase()))]));
+    for (const difficulty of DIFFICULTIES) {
+      for (let index = 0; index < 25; index++) {
+        const puzzle = generateWendPuzzle(`unit-${index}`, difficulty, { language: "en" });
+        expect(validateWendPuzzle(puzzle).problems, puzzle.seed).toEqual([]);
+        expect(puzzle.language).toBe("en");
+        const tier = WEND_TIERS[difficulty];
+        expect(tier.sizes).toContain(puzzle.size);
+        expect(puzzle.words.length).toBeGreaterThanOrEqual(tier.words[0]);
+        expect(puzzle.words.length).toBeLessThanOrEqual(tier.words[1]);
+        expect(puzzle.metadata.walls).toBeGreaterThanOrEqual(tier.walls[0]);
+        expect(puzzle.metadata.walls).toBeLessThanOrEqual(tier.walls[1]);
+        // One theme of the English bank, and only words of that theme.
+        const words = bank.get(puzzle.theme);
+        expect(words, `${puzzle.seed}: ${puzzle.theme}`).toBeDefined();
+        for (const word of puzzle.words) {
+          expect(words?.has(word.display), `${puzzle.seed}: ${word.display}`).toBe(true);
+          expect(word.text.length).toBeGreaterThanOrEqual(tier.lengths[0]);
+          expect(word.text.length).toBeLessThanOrEqual(tier.lengths[1]);
+        }
+      }
+    }
+  });
+
+  it("carries the language in the seed, the id and the puzzle", () => {
+    const english = generateWendPuzzle("lucky", "hard", { size: 7, language: "en" });
+    const portuguese = generateWendPuzzle("lucky", "hard", { size: 7 });
+    expect(english.seed).toBe("WEND:lucky:1:hard:7:en");
+    expect(portuguese.seed).toBe("WEND:lucky:1:hard:7");
+    expect(english.language).toBe("en");
+    expect(wendLanguage(wendSeeds.parse(english.seed)!)).toBe("en");
+    expect(wendLanguage(wendSeeds.parse(portuguese.seed)!)).toBe("pt-br");
+    // Two languages are two puzzles: another id, so saved boards and results never mix.
+    expect(english.id).not.toBe(portuguese.id);
+    expect(english.id).toBe(wendPuzzleId(english.seed));
+    expect(english.letters).not.toEqual(portuguese.letters);
+    expect(WEND_BANKS.en.some((theme) => theme.title === english.theme)).toBe(true);
+    expect(WEND_BANKS["pt-br"].some((theme) => theme.title === portuguese.theme)).toBe(true);
+  });
+
+  it("is deterministic: an English seed builds the same puzzle every time, from the seed alone", () => {
+    const first = generateWendPuzzle("example-seed", "medium", { language: "en" });
+    expect(generateWendPuzzle("example-seed", "medium", { language: "en" })).toEqual(first);
+    // The canonical seed is all a shared link carries.
+    expect(generateWendFromSpec(wendSeeds.parse(first.seed)!)).toEqual(first);
+    expect(generateWendFromSpec(wendSeeds.resolve({ seed: "example-seed", difficulty: "medium", lang: "en" }))).toEqual(first);
+    expect(generateWendPuzzle("another-seed", "medium", { language: "en" }).letters).not.toEqual(first.letters);
+    expect(generateWendPuzzle("example-seed", "hard", { language: "en" }).letters).not.toEqual(first.letters);
+  });
+
+  it("honours a board size picked by hand, in every tier", () => {
+    for (const difficulty of DIFFICULTIES) {
+      for (let size = WEND_MIN_SIZE; size <= WEND_MAX_SIZE; size++) {
+        const puzzle = generateWendPuzzle("sized", difficulty, { size, language: "en" });
+        expect(puzzle.size).toBe(size);
+        expect(validateWendPuzzle(puzzle).ok, puzzle.seed).toBe(true);
+      }
+    }
+  });
+});
+
 describe("daily", () => {
   it("numbers the days from LinkedIn's launch date", () => {
     expect(getWendDailyInfo(WEND_DAILY_CONFIG.epoch).number).toBe(1);
@@ -219,5 +294,55 @@ describe("daily", () => {
     for (let day = 0; day < 28; day++) themes.push(getWendDailyPuzzle(addDays("2026-11-23", day)).puzzle.theme);
     // The deck of themes is walked one card a day. A repeat only happens when a theme cannot fill that day's board and another steps in.
     expect(new Set(themes).size).toBeGreaterThanOrEqual(27);
+  });
+
+  it("keeps the Portuguese daily themes it always had", () => {
+    const themes = Array.from({ length: 10 }, (_, day) => getWendDailyPuzzle(addDays("2026-11-20", day)).puzzle.theme);
+    expect(themes).toEqual(["Ferramentas", "Tecnologia", "Bebidas", "Na cidade", "Calendário", "Saúde", "Animais selvagens", "Na cozinha", "No céu", "No banheiro"]);
+    const sunday = getWendDailyPuzzle("2026-11-22").puzzle;
+    expect(sunday.id).toBe("wend-8227f7b5273b");
+    expect(sunday.words.map((word) => word.display)).toEqual(["BATIDA", "GARAPA", "GUARANÁ", "TEQUILA", "LIMONADA", "VITAMINA", "CHAMPANHE", "ENERGÉTICO"]);
+  });
+
+  it("has one daily puzzle per language: the same day, number and tier, with other words", () => {
+    const portuguese = getWendDailyInfo("2026-11-22");
+    const english = getWendDailyInfo("2026-11-22", "en");
+    expect(english.seed).toBe("WEND:2026-11-22:1:expert:en");
+    expect(english.variant).toBe("en");
+    expect(portuguese.variant).toBeUndefined();
+    expect(getWendDailyInfo("2026-11-22", "pt-br")).toEqual(portuguese);
+    expect({ number: english.number, difficulty: english.difficulty, date: english.date }).toEqual({ number: portuguese.number, difficulty: portuguese.difficulty, date: portuguese.date });
+    expect(wendDailyDateFromSpec(english.spec)).toBe("2026-11-22");
+    expect(wendDailyDateFromSpec({ ...english.spec, difficulty: "easy" })).toBeNull();
+
+    const { info, puzzle } = getWendDailyPuzzle("2026-11-22", "en");
+    expect(info).toEqual(english);
+    expect(puzzle.seed).toBe(english.seed);
+    expect(puzzle.language).toBe("en");
+    expect(validateWendPuzzle(puzzle).problems).toEqual([]);
+    const other = getWendDailyPuzzle("2026-11-22").puzzle;
+    expect(puzzle.id).not.toBe(other.id);
+    expect(puzzle.letters).not.toEqual(other.letters);
+    expect(WEND_BANKS.en.some((theme) => theme.title === puzzle.theme)).toBe(true);
+  });
+
+  it("walks a theme deck of its own in English, as long as the English bank", () => {
+    const count = WEND_BANKS.en.length;
+    const titles = WEND_BANKS.en.map((theme) => theme.title);
+    const english: string[] = [];
+    const portuguese: string[] = [];
+    for (let day = 0; day < count; day++) {
+      english.push(getWendDailyPuzzle(addDays("2026-11-23", day), "en").puzzle.theme);
+      portuguese.push(getWendDailyPuzzle(addDays("2026-11-23", day)).puzzle.theme);
+    }
+    for (const theme of english) expect(titles).toContain(theme);
+    // One full turn of the deck shows every theme once. A repeat only happens when a theme cannot fill that day's board and another steps in.
+    expect(new Set(english).size).toBeGreaterThanOrEqual(count - 2);
+    expect(new Set(english.slice(0, 28)).size).toBeGreaterThanOrEqual(27);
+    // The deck starts over after its last card.
+    expect(getWendDailyPuzzle(addDays("2026-11-23", count), "en").puzzle.theme).toBe(english[0]);
+    // The two decks are shuffled apart: the day's theme in one language says nothing about the other.
+    const position = (bank: readonly { title: string }[], theme: string) => bank.findIndex((entry) => entry.title === theme);
+    expect(english.map((theme) => position(WEND_BANKS.en, theme))).not.toEqual(portuguese.map((theme) => position(WEND_BANKS["pt-br"], theme)));
   });
 });

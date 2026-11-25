@@ -291,6 +291,39 @@ describe("storage", () => {
     expect(foundWords(restored!.state)).toHaveLength(puzzle.words.length);
   });
 
+  it("refuses a board saved in one language for the puzzle of the other", () => {
+    const portuguese = generateWendPuzzle("stored", "medium");
+    const english = generateWendPuzzle("stored", "medium", { language: "en" });
+    const solve = (puzzle: typeof portuguese) => {
+      let state = createWendGame(puzzle.id);
+      for (const word of puzzle.words) state = stroke(puzzle, state, word.path).state;
+      return toWendSnapshot(state, puzzle.seed, { startedAt: 1, finishedMs: 5_000 });
+    };
+    const [saved, savedEnglish] = [solve(portuguese), solve(english)];
+    // Each language reads its own board back.
+    expect(fromWendSnapshot(portuguese.id, portuguese, saved)?.state.status).toBe("solved");
+    expect(fromWendSnapshot(english.id, english, savedEnglish)?.state.status).toBe("solved");
+    expect(savedEnglish.seed).toBe("WEND:stored:1:medium:en");
+    // The two puzzles have different ids, so a board never reaches the other language.
+    expect(fromWendSnapshot(english.id, english, saved)).toBeNull();
+    expect(fromWendSnapshot(portuguese.id, portuguese, savedEnglish)).toBeNull();
+    // Even with the id forged, a board whose seed names another language is refused before a single trail is read.
+    expect(fromWendSnapshot(english.id, english, { ...saved, puzzleId: english.id, trails: [] , finishedMs: null }, english.seed)).toBeNull();
+    expect(fromWendSnapshot(portuguese.id, portuguese, { ...savedEnglish, puzzleId: portuguese.id, trails: [], finishedMs: null }, portuguese.seed)).toBeNull();
+    // Without that check an empty board would have passed: nothing on it contradicts the puzzle.
+    expect(fromWendSnapshot(english.id, english, { ...saved, puzzleId: english.id, trails: [], finishedMs: null })).not.toBeNull();
+  });
+
+  it("still reads a board saved before the game had two languages", () => {
+    // What the first release wrote for WEND:stored:1:medium: no language anywhere.
+    const puzzle = generateWendPuzzle("stored", "medium");
+    const old = { snapshotVersion: 1, puzzleId: puzzle.id, seed: "WEND:stored:1:medium", trails: [{ cells: [...puzzle.words[0].path], hinted: 0 }], moves: 1, mistakes: 0, hintsUsed: 0, revealed: false, startedAt: 1_790_000_000_000, finishedMs: null };
+    const restored = fromWendSnapshot(puzzle.id, puzzle, JSON.parse(JSON.stringify(old)));
+    expect(restored?.state.status).toBe("playing");
+    expect(foundWords(restored!.state)).toEqual([0]);
+    expect(fromWendSnapshot(puzzle.id, puzzle, JSON.parse(JSON.stringify(old)), puzzle.seed)?.state.status).toBe("playing");
+  });
+
   it("rejects tampered snapshots", () => {
     const state = stroke(SHAPE, createWendGame("p"), [7, 8]).state;
     const good = toWendSnapshot(state, "seed", RUNNING);
