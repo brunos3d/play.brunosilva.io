@@ -1,9 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { buildTopology, checkQueen, generateQueensPuzzle, ruleBetween, ruledOutCells, unitsOf, validateQueens, validateShape } from "@/games/queens/engine";
+import { buildTopology, checkQueen, generateQueensPuzzle, moveErrorText, ruleBetween, ruledOutCells, unitsOf, validateQueens, validateShape } from "@/games/queens/engine";
+import { translator } from "../i18n";
 import { COLUMNS, CONFINED_REGION, shape } from "./fixtures";
 
 const topology = buildTopology(CONFINED_REGION);
 const at = (row: number, column: number) => row * 5 + column;
+/** The English sentences, as a player with the interface in English reads them. */
+const t = translator("queens");
+const pt = translator("queens", "pt-br");
 
 describe("queens rules", () => {
   it("names the rule two queens break", () => {
@@ -20,11 +24,13 @@ describe("queens rules", () => {
     expect(checkQueen(topology, [], at(2, 2))).toBeNull();
     expect(checkQueen(topology, [at(0, 0)], at(2, 3))).toBeNull();
     const error = checkQueen(topology, [at(0, 0), at(1, 2)], at(2, 3));
-    expect(error).toMatchObject({ rule: "touching", with: at(1, 2) });
-    expect(error?.message).toMatch(/touch/);
-    expect(checkQueen(topology, [at(0, 0)], at(0, 3))?.message).toMatch(/row/);
-    expect(checkQueen(topology, [at(0, 0)], at(4, 0))?.message).toMatch(/column/);
-    expect(checkQueen(topology, [at(1, 0)], at(3, 2))?.message).toMatch(/region/);
+    expect(error).toEqual({ rule: "touching", with: at(1, 2) });
+    expect(moveErrorText(t, error!)).toBe("Queens cannot touch, not even diagonally.");
+    expect(moveErrorText(pt, error!)).toBe("As rainhas não podem se tocar, nem na diagonal.");
+    expect(moveErrorText(t, checkQueen(topology, [at(0, 0)], at(0, 3))!)).toBe("This row already has a queen.");
+    expect(moveErrorText(t, checkQueen(topology, [at(0, 0)], at(4, 0))!)).toBe("This column already has a queen.");
+    expect(moveErrorText(t, checkQueen(topology, [at(1, 0)], at(3, 2))!)).toBe("This region already has a queen.");
+    expect(moveErrorText(pt, checkQueen(topology, [at(1, 0)], at(3, 2))!)).toBe("Esta região já tem uma rainha.");
   });
 
   it("accepts only a full board with one queen per row, column and region and none touching", () => {

@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { buildTopology, ruledOutCells } from "@/games/queens/engine";
-import { confirmReveal, result, seconds, skipTutorials, status, timer, watchConsole } from "../shared";
+import { SETTINGS_KEY, confirmReveal, inLocale, result, seconds, skipTutorials, status, timer, watchConsole } from "../shared";
 import { board, crosses, dragCells, openQueens, placeQueen, queens, queensPuzzle, ruledOut, solve, tapCell } from "./helpers";
 
 const SIZE = 6;
@@ -236,4 +236,84 @@ test("the tutorial teaches on its own board and can be skipped", async ({ page }
   await tutorial.getByRole("button", { name: "Skip" }).click();
   await expect(tutorial).toBeHidden();
   await expect(board(page)).toHaveAttribute("data-locked", "false");
+});
+
+test.describe("in Portuguese", () => {
+  const portuguese = inLocale("pt-br", url);
+
+  test("the board, the status line, a refusal and the hints read in Portuguese", async ({ page }) => {
+    const problems = watchConsole(page);
+    await openQueens(page, portuguese);
+    await expect(page).toHaveURL(/\/pt-br\/queens\/play/);
+    await expect(page.locator("html")).toHaveAttribute("lang", "pt-BR");
+    await expect(status(page)).toHaveText("Toque em uma casa uma vez para um X, duas para uma rainha. Arraste para marcar várias casas.");
+    await expect(board(page).getByRole("grid")).toHaveAccessibleName(/^Tabuleiro do Queens, 6 por 6, 6 regiões coloridas\. As setas movem o cursor\./);
+
+    // The hint names the region by its colour and agrees with "coluna", all in one Portuguese sentence.
+    await page.getByRole("button", { name: /^Dica/ }).click();
+    await expect(status(page)).toHaveAttribute("data-kind", "hint");
+    await expect(status(page)).toHaveText("Todas as casas livres da região caramelo estão na coluna 1, então a rainha dela fica nessa coluna. Nenhuma outra casa dali pode ter uma rainha.");
+    await expect.poll(async () => crosses(page).count()).toBeGreaterThan(0);
+    await page.getByRole("button", { name: "Reiniciar" }).click();
+    await expect(status(page)).toHaveText("Tabuleiro limpo. O relógio continua correndo.");
+
+    await placeQueen(page, SIZE, first);
+    await expect(status(page)).toHaveText(`1 de ${SIZE} rainhas colocadas.`);
+    await expect(board(page).locator('.queens-cell[data-mark="queen"]')).toHaveAttribute("aria-label", /^Linha 1, coluna \d, região [a-zçáãêíú-]+\. Rainha\.$/);
+    await expect(board(page).locator('.queens-cell[data-auto="true"]').first()).toHaveAttribute("aria-label", /Eliminada por uma rainha\.$/);
+
+    await placeQueen(page, SIZE, sameRow);
+    await expect(status(page)).toHaveText("Esta linha já tem uma rainha. Toque de novo para tirar o X.");
+    await expect(status(page)).toHaveAttribute("data-kind", "invalid");
+    await expect(board(page).locator('.queens-cell[data-mark="x"]')).toHaveAttribute("aria-label", /Marcada com um X\.$/);
+    await page.getByRole("button", { name: "Desfazer" }).click();
+    await expect(status(page)).toHaveText("Última jogada desfeita.");
+
+    // A wrong queen is named before any deduction.
+    await page.getByRole("button", { name: "Reiniciar" }).click();
+    const wrong = Array.from({ length: SIZE * SIZE }, (_, cell) => cell).find((cell) => !solution.includes(cell))!;
+    await placeQueen(page, SIZE, wrong);
+    await page.getByRole("button", { name: /^Dica/ }).click();
+    await expect(status(page)).toHaveText("Esta rainha está no lugar errado. Com ela ali não dá para terminar o tabuleiro, então ela sai.");
+    await expect(queens(page)).toHaveCount(0);
+    expect(problems).toEqual([]);
+  });
+
+  test("solving and revealing end in Portuguese", async ({ page }) => {
+    await openQueens(page, portuguese);
+    await solve(page, puzzle);
+    await expect(board(page)).toHaveAttribute("data-solved", "true");
+    await expect(status(page)).toHaveText("Resolvido. Cada rainha no seu lugar.");
+    await expect(result(page)).toContainText("Impecável");
+
+    const other = inLocale("pt-br", queensPuzzle("e2e-queens-2", "easy", 5).url);
+    await openQueens(page, other);
+    await page.getByRole("button", { name: "Revelar" }).click();
+    await page.getByTestId("game-confirm").getByRole("button", { name: "Revelar" }).click();
+    await expect(status(page)).toHaveText(/Revelando a solução\.|Solução revelada\./);
+    await expect(queens(page)).toHaveCount(5, { timeout: 15_000 });
+    await expect(status(page)).toHaveText("Solução revelada.");
+  });
+
+  test("the tutorial teaches in Portuguese", async ({ page }) => {
+    await page.addInitScript((key) => localStorage.setItem(key, JSON.stringify({ sound: false, haptics: false, tutorials: {} })), SETTINGS_KEY);
+    await page.goto(portuguese);
+    const tutorial = page.getByTestId("game-tutorial");
+    await expect(tutorial).toContainText("Como jogar Queens");
+    await expect(tutorial).toContainText("1. Marque uma casa");
+    await expect(tutorial).toContainText("É um lembrete para você: ali não vai rainha.");
+    await expect(tutorial.getByRole("grid")).toHaveAccessibleName("Tabuleiro do tutorial, 5 por 5");
+    await expect(tutorial.getByRole("button", { name: "Desfazer" })).toBeDisabled();
+
+    // The hint places the first queen and explains it, which also moves the lesson two steps on.
+    await tutorial.getByRole("button", { name: /^Dica/ }).click();
+    await expect(tutorial).toContainText("Só resta uma casa livre na região rosa, então a rainha dela vai ali.");
+    await expect(tutorial.locator('.queens-cell[data-mark="queen"]')).toHaveCount(1);
+    await expect(tutorial).toContainText("3. As rainhas mantêm distância");
+
+    await tutorial.getByRole("button", { name: "Pular" }).click();
+    await expect(tutorial).toBeHidden();
+    await expect(board(page)).toHaveAttribute("data-locked", "false");
+    await expect(status(page)).toContainText("Toque em uma casa uma vez para um X");
+  });
 });

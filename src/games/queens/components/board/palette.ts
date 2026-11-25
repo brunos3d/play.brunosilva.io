@@ -2,7 +2,7 @@ import { createRng } from "@/shared/engine/prng";
 import { sideNeighbors } from "../../engine/grid";
 import type { QueensShape } from "../../engine/types";
 
-/** Pastel fabric colours, the same family Patches uses. All keep dark ink readable at AA contrast. */
+/** Pastel fabric colours, the same family Patches uses. All keep dark ink readable at AA contrast. `name` is an id: what a player reads comes from the "queens" messages, under color.<name>. */
 export const REGION_COLORS = [
   { name: "rose", value: "#f2b5b0" },
   { name: "sky", value: "#a8d3ea" },

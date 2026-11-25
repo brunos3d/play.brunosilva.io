@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { assignRegionColors } from "@/games/queens/components/board/palette";
+import { REGION_COLORS, assignRegionColors } from "@/games/queens/components/board/palette";
 import { DIFFICULTIES, generateQueensPuzzle, validateQueensPuzzle } from "@/games/queens/engine";
+import { translator } from "../i18n";
 
 describe("queens tutorial and palette", () => {
   it("teaches on a board that only needs the simplest step", () => {
@@ -19,5 +20,16 @@ describe("queens tutorial and palette", () => {
       expect(new Set(colors.map((color) => color.name)).size).toBe(puzzle.size);
       expect(assignRegionColors(puzzle, puzzle.id)).toEqual(colors);
     }
+  });
+
+  it("names every colour of the palette in both languages, each one differently", () => {
+    for (const locale of ["en", "pt-br"] as const) {
+      const t = translator("queens", locale);
+      // A colour without a message would throw here.
+      const names = REGION_COLORS.map((color) => t(`color.${color.name}`));
+      expect(new Set(names).size, locale).toBe(REGION_COLORS.length);
+    }
+    expect(translator("queens")("color.rose")).toBe("rose");
+    expect(translator("queens", "pt-br")("color.sky")).toBe("azul-celeste");
   });
 });

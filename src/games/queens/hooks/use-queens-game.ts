@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useGameClock } from "@/shared/hooks/use-game-clock";
 import { type SoundName, playSound } from "@/shared/platform/audio";
@@ -28,8 +29,9 @@ import {
   undoQueens,
 } from "../engine/game/state";
 import { buildTopology } from "../engine/grid";
-import { type UnitNamer, defaultUnitName, getQueensHint } from "../engine/hint";
+import { getQueensHint } from "../engine/hint";
 import type { MoveError } from "../engine/rules";
+import { type RegionColorName, hintText, moveErrorText } from "../engine/text";
 import type { QueensShape } from "../engine/types";
 import { fromQueensSnapshot, toQueensSnapshot } from "../storage/progress";
 
@@ -48,8 +50,8 @@ type Options = {
   puzzle: PlayableQueens;
   settings: Settings;
   persist?: boolean;
-  /** Names regions in hint sentences. The board passes one that uses the region's colour. */
-  nameUnit?: UnitNamer;
+  /** The translated colour of a region, so a hint names a region the way the board shows it. */
+  regionColor?: RegionColorName;
 };
 
 type Gesture = { marksBefore: readonly number[]; start: number; mode: "mark" | "erase" | null; moved: boolean };
@@ -64,10 +66,12 @@ const summarize = (state: QueensState, elapsedMs: number): FinishSummary => ({
 
 /**
  * Glue between the pure Queens engine and React: the clock, storage, sound and
- * the gesture that turns taps and drags into marks. Mount it with
- * `key={puzzle.id}` so a new puzzle starts from a clean slate.
+ * the gesture that turns taps and drags into marks. Its sentences come from
+ * the "queens" messages of the page's locale. Mount it with `key={puzzle.id}`
+ * so a new puzzle starts from a clean slate.
  */
-export function useQueensGame({ puzzle, settings, persist = true, nameUnit = defaultUnitName }: Options) {
+export function useQueensGame({ puzzle, settings, persist = true, regionColor }: Options) {
+  const t = useTranslations("queens");
   const topology = useMemo(() => buildTopology(puzzle), [puzzle]);
   const [game, setGame] = useState<QueensState>(() => createQueensGame(puzzle.id, puzzle.size * puzzle.size));
   const [ready, setReady] = useState(!persist);
@@ -88,11 +92,11 @@ export function useQueensGame({ puzzle, settings, persist = true, nameUnit = def
   const lastRefusedRef = useRef<number | null>(null);
   const refusedTimer = useRef(0);
   const settingsRef = useRef(settings);
-  const nameRef = useRef(nameUnit);
+  const colorRef = useRef(regionColor);
   useEffect(() => {
     settingsRef.current = settings;
-    nameRef.current = nameUnit;
-  }, [settings, nameUnit]);
+    colorRef.current = regionColor;
+  }, [settings, regionColor]);
 
   const { clockRef, begin: beginClock, finish: finishClock, restore: restoreClock } = clock;
 
@@ -122,10 +126,10 @@ export function useQueensGame({ puzzle, settings, persist = true, nameUnit = def
       clearHint();
       setEndedNow(true);
       setSummary(summarize(state, elapsedMs));
-      setStatus({ kind: "success", text: state.revealed ? "Solution revealed." : "Solved. Every queen has its place." });
+      setStatus({ kind: "success", text: t(state.revealed ? "status.revealed" : "status.solved") });
       feedback("complete", "complete");
     },
-    [clearHint, feedback, finishClock, save],
+    [clearHint, feedback, finishClock, save, t],
   );
 
   const begin = useCallback(() => {
@@ -136,14 +140,14 @@ export function useQueensGame({ puzzle, settings, persist = true, nameUnit = def
   const refuse = useCallback(
     (cell: number, error: MoveError) => {
       lastRefusedRef.current = cell;
-      setStatus({ kind: "invalid", text: `${error.message} Tap again to clear the X.` });
+      setStatus({ kind: "invalid", text: t("status.refused", { reason: moveErrorText(t, error) }) });
       setShakeSignal((signal) => signal + 1);
       setRefused({ cell, with: error.with });
       window.clearTimeout(refusedTimer.current);
       refusedTimer.current = window.setTimeout(() => setRefused(null), REFUSED_MS);
       feedback("invalid", "invalid");
     },
-    [feedback],
+    [feedback, t],
   );
 
   /** Closes an action: counts it, saves, and ends the puzzle if the last queen went on. */
@@ -255,7 +259,7 @@ export function useQueensGame({ puzzle, settings, persist = true, nameUnit = def
     busyRef.current = true;
     clearHint();
     setWrongCells([]);
-    setStatus({ kind: "info", text: "Revealing the solution." });
+    setStatus({ kind: "info", text: t("status.revealing") });
     const tick = () => {
       if (gameRef.current.status === "solved") {
         busyRef.current = false;
@@ -269,7 +273,7 @@ export function useQueensGame({ puzzle, settings, persist = true, nameUnit = def
       window.setTimeout(tick, REVEAL_STEP_MS);
     };
     tick();
-  }, [clearHint, end, feedback, puzzle.solution, show, topology]);
+  }, [clearHint, end, feedback, puzzle.solution, show, t, topology]);
 
   // Restore saved progress.
   useEffect(() => {
@@ -302,9 +306,9 @@ export function useQueensGame({ puzzle, settings, persist = true, nameUnit = def
     clearHint();
     show(next);
     save();
-    setStatus({ kind: "info", text: "Last move undone." });
+    setStatus({ kind: "info", text: t("status.undone") });
     feedback("back", "remove");
-  }, [clearHint, feedback, save, show]);
+  }, [clearHint, feedback, save, show, t]);
 
   const reset = useCallback(() => {
     if (busyRef.current) return;
@@ -314,9 +318,9 @@ export function useQueensGame({ puzzle, settings, persist = true, nameUnit = def
     clearHint();
     show(next);
     save();
-    setStatus({ kind: "info", text: "Board cleared. The clock keeps running." });
+    setStatus({ kind: "info", text: t("status.reset") });
     feedback("remove", "remove");
-  }, [clearHint, feedback, save, show]);
+  }, [clearHint, feedback, save, show, t]);
 
   /**
    * A hint acts. A wrong queen or a wrong X is flagged and taken off first.
@@ -325,12 +329,12 @@ export function useQueensGame({ puzzle, settings, persist = true, nameUnit = def
    */
   const requestHint = useCallback(() => {
     if (busyRef.current || isQueensLocked(gameRef.current)) return;
-    const hint = getQueensHint(topology, puzzle.solution, gameRef.current.marks, nameRef.current);
+    const hint = getQueensHint(topology, puzzle.solution, gameRef.current.marks);
     if (hint.kind === "complete") return;
     const marksBefore = gameRef.current.marks;
     lastRefusedRef.current = null;
     show(recordQueensHint(gameRef.current));
-    setStatus({ kind: "hint", text: hint.message });
+    setStatus({ kind: "hint", text: hintText(t, hint, colorRef.current) });
     feedback("hint", "hint");
     busyRef.current = true;
 
@@ -368,7 +372,7 @@ export function useQueensGame({ puzzle, settings, persist = true, nameUnit = def
       commit(marksBefore);
       save();
     }, HINT_ACT_MS);
-  }, [clearHint, commit, feedback, puzzle.solution, save, show, topology]);
+  }, [clearHint, commit, feedback, puzzle.solution, save, show, t, topology]);
 
   const reveal = useCallback(() => {
     if (busyRef.current || isQueensLocked(gameRef.current)) return;

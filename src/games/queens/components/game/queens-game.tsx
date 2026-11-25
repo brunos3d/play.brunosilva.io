@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import dynamic from "next/dynamic";
 import { useCallback, useMemo, useState } from "react";
 import { GAMES } from "@/games/registry";
@@ -12,8 +13,8 @@ import { GameLoading } from "@/shared/ui/game-loading";
 import { PuzzleAttempts } from "@/shared/ui/puzzle-attempts";
 import { queensOf } from "../../engine/game/state";
 import { generateQueensFromSpec } from "../../engine/generator";
-import type { UnitNamer } from "../../engine/hint";
 import { type PuzzleSpec, queensSeeds } from "../../engine/seed";
+import type { RegionColorName } from "../../engine/text";
 import type { QueensPuzzle } from "../../engine/types";
 import { useQueensGame } from "../../hooks/use-queens-game";
 import { assignRegionColors } from "../board/palette";
@@ -47,15 +48,16 @@ export function QueensGame({ spec, daily, onNext }: GameProps) {
 type ViewProps = { spec: PuzzleSpec; puzzle: QueensPuzzle; generationMs: number; daily?: DailyInfo; onNext?: () => void };
 
 function GameView({ spec, puzzle, generationMs, daily, onNext }: ViewProps) {
+  const t = useTranslations("queens");
   const { settings } = useSettings();
   const [showSolution, setShowSolution] = useState(false);
   const colors = useMemo(() => assignRegionColors(puzzle, puzzle.id), [puzzle]);
   // Hints name a region by its colour, the way a player would point at it.
-  const nameUnit = useCallback<UnitNamer>((unit) => (unit.kind === "region" ? `the ${colors[unit.index].name} region` : `${unit.kind} ${unit.index + 1}`), [colors]);
-  const game = useQueensGame({ puzzle, settings, nameUnit });
+  const regionColor = useCallback<RegionColorName>((region) => t(`color.${colors[region].name}`), [colors, t]);
+  const game = useQueensGame({ puzzle, settings, regionColor });
 
   const placed = queensOf(game.game.marks).length;
-  const idleText = placed === 0 ? "Tap a cell once for an X, twice for a queen. Drag to mark several cells." : `${placed} of ${puzzle.size} queens placed.`;
+  const idleText = placed === 0 ? t("idle.start") : t("idle.progress", { placed, size: puzzle.size });
 
   return (
     <GameFrame
@@ -82,7 +84,7 @@ function GameView({ spec, puzzle, generationMs, daily, onNext }: ViewProps) {
           hintCells={game.hintCells}
           hintTargets={game.hintTargets}
           debugSolution={showSolution ? puzzle.solution : null}
-          label={`Queens board, ${puzzle.size} by ${puzzle.size}, ${puzzle.size} coloured regions. Arrow keys move. Enter or Space turns a cell into an X, then a queen, then empty. Delete clears it.`}
+          label={t("board.label", { size: puzzle.size })}
           onPress={game.press}
           onDrag={game.drag}
           onRelease={game.release}

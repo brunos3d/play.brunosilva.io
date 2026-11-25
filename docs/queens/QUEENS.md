@@ -13,7 +13,7 @@ The rules live in one file, `engine/rules.ts`.
 
 Rule 4 only bans neighbouring cells. Two queens can share a long diagonal, which is where the game departs from chess.
 
-`checkQueen(topology, queens, cell)` returns null or the first rule a queen already on the board breaks with the new one, with the clashing queen and a sentence for the UI: `same-row`, `same-column`, `same-region`, `touching`. `validateQueens` checks a whole set of queens from scratch and is the only completion check. `ruledOutCells` lists the cells that placed queens rule out, which the board draws as small dots.
+`checkQueen(topology, queens, cell)` returns null or the first rule a queen already on the board breaks with the new one, together with the clashing queen: `same-row`, `same-column`, `same-region`, `touching`. The rule is a code. `moveErrorText` in `engine/text.ts` turns it into the sentence the status line shows. `validateQueens` checks a whole set of queens from scratch and is the only completion check. `ruledOutCells` lists the cells that placed queens rule out, which the board draws as small dots.
 
 ## The original and what changed
 
@@ -121,13 +121,28 @@ A cell that can never take a queen would keep its X forever if the cycle stopped
 
 ## Hints
 
-`getQueensHint(topology, solution, marks, nameUnit)` in `engine/hint.ts`:
+`getQueensHint(topology, solution, marks)` in `engine/hint.ts`:
 
 1. A queen that is not part of the solution is flagged and taken off (`wrong-queen`).
 2. An X on a cell that needs a queen is flagged and taken off (`wrong-mark`).
 3. Otherwise the deduction solver looks at the board as the player left it. Placed queens and X's count as known. Its easiest step becomes the hint: `place` puts the queen on, `eliminate` writes X's on the cells the reasoning rules out.
 
-The message names the groups involved, for example "Every free cell of the rose region is in row 4, so its queen takes that row. No other cell there can hold one." The engine does not know colours. It takes a `nameUnit` function, and the board passes one that calls a region by its colour. The cells of the group are ringed on the board, and the cells the hint acts on get a dashed ring.
+The cells of the group are ringed on the board, and the cells the hint acts on get a dashed ring.
+
+### The sentence
+
+The hint is data. A `place` or `eliminate` hint carries a `reason`: the technique as a code and the groups it talks about, as kinds and indices.
+
+```ts
+{ code: "confined-region", region: 2, line: { kind: "row", index: 3 } }
+{ code: "region-group", regions: [0, 4], lines: [{ kind: "column", index: 0 }, { kind: "column", index: 1 }] }
+```
+
+`hintText(t, hint, colorOf)` in `engine/text.ts` builds the sentence with a translator for the `queens` messages (see `docs/I18N.md`). The example above reads "Every free cell of the rose region is in row 4, so its queen takes that row. No other cell there can hold one." in English and "Todas as casas livres da região rosa estão na linha 4, então a rainha dela fica nessa linha. Nenhuma outra casa dali pode ter uma rainha." in Portuguese.
+
+The engine does not know colours. `colorOf` is a function from a region to the translated name of its colour, and the board passes one built from its palette and the `color.*` messages. Without it a region is called by its number ("region 3"), which is what tests and tools get.
+
+No sentence is glued together from the names of groups, because Portuguese needs the article, the preposition and the number to agree ("na linha 3", "da coluna 2", "as regiões rosa e lilás"). Each message under `hint.step` takes the kind of the group as an ICU `select` (`row`, `column`, `color` for a region with a colour, anything else for a region with a number) and phrases the whole clause. The group steps list several regions and lines. `hint.regionInList` phrases one region of such a list, and `list.and` joins the items with the language's conjunction.
 
 A test follows hints from an empty board to the end on boards of every tier and checks three things: every placed queen is a solution cell, no eliminated cell is one, and the number of hints equals the number of steps the generator recorded.
 
@@ -135,7 +150,7 @@ A test follows hints from an empty board to the end on boards of every tier and 
 
 - Tap a cell once for an X and again for a queen. A third tap clears it.
 - Drag across cells to mark X's. A drag that starts on an X erases X's instead. A drag never changes a queen.
-- A queen that breaks a rule is refused. The board shakes, the cell and the queen it clashes with are hatched, a sound plays and the status line names the rule. The next tap on that cell clears its X.
+- A queen that breaks a rule is refused. The board shakes, the cell and the queen it clashes with are hatched, a sound plays and the status line names the rule in the player's language. The next tap on that cell clears its X.
 - Cells a queen rules out show a small dot and fade a little. The player's own X is a cross, so the two never look alike.
 - Regions are drawn as joined tiles in pastel fabric colours, the same family Patches uses, with an ink line on every border between two regions. Colour is never the only cue. Each region gets its own colour, chosen from the puzzle id so that look-alike colours rarely share a border.
 - A solved board drops the X's and dots, and the crowns bow one row after another.

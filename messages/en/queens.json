@@ -1,1 +1,85 @@
-{}
+{
+  "board": {
+    "label": "Queens board, {size} by {size}, {size} coloured regions. Arrow keys move. Enter or Space turns a cell into an X, then a queen, then empty. Delete clears it.",
+    "tutorialLabel": "Tutorial board, {size} by {size}",
+    "cell": "Row {row}, column {column}, {color} region.",
+    "queen": "Queen.",
+    "marked": "Marked with an X.",
+    "ruledOut": "Ruled out by a queen.",
+    "empty": "Empty."
+  },
+  "color": {
+    "rose": "rose",
+    "sky": "sky",
+    "butter": "butter",
+    "sage": "sage",
+    "lilac": "lilac",
+    "apricot": "apricot",
+    "mint": "mint",
+    "periwinkle": "periwinkle",
+    "clay": "clay",
+    "teal": "teal",
+    "pink": "pink",
+    "moss": "moss"
+  },
+  "idle": {
+    "start": "Tap a cell once for an X, twice for a queen. Drag to mark several cells.",
+    "progress": "{placed} of {size} queens placed."
+  },
+  "status": {
+    "solved": "Solved. Every queen has its place.",
+    "revealed": "Solution revealed.",
+    "revealing": "Revealing the solution.",
+    "undone": "Last move undone.",
+    "reset": "Board cleared. The clock keeps running.",
+    "refused": "{reason} Tap again to clear the X."
+  },
+  "error": {
+    "same-row": "This row already has a queen.",
+    "same-column": "This column already has a queen.",
+    "same-region": "This region already has a queen.",
+    "touching": "Queens cannot touch, not even diagonally."
+  },
+  "list": {
+    "and": "{head} and {last}"
+  },
+  "hint": {
+    "wrongQueen": "This queen is in the wrong place. With it there the board cannot be finished, so it comes off.",
+    "wrongMark": "This X is on a cell that needs a queen, so it comes off.",
+    "complete": "The board is complete.",
+    "solution": "The queen of {region, select, color {the {color} region} other {region {number}}} goes here.",
+    "regionInList": "{region, select, color {the {color} region} other {region {number}}}",
+    "step": {
+      "single": "{unit, select, row {Row {number}} column {Column {number}} color {The {color} region} other {Region {number}}} has one free cell left, so its queen goes there.",
+      "confined-region": "Every free cell of {region, select, color {the {color} region} other {region {number}}} is in {line, select, row {row} other {column}} {lineNumber}, so its queen takes that {line, select, row {row} other {column}}. No other cell there can hold one.",
+      "confined-line": "Every free cell of {line, select, row {row} other {column}} {lineNumber} is in {region, select, color {the {color} region} other {region {number}}}, so that region's queen is there. Its other cells are out.",
+      "blocker": "A queen on {cells, plural, =1 {this cell} other {any of these cells}} would rule out every free cell of {unit, select, row {row {number}} column {column {number}} color {the {color} region} other {region {number}}}.",
+      "region-group": "{regions} have all their free cells in {line, select, row {rows} other {columns}} {lines}. They take every queen there, so no other region can use those {line, select, row {rows} other {columns}}.",
+      "line-group": "{line, select, row {Rows} other {Columns}} {lines} only have free cells in {regions}. Those regions place their queens there, so their cells elsewhere are out.",
+      "trial": "A queen on this cell forces other queens one after another, and {unit, select, row {row {number}} column {column {number}} color {the {color} region} other {region {number}}} ends up with no free cell."
+    }
+  },
+  "tutorial": {
+    "title": "How to play Queens",
+    "steps": {
+      "mark": {
+        "title": "Mark a cell",
+        "body": "Tap a cell once to mark it with an X. It is a note to yourself: no queen goes there. Drag across cells to mark several at once."
+      },
+      "place": {
+        "title": "Place a queen",
+        "body": "Tap a marked cell again and it becomes a queen. Every row, every column and every coloured region takes exactly one queen."
+      },
+      "distance": {
+        "title": "Queens keep their distance",
+        "body": "Two queens can never touch, not even at a corner. The small dots show every cell a queen has ruled out. Place a second queen."
+      },
+      "fill": {
+        "title": "Fill the board",
+        "body": "Place the remaining queens. A third tap removes a queen. If you get stuck, Hint finds the next step and says why it holds."
+      }
+    },
+    "doneTitle": "That is the whole game",
+    "doneBody": "One queen per row, column and region, and no two queens touching. Every board has exactly one answer and can be solved without guessing. The clock starts when you first see a board and only stops when it is solved."
+  }
+}

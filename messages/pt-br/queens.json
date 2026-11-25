@@ -1,1 +1,85 @@
-{}
+{
+  "board": {
+    "label": "Tabuleiro do Queens, {size} por {size}, {size} regiões coloridas. As setas movem o cursor. Enter ou Espaço transforma uma casa em X, depois em rainha, depois em vazia. Delete limpa a casa.",
+    "tutorialLabel": "Tabuleiro do tutorial, {size} por {size}",
+    "cell": "Linha {row}, coluna {column}, região {color}.",
+    "queen": "Rainha.",
+    "marked": "Marcada com um X.",
+    "ruledOut": "Eliminada por uma rainha.",
+    "empty": "Vazia."
+  },
+  "color": {
+    "rose": "rosa",
+    "sky": "azul-celeste",
+    "butter": "amarela",
+    "sage": "verde",
+    "lilac": "lilás",
+    "apricot": "pêssego",
+    "mint": "menta",
+    "periwinkle": "lavanda",
+    "clay": "caramelo",
+    "teal": "turquesa",
+    "pink": "pink",
+    "moss": "musgo"
+  },
+  "idle": {
+    "start": "Toque em uma casa uma vez para um X, duas para uma rainha. Arraste para marcar várias casas.",
+    "progress": "{placed} de {size} rainhas colocadas."
+  },
+  "status": {
+    "solved": "Resolvido. Cada rainha no seu lugar.",
+    "revealed": "Solução revelada.",
+    "revealing": "Revelando a solução.",
+    "undone": "Última jogada desfeita.",
+    "reset": "Tabuleiro limpo. O relógio continua correndo.",
+    "refused": "{reason} Toque de novo para tirar o X."
+  },
+  "error": {
+    "same-row": "Esta linha já tem uma rainha.",
+    "same-column": "Esta coluna já tem uma rainha.",
+    "same-region": "Esta região já tem uma rainha.",
+    "touching": "As rainhas não podem se tocar, nem na diagonal."
+  },
+  "list": {
+    "and": "{head} e {last}"
+  },
+  "hint": {
+    "wrongQueen": "Esta rainha está no lugar errado. Com ela ali não dá para terminar o tabuleiro, então ela sai.",
+    "wrongMark": "Este X está em uma casa que precisa de uma rainha, então ele sai.",
+    "complete": "O tabuleiro está completo.",
+    "solution": "A rainha da região {region, select, color {{color}} other {{number}}} vai aqui.",
+    "regionInList": "{region, select, color {{color}} other {{number}}}",
+    "step": {
+      "single": "Só resta uma casa livre {unit, select, row {na linha {number}} column {na coluna {number}} color {na região {color}} other {na região {number}}}, então a rainha dela vai ali.",
+      "confined-region": "Todas as casas livres da região {region, select, color {{color}} other {{number}}} estão {line, select, row {na linha} other {na coluna}} {lineNumber}, então a rainha dela fica nessa {line, select, row {linha} other {coluna}}. Nenhuma outra casa dali pode ter uma rainha.",
+      "confined-line": "Todas as casas livres {line, select, row {da linha} other {da coluna}} {lineNumber} estão na região {region, select, color {{color}} other {{number}}}, então a rainha dessa região fica ali. As outras casas dela estão eliminadas.",
+      "blocker": "Uma rainha {cells, plural, =1 {nesta casa} other {em qualquer uma destas casas}} eliminaria todas as casas livres {unit, select, row {da linha {number}} column {da coluna {number}} color {da região {color}} other {da região {number}}}.",
+      "region-group": "As regiões {regions} têm todas as casas livres {line, select, row {nas linhas} other {nas colunas}} {lines}. Elas ficam com todas as rainhas dali, então nenhuma outra região pode usar essas {line, select, row {linhas} other {colunas}}.",
+      "line-group": "{line, select, row {As linhas} other {As colunas}} {lines} só têm casas livres nas regiões {regions}. Essas regiões colocam suas rainhas ali, então as outras casas delas estão eliminadas.",
+      "trial": "Uma rainha nesta casa força outras rainhas, uma depois da outra, e {unit, select, row {a linha {number}} column {a coluna {number}} color {a região {color}} other {a região {number}}} acaba sem nenhuma casa livre."
+    }
+  },
+  "tutorial": {
+    "title": "Como jogar Queens",
+    "steps": {
+      "mark": {
+        "title": "Marque uma casa",
+        "body": "Toque em uma casa uma vez para marcá-la com um X. É um lembrete para você: ali não vai rainha. Arraste pelas casas para marcar várias de uma vez."
+      },
+      "place": {
+        "title": "Coloque uma rainha",
+        "body": "Toque de novo em uma casa marcada e ela vira uma rainha. Cada linha, cada coluna e cada região colorida recebe exatamente uma rainha."
+      },
+      "distance": {
+        "title": "As rainhas mantêm distância",
+        "body": "Duas rainhas nunca podem se tocar, nem pelo canto. Os pontinhos mostram todas as casas que uma rainha eliminou. Coloque uma segunda rainha."
+      },
+      "fill": {
+        "title": "Complete o tabuleiro",
+        "body": "Coloque as rainhas que faltam. Um terceiro toque tira a rainha. Se você travar, a Dica encontra o próximo passo e explica por que ele vale."
+      }
+    },
+    "doneTitle": "O jogo é só isso",
+    "doneBody": "Uma rainha por linha, coluna e região, e nenhuma rainha encostada em outra. Todo tabuleiro tem exatamente uma resposta e pode ser resolvido sem chutar. O relógio começa quando você vê o tabuleiro pela primeira vez e só para quando ele é resolvido."
+  }
+}

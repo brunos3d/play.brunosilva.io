@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { type CSSProperties, type KeyboardEvent, type PointerEvent, useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { MARK, QUEEN, queensOf } from "../../engine/game/state";
 import type { Topology } from "../../engine/grid";
@@ -41,6 +42,7 @@ type BoardProps = {
 const SHAKE_MS = 300;
 
 export function QueensBoard({ puzzle, topology, marks, colors, locked, solved, shakeSignal, refused, wrongCells, hintCells, hintTargets, debugSolution, label, onPress, onDrag, onRelease, onKeyCycle, onKeyClear }: BoardProps) {
+  const t = useTranslations("queens");
   const boardRef = useRef<HTMLDivElement>(null);
   const gridRef = useRef<HTMLDivElement>(null);
   // Source of truth for the handlers. React batches pointermove updates, so state would lag behind fast input.
@@ -57,6 +59,7 @@ export function QueensBoard({ puzzle, topology, marks, colors, locked, solved, s
   const wrong = useMemo(() => new Set(wrongCells), [wrongCells]);
   const hinted = useMemo(() => new Set(hintCells), [hintCells]);
   const targets = useMemo(() => new Set(hintTargets), [hintTargets]);
+  const colorNames = useMemo(() => colors.map((color) => t(`color.${color.name}`)), [colors, t]);
 
   // Edges between two regions, as one SVG path. Cell edges inside a region are left to the tiles.
   const borders = useMemo(() => {
@@ -190,14 +193,14 @@ export function QueensBoard({ puzzle, topology, marks, colors, locked, solved, s
               const right = column < size - 1 && same(cell + 1);
               const down = row < size - 1 && same(cell + size);
               const left = column > 0 && same(cell - 1);
-              const state = mark === QUEEN ? "Queen." : mark === MARK ? "Marked with an X." : auto ? "Ruled out by a queen." : "Empty.";
+              const state = t(mark === QUEEN ? "board.queen" : mark === MARK ? "board.marked" : auto ? "board.ruledOut" : "board.empty");
               return (
                 <div
                   key={cell}
                   id={`${idBase}-${cell}`}
                   role="gridcell"
                   className="mg-cell queens-cell"
-                  aria-label={`Row ${row + 1}, column ${column + 1}, ${colors[region].name} region. ${state}`}
+                  aria-label={`${t("board.cell", { row: row + 1, column: column + 1, color: colorNames[region] })} ${state}`}
                   aria-rowindex={row + 1}
                   aria-colindex={column + 1}
                   aria-selected={cell === cursor}

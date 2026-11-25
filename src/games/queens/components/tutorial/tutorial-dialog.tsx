@@ -1,12 +1,13 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
+import { useCallback, useMemo, useState } from "react";
 import type { Settings } from "@/shared/storage/settings";
 import { Dialog } from "@/shared/ui/dialog";
 import { HintIcon, UndoIcon } from "@/shared/ui/icons";
 import { MARK, type QueensState, queensOf } from "../../engine/game/state";
 import { generateQueensPuzzle } from "../../engine/generator";
-import type { UnitNamer } from "../../engine/hint";
+import type { RegionColorName } from "../../engine/text";
 import { useQueensGame } from "../../hooks/use-queens-game";
 import { assignRegionColors } from "../board/palette";
 import { QueensBoard } from "../board/queens-board";
@@ -15,38 +16,25 @@ import { QueensBoard } from "../board/queens-board";
 export const QUEENS_TUTORIAL_SEED = "tutorial-1";
 const TUTORIAL_SIZE = 5;
 
-type Step = { title: string; body: string; done: (game: QueensState) => boolean };
+/** The steps in order. Titles and bodies are in the "queens" messages, under tutorial.steps.<id>. */
+type Step = { id: "mark" | "place" | "distance" | "fill"; done: (game: QueensState) => boolean };
 
 const STEPS: Step[] = [
-  {
-    title: "Mark a cell",
-    body: "Tap a cell once to mark it with an X. It is a note to yourself: no queen goes there. Drag across cells to mark several at once.",
-    done: (game) => game.marks.includes(MARK) || queensOf(game.marks).length > 0,
-  },
-  {
-    title: "Place a queen",
-    body: "Tap a marked cell again and it becomes a queen. Every row, every column and every coloured region takes exactly one queen.",
-    done: (game) => queensOf(game.marks).length >= 1,
-  },
-  {
-    title: "Queens keep their distance",
-    body: "Two queens can never touch, not even at a corner. The small dots show every cell a queen has ruled out. Place a second queen.",
-    done: (game) => queensOf(game.marks).length >= 2,
-  },
-  {
-    title: "Fill the board",
-    body: "Place the remaining queens. A third tap removes a queen. If you get stuck, Hint finds the next step and says why it holds.",
-    done: (game) => game.status === "solved",
-  },
+  { id: "mark", done: (game) => game.marks.includes(MARK) || queensOf(game.marks).length > 0 },
+  { id: "place", done: (game) => queensOf(game.marks).length >= 1 },
+  { id: "distance", done: (game) => queensOf(game.marks).length >= 2 },
+  { id: "fill", done: (game) => game.status === "solved" },
 ];
 
 type Props = { open: boolean; settings: Settings; onClose: () => void };
 
 function TutorialBody({ settings, onClose }: Omit<Props, "open">) {
+  const t = useTranslations("queens");
+  const common = useTranslations("common.tutorial");
   const puzzle = useMemo(() => generateQueensPuzzle(QUEENS_TUTORIAL_SEED, "easy", { size: TUTORIAL_SIZE, version: 1 }), []);
   const colors = useMemo(() => assignRegionColors(puzzle, puzzle.id), [puzzle]);
-  const nameUnit = useMemo<UnitNamer>(() => (unit) => (unit.kind === "region" ? `the ${colors[unit.index].name} region` : `${unit.kind} ${unit.index + 1}`), [colors]);
-  const game = useQueensGame({ puzzle, settings, persist: false, nameUnit });
+  const regionColor = useCallback<RegionColorName>((region) => t(`color.${colors[region].name}`), [colors, t]);
+  const game = useQueensGame({ puzzle, settings, persist: false, regionColor });
 
   // Steps only move forward. A player who works ahead skips the steps they already satisfied.
   const [stepIndex, setStepIndex] = useState(0);
@@ -59,14 +47,14 @@ function TutorialBody({ settings, onClose }: Omit<Props, "open">) {
     <div className="flex flex-col gap-3">
       <div className="flex gap-1.5" aria-hidden="true">
         {STEPS.map((entry, index) => (
-          <span key={entry.title} className="h-1.5 flex-1 rounded-full" style={{ background: index < stepIndex ? "var(--valid)" : index === stepIndex ? "var(--ink)" : "var(--thread)" }} />
+          <span key={entry.id} className="h-1.5 flex-1 rounded-full" style={{ background: index < stepIndex ? "var(--valid)" : index === stepIndex ? "var(--ink)" : "var(--thread)" }} />
         ))}
       </div>
 
       <div aria-live="polite" className="min-h-[104px]">
-        <h3 className="font-bold mb-1">{finished ? "That is the whole game" : `${stepIndex + 1}. ${step.title}`}</h3>
+        <h3 className="font-bold mb-1">{finished ? t("tutorial.doneTitle") : common("step", { number: stepIndex + 1, title: t(`tutorial.steps.${step.id}.title`) })}</h3>
         <p className="text-sm leading-relaxed text-[var(--ink-soft)]">
-          {finished ? "One queen per row, column and region, and no two queens touching. Every board has exactly one answer and can be solved without guessing. The clock starts when you first see a board and only stops when it is solved." : step.body}
+          {finished ? t("tutorial.doneBody") : t(`tutorial.steps.${step.id}.body`)}
         </p>
       </div>
 
@@ -83,7 +71,7 @@ function TutorialBody({ settings, onClose }: Omit<Props, "open">) {
           wrongCells={game.wrongCells}
           hintCells={game.hintCells}
           hintTargets={game.hintTargets}
-          label="Tutorial board, 5 by 5"
+          label={t("board.tutorialLabel", { size: TUTORIAL_SIZE })}
           onPress={game.press}
           onDrag={game.drag}
           onRelease={game.release}
@@ -96,18 +84,18 @@ function TutorialBody({ settings, onClose }: Omit<Props, "open">) {
 
       {finished ? (
         <button type="button" className="mg-button" data-variant="primary" onClick={onClose}>
-          Start playing
+          {common("start")}
         </button>
       ) : (
         <div className="grid grid-cols-3 gap-2">
           <button type="button" className="mg-button" onClick={game.undo} disabled={!game.canUndo}>
-            <UndoIcon /> Undo
+            <UndoIcon /> {common("undo")}
           </button>
           <button type="button" className="mg-button" onClick={game.requestHint}>
-            <HintIcon /> Hint
+            <HintIcon /> {common("hint")}
           </button>
           <button type="button" className="mg-button" onClick={onClose}>
-            Skip
+            {common("skip")}
           </button>
         </div>
       )}
@@ -116,8 +104,9 @@ function TutorialBody({ settings, onClose }: Omit<Props, "open">) {
 }
 
 export function QueensTutorialDialog({ open, settings, onClose }: Props) {
+  const t = useTranslations("queens.tutorial");
   return (
-    <Dialog open={open} onClose={onClose} title="How to play Queens" testId="game-tutorial">
+    <Dialog open={open} onClose={onClose} title={t("title")} testId="game-tutorial">
       <TutorialBody settings={settings} onClose={onClose} />
     </Dialog>
   );

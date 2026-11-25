@@ -13,14 +13,12 @@ import type { QueensShape } from "./types";
  */
 export type RuleId = "same-row" | "same-column" | "same-region" | "touching";
 
-export type MoveError = { rule: RuleId; /** The queen already on the board that refuses the new one. */ with: number; message: string };
-
-const MESSAGES: Record<RuleId, string> = {
-  "same-row": "This row already has a queen.",
-  "same-column": "This column already has a queen.",
-  "same-region": "This region already has a queen.",
-  touching: "Queens cannot touch, not even diagonally.",
-};
+/**
+ * Why a queen is refused, as data: the rule it breaks and the queen already on
+ * the board that it breaks it with. The sentence is built in ./text.ts, in the
+ * player's language.
+ */
+export type MoveError = { rule: RuleId; /** The queen already on the board that refuses the new one. */ with: number };
 
 /** The rule two queens on these cells break, or null when they can share a board. */
 export function ruleBetween(topology: Topology, a: number, b: number): RuleId | null {
@@ -39,7 +37,7 @@ export function checkQueen(topology: Topology, queens: readonly number[], cell: 
   for (const queen of queens) {
     if (queen === cell) continue;
     const rule = ruleBetween(topology, queen, cell);
-    if (rule) return { rule, with: queen, message: MESSAGES[rule] };
+    if (rule) return { rule, with: queen };
   }
   return null;
 }

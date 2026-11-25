@@ -9,4 +9,5 @@ export * from "./seed";
 export * from "./generator";
 export * from "./daily";
 export * from "./hint";
+export * from "./text";
 export * from "./game/state";
