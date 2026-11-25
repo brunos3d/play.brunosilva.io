@@ -1,7 +1,9 @@
+import type { WendTheme } from "./types";
+
 /**
- * The word bank: every puzzle hides words of one theme. Words are written the
- * way they are spelled, with accents. The board shows them without accents and
- * the word list puts the accents back once a word is found.
+ * The Portuguese word bank: every puzzle hides words of one theme. Words are
+ * written the way they are spelled, with accents. The board shows them without
+ * accents and the word list puts the accents back once a word is found.
  *
  * Rules for an entry: one word, 3 to 12 letters, no hyphen, no space. A theme
  * needs words of many different lengths, because a board is filled with one
@@ -10,8 +12,6 @@
  * Changing a word changes the puzzles that seeds build. Add a generator version
  * in seed.ts before editing a theme that has shipped.
  */
-export type WendTheme = { title: string; words: string };
-
 export const WEND_THEMES: readonly WendTheme[] = [
   {
     title: "Frutas",

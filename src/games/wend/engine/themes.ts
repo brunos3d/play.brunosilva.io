@@ -1,4 +1,4 @@
-import { WEND_THEMES } from "./bank";
+import { WEND_THEMES } from "./bank/pt-br";
 import { displayWord, plainLetters } from "./text";
 
 export type BankWord = { text: string; display: string };
