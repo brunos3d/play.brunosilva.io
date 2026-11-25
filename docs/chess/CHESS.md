@@ -161,7 +161,80 @@ The result screen reports wrong moves under "Mistakes". "Flawless" means none an
 
 ### The coach (`engine/coach/`)
 
-The coach is the one part of the platform that speaks Portuguese. All of her text is in `coach/messages.ts`, with moves in Portuguese notation (R, D, T, B, C).
+The coach comments on every move, and she never uses notation. "Txd1+" means nothing to someone who is learning, so she says "a torre captura o bispo em d1, dando xeque". Pieces have names and squares stay coordinates, because that is how a board is read and the board shows them.
+
+#### Two languages, neither of them the interface's
+
+The coach speaks the game language, the device setting described in `docs/I18N.md`. It is independent of the interface locale: a Portuguese page can have an English coach, and the other way around. Everything she says follows it: the chat lines, the illegal-move line, her role label, the take-back note and the "thinking" label.
+
+Her text is TypeScript, not next-intl messages, because the grammar is logic: articles agree with the piece, verbs are conjugated, and a sentence is built around a move. The engine stays free of React and of the i18n library.
+
+| File | Holds |
+|---|---|
+| `coach/coach.ts` | The `Coach` interface, `CoachMessage` and the `MoveForm` names |
+| `coach/facts.ts` | `moveFacts`, the part of the describer both languages share |
+| `coach/pt-br.ts`, `coach/en.ts` | One coach per language: nouns, verbs and every sentence |
+| `coach/index.ts` | `coachFor(language)` |
+| `coach/feedback.ts` | Why a wrong move is wrong, as data |
+
+```ts
+type Coach = {
+  language: GameLanguage;
+  text: CoachText;   // name, role, thinking, undone, reset, takeBack, resumed, revealed, solvedBefore
+  describeMove(position, move, form, after?): string;
+  intro(puzzle): CoachMessage;
+  praise(position, move, reply, variant): CoachMessage;
+  solved(puzzle, position, move, variant): CoachMessage;
+  wrong(position, move, feedback, variant): CoachMessage;
+  pieceHint(puzzle, move): CoachMessage;
+  moveHint(position, move): CoachMessage;
+  takeBackHint(): CoachMessage;
+  illegal(reason, piece, square): string;
+  reveal(puzzle, from?): CoachMessage;
+};
+```
+
+`useChessGame` takes the language as an option and reads the coach at the moment she speaks. If the player changes the game language in the middle of a puzzle, the lines already in the chat stay as they were said and the next one comes in the new language. Each chat line keeps the HTML `lang` it was said in, and the panel's own `lang` is the current game language (`LOCALE_META[language].htmlLang`).
+
+Adding a language means writing one more `Coach` and adding it to the record in `coach/index.ts`. The record is typed by `GameLanguage`, so a language without a coach does not compile.
+
+#### The move describer
+
+`describeMove` turns a legal move, with the position before it, into a phrase. It works in two steps.
+
+`moveFacts(position, move, after?)` reads the move as data: the piece, the squares, what is captured, en passant, the promotion piece, the castling side, whether it gives check or mate, and two things that need the position:
+
+- `ambiguous`: another piece of the same kind could go to the same square, so the phrase names the origin ("a torre de a1", "the rook on a1"). A pinned piece is not a rival, since the test uses legal moves. It applies to pawn captures too.
+- `recapture`: the move takes the piece that the move before (`after`) brought to this square. The phrase then leaves the square out, because the caller has just named it: "O adversário respondeu capturando a dama com a torre."
+
+Each language then builds the phrase in one of six forms. The sentence around the move picks the form it needs:
+
+| Form | Portuguese | English |
+|---|---|---|
+| `clause` | a torre captura o bispo em e1 | the rook takes the bishop on e1 |
+| `infinitive` | capturar o bispo em e1 com a torre | take the bishop on e1 with the rook |
+| `past` | capturou o bispo em e1 com a torre | took the bishop on e1 with the rook |
+| `pastPlural` | capturaram o bispo em e1 com a torre | took the bishop on e1 with the rook |
+| `present` | captura o bispo em e1 com a torre | takes the bishop on e1 with the rook |
+| `gerund` | capturando o bispo em e1 com a torre | taking the bishop on e1 with the rook |
+
+In `clause` the piece is the subject. In the others the player is, and the phrase starts with the verb. `pastPlural` exists because a side is plural in Portuguese ("as pretas moveram"). English has one past form, and uses the infinitive after "you" ("you move the rook").
+
+A language needs five verbs, each in five forms, and a noun per piece. Portuguese nouns carry a gender, which gives the article ("a torre", "o bispo"), the possessive ("a sua dama") and the agent of a passive ("capturada pelo bispo").
+
+| Move | Portuguese (`clause`) | English (`clause`) |
+|---|---|---|
+| Piece move | a dama vai para g8 | the queen goes to g8 |
+| Pawn move | o peão avança para e4 | the pawn advances to e4 |
+| Capture | o peão captura o cavalo em d5 | the pawn takes the knight on d5 |
+| En passant | o peão captura en passant em d6 | the pawn takes en passant on d6 |
+| Castling | o rei faz o roque pequeno / grande | the king castles kingside / queenside |
+| Promotion | o peão chega a e8 e vira dama | the pawn reaches e8 and becomes a queen |
+| Promotion with capture | o peão captura a torre em d8 e vira dama | the pawn takes the rook on d8 and becomes a queen |
+
+A check or a mate ends the phrase: ", dando xeque" and ": xeque-mate", ", giving check" and ": checkmate". After a gerund the check joins with "e" or "and", since two gerunds in a row read badly: "movendo a torre para e1 e dando xeque".
+
+#### What she says
 
 `feedback.ts` works out why a wrong move is wrong, as data:
 
@@ -177,9 +250,23 @@ The coach is the one part of the platform that speaks Portuguese. All of her tex
 
 The analysis is a 2-ply search after the wrong move, plus the exact mate search, capped at 80,000 nodes. It takes a few milliseconds.
 
-`messages.ts` turns the data into a sentence. It says what the move allows or misses, and it names the piece that is lost: "Você moveu o cavalo, mas e a sua torre? O adversário captura em e8 com Txe8+." It never names the move to find. A test checks that no wrong-move message contains the solution's notation. The second hint and the reveal are the two places where the solution is written out, because that is their job.
+`wrong` turns the data into a sentence. It says what the move allows or misses, and it names the piece that is lost: "Você moveu o bispo, mas e a sua torre? O adversário captura a torre em d1 com a torre, dando xeque." The player's own wrong move is "esse lance" or "that move", since it is on the board in front of them. A reply the board does not show is told as something the opponent can do: "o adversário pode mover o rei para h2".
+
+The coach never names the move to find. The second hint and the reveal are the two places where the solution is told, because that is their job. The reveal tells the line from where the board stands, one short sentence per half-move:
+
+> Veja a solução. Você move a dama para g8, dando xeque. O adversário captura a dama com a torre. Você move o cavalo para f7: xeque-mate.
+
+The longest line is three moves with two replies, which still fits the bubble under the board on a 390 px phone.
 
 Wording varies with a counter kept by the caller, so the same game always reads the same and tests can pin the text.
+
+`tests/chess/coach.test.ts` covers the describer in both languages, move type by move type, from real positions. It also builds a batch of puzzles, runs every message builder on them in both languages, and checks two things: no message matches a notation pattern, and no hint or wrong-move comment contains the move to find in any of its six forms.
+
+### What follows the interface locale
+
+Everything that is not the coach's voice is in `messages/<locale>/chess.json` and read with `useTranslations("chess")`: the board's label, what a screen reader hears on a square ("e4, white knight, selected"), the promotion choice, and the tutorial's steps and title. In the tutorial the steps are in the interface locale and the coach's line under the board is in the game language.
+
+`debug-panel.tsx` and the command-line tools still print notation (`engine/notation.ts`), which is what a developer wants to read.
 
 ### Board (`components/board/chess-board.tsx`)
 
@@ -198,6 +285,8 @@ The board is a DOM grid on the shared tile board, like the other games, with the
 
 The panel takes the place of the status line through `GameFrame`'s `statusSlot`. On a phone it sits under the board with the coach's avatar and her latest line. From 1,000 px of width it moves beside the board and keeps the whole conversation, as a chat. `chess.css` does both with `:has(.chess-coach)` on the shared shell, so no other game is affected.
 
+The panel carries the `lang` of the game language, since it may differ from the page around it. Her name, her role ("Treinadora", "Coach") and the note under the chat come from the same `Coach` as her lines.
+
 The avatar is an owl, Sofia. Her eyes and brows follow the mood of the last line (calm, happy, worried, thinking), and each bubble carries a stripe in the same sense for people who cannot read the drawing.
 
 A visually hidden line with `data-testid="game-status"` carries the latest status, as the status line does in the other games.
@@ -209,12 +298,15 @@ The snapshot stores how far the player got, the counters, the clock and, if ther
 ## Tools
 
 ```
-npm run chess:generate -- --seed 12345 --difficulty hard [--solution] [--json]
+npm run chess:generate -- --seed 12345 --difficulty hard [--solution] [--json] [--lang pt-br]
 npm run chess:validate -- [--count 100] [--from 2026-11-22 --days 365]
 npm run chess:benchmark -- [--count 200]
+npx tsx scripts/chess/coach.ts --seed 12345 --difficulty hard [--lang pt-br]
 ```
 
-`CHESS_BULK=100` raises the number of puzzles the bulk generation test builds per tier.
+`scripts/chess/coach.ts` prints what the coach says along one puzzle: the opening line, one wrong first move of each kind, both hints, her comment on every right move and the reveal. It is the quick way to proofread a change to her wording. `--lang` is `en` by default, here and in `chess:generate`.
+
+`CHESS_BULK=100` raises the number of puzzles the bulk generation test builds per tier, and widens the batch the coach's notation test reads.
 
 ## Piece artwork
 
