@@ -1,1 +1,78 @@
-{}
+{
+  "board": {
+    "label": "{count, plural, =1 {Termo: uma palavra de {length} letras, {guesses} tentativas.} other {Termo: # palavras de {length} letras, {guesses} tentativas. Cada palpite vale para todas.}}",
+    "guesses": "Tentativas",
+    "word": "{found, select, yes {Palavra {number} de {count}, encontrada} other {Palavra {number} de {count}}}",
+    "row": "Tentativa {number}",
+    "tile": "{letter}, {mark}",
+    "empty": "vazio",
+    "cell": "Posição {position}: {filled, select, yes {{letter}} other {vazia}}{hinted, select, yes {, dica {hint}} other {}}{cursor, select, yes {, cursor} other {}}"
+  },
+  "mark": {
+    "right": "no lugar certo",
+    "place": "em outra posição",
+    "wrong": "fora da palavra"
+  },
+  "keyboard": {
+    "label": "Teclado",
+    "key": "{letter}, {marks}",
+    "onBoard": "palavra {number}: {mark}",
+    "erase": "Apagar letra",
+    "clear": "limpar",
+    "clearLabel": "Limpar todas as letras da linha",
+    "clearTitle": "Limpar a linha",
+    "enter": "enter",
+    "enterLabel": "Enviar palavra"
+  },
+  "idle": {
+    "start": "{count, plural, =1 {Descubra a palavra em {guesses} tentativas.} other {Descubra as # palavras em {guesses} tentativas.}} Digite uma palavra de {length} letras e aperte Enter.",
+    "progress": "Tentativa {number} de {total}."
+  },
+  "status": {
+    "solved": "{count, plural, =1 {De primeira! Você acertou a palavra.} other {Você acertou em # tentativas.}}",
+    "solvedAll": "Você encontrou as {words} palavras em {count} tentativas.",
+    "revealed": "{words, plural, =1 {Solução revelada. A palavra era {answers}.} other {Solução revelada. As palavras eram {answers}.}}",
+    "lost": "{words, plural, =1 {Acabaram as tentativas. A palavra era {answers}.} other {Acabaram as tentativas. As palavras eram {answers}.}}",
+    "found": "{word} encontrada. {left, plural, =1 {Falta 1 palavra.} other {Faltam # palavras.}}"
+  },
+  "list": "{head} e {last}",
+  "error": {
+    "incomplete": "A palavra precisa ter {length} letras.",
+    "unknown": "Essa palavra não está na lista."
+  },
+  "hint": {
+    "none": "Você já conhece todas as letras. Falta só montar a palavra.",
+    "letter": "A {position}ª letra é {letter}.",
+    "letterOnBoard": "Na palavra {board}, a {position}ª letra é {letter}."
+  },
+  "words": {
+    "unavailable": "Não foi possível carregar a lista de palavras",
+    "unavailableBody": "As palavras de um idioma são baixadas na primeira vez que você joga nele. Verifique sua conexão e tente de novo."
+  },
+  "next": {
+    "label": "Mais Termo",
+    "termo": "Jogar o Termo do dia",
+    "dueto": "Jogar o Dueto do dia",
+    "quarteto": "Jogar o Quarteto do dia",
+    "practice": "Prática"
+  },
+  "practice": {
+    "mode": "Modo",
+    "summary": "{boards, plural, =1 {1 palavra} other {# palavras ao mesmo tempo}}, {guesses} tentativas",
+    "modeSummary": "{name}: {summary}.",
+    "seedNote": "A mesma seed, o mesmo modo e o mesmo idioma sempre escondem as mesmas palavras."
+  },
+  "tutorial": {
+    "title": "Como jogar Termo",
+    "intro": "Descubra a palavra escondida de {length} letras. Digite uma palavra e aperte Enter: cada letra mostra o quanto você chegou perto.",
+    "example": "{word}. {text}",
+    "right": "A letra {letter} está na palavra e no lugar certo.",
+    "place": "A letra {letter} está na palavra, mas em outra posição.",
+    "wrong": "A letra {letter} não está na palavra.",
+    "accents": "Acentos e cedilha não são digitados: o jogo completa, e eles não contam.",
+    "repeats": "Uma palavra pode ter letras repetidas.",
+    "keyboard": "A tecla de apagar tira uma letra, Limpar esvazia a linha. Toque em uma casa para mover o cursor.",
+    "modes": "No Termo é 1 palavra em 6 tentativas. No Dueto são 2 em 7, e no Quarteto são 4 em 9. Cada palpite vale para todas.",
+    "controls": "Dica revela uma letra no lugar certo. Revelar mostra a resposta e encerra a partida."
+  }
+}

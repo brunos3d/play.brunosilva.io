@@ -1,9 +1,11 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { type FormEvent, useState } from "react";
 import { GAMES } from "@/games/registry";
+import { useRouter } from "@/i18n/navigation";
 import { useGameLanguage } from "@/shared/hooks/use-game-language";
+import { useGameText } from "@/shared/hooks/use-game-text";
 import { buildPlayPath } from "@/shared/platform/share-text";
 import { GameFooter } from "@/shared/ui/game-footer";
 import { GameHeader } from "@/shared/ui/game-header";
@@ -12,6 +14,7 @@ import { GameLanguagePicker } from "@/shared/ui/practice-setup";
 import { randomSeedToken } from "@/shared/ui/random-seed";
 import { TERMO_MODES } from "../../engine/config";
 import { termoSeeds } from "../../engine/seed";
+import { modeSummaryText } from "../../engine/text";
 
 const GAME = GAMES.termo;
 
@@ -22,10 +25,14 @@ const GAME = GAMES.termo;
  * The language picker is the platform's game language setting.
  */
 export function TermoPracticeSetup() {
+  const t = useTranslations("termo");
+  const common = useTranslations("common.practice");
+  const text = useGameText();
   const router = useRouter();
   const { language } = useGameLanguage();
   const [mode, setMode] = useState(TERMO_MODES[0]);
   const [seed, setSeed] = useState("");
+  const summary = (option: (typeof TERMO_MODES)[number]): string => t("practice.modeSummary", { name: option.name, summary: modeSummaryText(t, option.difficulty) });
 
   const handleSubmit = (event: FormEvent) => {
     event.preventDefault();
@@ -39,42 +46,42 @@ export function TermoPracticeSetup() {
       <GameHeader game={GAME} mode="practice" />
 
       <form onSubmit={handleSubmit} className="w-full flex flex-col gap-5 mt-2">
-        <p className="text-[15px] leading-relaxed text-[var(--ink-soft)]">Unlimited words from the same lists as the daily. Every word has five letters. Practice never touches your streak.</p>
+        <p className="text-[15px] leading-relaxed text-[var(--ink-soft)]">{text.practiceBlurb(GAME.id)}</p>
 
         <GameLanguagePicker />
 
         <fieldset className="flex flex-col gap-2">
-          <legend className="text-xs font-bold tracking-wider uppercase text-[var(--ink-soft)] mb-2">Mode</legend>
+          <legend className="text-xs font-bold tracking-wider uppercase text-[var(--ink-soft)] mb-2">{t("practice.mode")}</legend>
           <div className="mg-segment">
             {TERMO_MODES.map((option) => (
-              <button key={option.name} type="button" aria-pressed={mode.name === option.name} aria-label={`${option.name}: ${option.summary}`} onClick={() => setMode(option)} data-testid={`termo-mode-${option.name.toLowerCase()}`}>
+              <button key={option.name} type="button" aria-pressed={mode.name === option.name} aria-label={summary(option)} onClick={() => setMode(option)} data-testid={`termo-mode-${option.name.toLowerCase()}`}>
                 {option.name}
               </button>
             ))}
           </div>
           <span className="text-sm text-[var(--ink-soft)]" data-testid="termo-mode-summary">
-            {mode.name}: {mode.summary}.
+            {summary(mode)}
           </span>
         </fieldset>
 
         <label className="flex flex-col gap-2">
-          <span className="text-xs font-bold tracking-wider uppercase text-[var(--ink-soft)]">Seed (optional)</span>
+          <span className="text-xs font-bold tracking-wider uppercase text-[var(--ink-soft)]">{common("seed")}</span>
           <input
             className="mg-field"
             value={seed}
             onChange={(event) => setSeed(event.target.value)}
-            placeholder={`A word, a number, or a shared ${termoSeeds.prefix}:… seed`}
+            placeholder={common("seedPlaceholder", { prefix: termoSeeds.prefix })}
             autoComplete="off"
             autoCapitalize="off"
             spellCheck={false}
             maxLength={96}
             data-testid="game-seed-input"
           />
-          <span className="text-xs text-[var(--ink-faint)]">The same seed and mode always hide the same words.</span>
+          <span className="text-xs text-[var(--ink-faint)]">{t("practice.seedNote")}</span>
         </label>
 
         <button type="submit" className="mg-button" data-variant="primary" data-testid="game-start">
-          <ShuffleIcon /> {seed.trim() === "" ? "Random puzzle" : "Play this seed"}
+          <ShuffleIcon /> {common(seed.trim() === "" ? "random" : "playSeed")}
         </button>
       </form>
 

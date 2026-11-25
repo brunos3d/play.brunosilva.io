@@ -28,12 +28,13 @@ export function scoreGuess(answer: string, guess: string): LetterMark[] {
 }
 
 export type GuessErrorCode = "incomplete" | "unknown";
-export type GuessError = { code: GuessErrorCode; message: string };
+/** Why a row was refused: a code, and the numbers its sentence needs. engine/text.ts turns it into words. */
+export type GuessError = { code: GuessErrorCode; values?: Record<string, number> };
 
 /** Checks a row before it is played. `letters` holds one entry per position, empty where nothing was typed. The word must be in the list of `language`. */
 export function checkGuess(letters: readonly string[], language: TermoLanguage): GuessError | null {
-  if (letters.length !== WORD_LENGTH || letters.some((letter) => !/^[a-z]$/.test(letter))) return { code: "incomplete", message: `A palavra precisa ter ${WORD_LENGTH} letras.` };
-  if (!isKnownWord(letters.join(""), language)) return { code: "unknown", message: "Essa palavra não está na lista." };
+  if (letters.length !== WORD_LENGTH || letters.some((letter) => !/^[a-z]$/.test(letter))) return { code: "incomplete", values: { length: WORD_LENGTH } };
+  if (!isKnownWord(letters.join(""), language)) return { code: "unknown" };
   return null;
 }
 

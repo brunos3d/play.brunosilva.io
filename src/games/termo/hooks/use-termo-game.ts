@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useGameClock } from "@/shared/hooks/use-game-clock";
 import { type SoundName, playSound } from "@/shared/platform/audio";
@@ -8,10 +9,10 @@ import type { FinishSummary } from "@/shared/platform/results";
 import { loadBoard, saveBoard } from "@/shared/storage/progress";
 import type { Settings } from "@/shared/storage/settings";
 import { IDLE_STATUS, type StatusMessage } from "@/shared/ui/status-line";
+import type { Translate } from "@/i18n/translate";
 import {
   type TermoState,
   clearDraft,
-  countSolved,
   createTermoGame,
   eraseLetter,
   isTermoLocked,
@@ -24,8 +25,8 @@ import {
   termoScore,
   typeLetter,
 } from "../engine/game/state";
+import { endText, foundText, guessErrorText, hintText } from "../engine/text";
 import type { TermoShape } from "../engine/types";
-import { type TermoLanguage, displayWord } from "../engine/words";
 import { fromTermoSnapshot, toTermoSnapshot } from "../storage/progress";
 
 export type PlayableTermo = TermoShape & { id: string; seed: string };
@@ -35,25 +36,9 @@ const SHAKE_MS = 420;
 
 type Options = { puzzle: PlayableTermo; settings: Settings; persist?: boolean };
 
-const shout = (word: string, language: TermoLanguage): string => displayWord(word, language).toUpperCase();
-const ORDINALS = ["1ª", "2ª", "3ª", "4ª", "5ª"];
-
-function listWords(words: readonly string[], language: TermoLanguage): string {
-  const shown = words.map((word) => shout(word, language));
-  return shown.length === 1 ? shown[0] : `${shown.slice(0, -1).join(", ")} e ${shown[shown.length - 1]}`;
-}
-
 /** What the status line says once a game is over. Also used when a finished game is reopened. */
-function endMessage(puzzle: TermoShape, state: TermoState): StatusMessage {
-  const many = puzzle.answers.length > 1;
-  if (state.status === "solved") {
-    const count = state.guesses.length;
-    if (many) return { kind: "success", text: `Você encontrou as ${puzzle.answers.length} palavras em ${count} tentativas.` };
-    return { kind: "success", text: count === 1 ? "De primeira! Você acertou a palavra." : `Você acertou em ${count} tentativas.` };
-  }
-  const answers = listWords(puzzle.answers, puzzle.language);
-  if (state.revealed) return { kind: "info", text: many ? `Solução revelada. As palavras eram ${answers}.` : `Solução revelada. A palavra era ${answers}.` };
-  return { kind: "invalid", text: many ? `Acabaram as tentativas. As palavras eram ${answers}.` : `Acabaram as tentativas. A palavra era ${answers}.` };
+function endMessage(t: Translate, puzzle: TermoShape, state: TermoState): StatusMessage {
+  return { kind: state.status === "solved" ? "success" : state.revealed ? "info" : "invalid", text: endText(t, puzzle, state) };
 }
 
 function summarize(puzzle: TermoShape, state: TermoState, elapsedMs: number): FinishSummary {
@@ -68,6 +53,7 @@ function summarize(puzzle: TermoShape, state: TermoState, elapsedMs: number): Fi
  * clean slate. The word list of the puzzle's language must be loaded.
  */
 export function useTermoGame({ puzzle, settings, persist = true }: Options) {
+  const t = useTranslations("termo");
   const [game, setGame] = useState<TermoState>(() => createTermoGame(puzzle.id));
   const [ready, setReady] = useState(!persist);
   const [status, setStatus] = useState<StatusMessage>(IDLE_STATUS);
@@ -109,11 +95,11 @@ export function useTermoGame({ puzzle, settings, persist = true }: Options) {
       save();
       setEndedNow(true);
       setSummary(summarize(puzzle, state, elapsedMs));
-      setStatus(endMessage(puzzle, state));
+      setStatus(endMessage(t, puzzle, state));
       if (state.status === "solved") feedback("complete", "complete");
       else feedback(state.revealed ? "reveal" : "invalid", state.revealed ? null : "invalid");
     },
-    [feedback, finishClock, puzzle, save],
+    [feedback, finishClock, puzzle, save, t],
   );
 
   const begin = useCallback(() => {
@@ -134,7 +120,7 @@ export function useTermoGame({ puzzle, settings, persist = true }: Options) {
         restoreClock(restored.clock);
         if (isTermoLocked(restored.state)) {
           setSummary(summarize(puzzle, restored.state, restored.clock.finishedMs ?? 0));
-          setStatus(endMessage(puzzle, restored.state));
+          setStatus(endMessage(t, puzzle, restored.state));
         }
       }
       setReady(true);
@@ -182,7 +168,7 @@ export function useTermoGame({ puzzle, settings, persist = true }: Options) {
     if (isTermoLocked(gameRef.current)) return;
     const result = submitGuess(puzzle, gameRef.current);
     if (!result.ok) {
-      if (result.error) refuse(result.error.message);
+      if (result.error) refuse(guessErrorText(t, result.error));
       return;
     }
     show(result.state);
@@ -193,31 +179,25 @@ export function useTermoGame({ puzzle, settings, persist = true }: Options) {
       return;
     }
     if (result.found.length > 0) {
-      const left = puzzle.answers.length - countSolved(puzzle, result.state.guesses);
-      setStatus({ kind: "success", text: `${shout(result.word, puzzle.language)} encontrada. ${left === 1 ? "Falta 1 palavra." : `Faltam ${left} palavras.`}` });
+      setStatus({ kind: "success", text: foundText(t, puzzle, result.state, result.word) });
       feedback("checkpoint", "checkpoint");
     } else {
       setStatus(IDLE_STATUS);
       feedback("place", "place");
     }
-  }, [end, feedback, puzzle, refuse, save, show]);
+  }, [end, feedback, puzzle, refuse, save, show, t]);
 
   /** A hint gives away one letter of an open board, in its place. */
   const requestHint = useCallback(() => {
     const state = gameRef.current;
     if (isTermoLocked(state)) return;
     const hint = nextHint(puzzle, state);
-    if (!hint) {
-      setStatus({ kind: "hint", text: "Você já conhece todas as letras. Falta só montar a palavra." });
-      return;
-    }
+    setStatus({ kind: "hint", text: hintText(t, puzzle, hint) });
+    if (!hint) return;
     show(recordTermoHint(state, hint));
     save();
-    const letter = puzzle.answers[hint.board][hint.index].toUpperCase();
-    const where = puzzle.answers.length > 1 ? `Na palavra ${hint.board + 1}, a` : "A";
-    setStatus({ kind: "hint", text: `${where} ${ORDINALS[hint.index]} letra é ${letter}.` });
     feedback("hint", "hint");
-  }, [feedback, puzzle, save, show]);
+  }, [feedback, puzzle, save, show, t]);
 
   const reveal = useCallback(() => {
     if (isTermoLocked(gameRef.current)) return;

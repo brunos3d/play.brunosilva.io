@@ -1,8 +1,9 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { type CSSProperties, useEffect, useRef } from "react";
 import type { TermoRow } from "../../engine/game/state";
-import type { LetterMark } from "../../engine/types";
+import { markText } from "../../engine/text";
 import { type TermoLanguage, WORD_LENGTH, displayWord } from "../../engine/words";
 
 export type TermoBoardView = {
@@ -28,8 +29,6 @@ type Props = {
   onCell: (index: number) => void;
 };
 
-const MARK_TEXT: Record<LetterMark, string> = { right: "no lugar certo", place: "em outra posição", wrong: "fora da palavra" };
-
 /** Letters of a played row as they are written: "maca" shows as M A Ç Ã. */
 function shownLetters(row: TermoRow, language: TermoLanguage): string[] {
   if (row.kind !== "played") return row.letters.map((letter) => letter.toUpperCase());
@@ -43,6 +42,7 @@ function shownLetters(row: TermoRow, language: TermoLanguage): string[] {
  * buttons that move the cursor.
  */
 export function TermoBoard({ boards, language, cursor, freshRow, shaking, locked, label, onCell }: Props) {
+  const t = useTranslations("termo");
   const root = useRef<HTMLDivElement>(null);
   const played = boards.reduce((most, board) => Math.max(most, board.rows.filter((row) => row.kind === "played").length), 0);
 
@@ -57,18 +57,18 @@ export function TermoBoard({ boards, language, cursor, freshRow, shaking, locked
     <div className="termo-stage">
       <div ref={root} className="termo-boards" data-boards={boards.length} data-locked={locked} data-testid="termo-board" role="group" aria-label={label} style={{ "--rows": boards[0]?.rows.length ?? 6 } as CSSProperties}>
         {boards.map((board, boardIndex) => (
-          <div key={boardIndex} className="termo-grid" data-board={boardIndex} data-solved={board.solved} data-testid="termo-grid" role="group" aria-label={boards.length > 1 ? `Palavra ${boardIndex + 1} de ${boards.length}${board.solved ? ", encontrada" : ""}` : "Tentativas"}>
+          <div key={boardIndex} className="termo-grid" data-board={boardIndex} data-solved={board.solved} data-testid="termo-grid" role="group" aria-label={boards.length > 1 ? t("board.word", { number: boardIndex + 1, count: boards.length, found: board.solved ? "yes" : "no" }) : t("board.guesses")}>
             {board.rows.map((row, rowIndex) => {
               const letters = shownLetters(row, language);
               return (
-                <div key={rowIndex} className="termo-row" data-kind={row.kind} data-row={rowIndex} data-fresh={row.kind === "played" && rowIndex === freshRow} data-shake={row.kind === "current" && shaking} data-testid="termo-row" role="group" aria-label={`Tentativa ${rowIndex + 1}`}>
+                <div key={rowIndex} className="termo-row" data-kind={row.kind} data-row={rowIndex} data-fresh={row.kind === "played" && rowIndex === freshRow} data-shake={row.kind === "current" && shaking} data-testid="termo-row" role="group" aria-label={t("board.row", { number: rowIndex + 1 })}>
                   {letters.map((letter, column) => {
                     const mark = row.marks?.[column];
                     const hint = row.kind === "current" ? board.hints[column].toUpperCase() : "";
                     const style = { "--column": column } as CSSProperties;
                     if (row.kind !== "current") {
                       return (
-                        <div key={column} className="termo-tile" data-mark={mark} data-column={column} data-testid="termo-tile" style={style} role="img" aria-label={mark ? `${letter}, ${MARK_TEXT[mark]}` : "vazio"}>
+                        <div key={column} className="termo-tile" data-mark={mark} data-column={column} data-testid="termo-tile" style={style} role="img" aria-label={mark ? t("board.tile", { letter, mark: markText(t, mark) }) : t("board.empty")}>
                           <span aria-hidden="true">{letter}</span>
                         </div>
                       );
@@ -85,7 +85,7 @@ export function TermoBoard({ boards, language, cursor, freshRow, shaking, locked
                         data-testid="termo-tile"
                         style={style}
                         tabIndex={-1}
-                        aria-label={`Posição ${column + 1}: ${letter !== "" ? letter : "vazia"}${hint !== "" ? `, dica ${hint}` : ""}${column === cursor ? ", cursor" : ""}`}
+                        aria-label={t("board.cell", { position: column + 1, filled: letter !== "" ? "yes" : "no", letter, hinted: hint !== "" ? "yes" : "no", hint, cursor: column === cursor ? "yes" : "no" })}
                         // Keeps the focus where it is, so the physical keyboard goes on typing into the row.
                         onMouseDown={(event) => event.preventDefault()}
                         onClick={() => onCell(column)}

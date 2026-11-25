@@ -1,5 +1,8 @@
-import Link from "next/link";
+"use client";
+
+import { useTranslations } from "next-intl";
 import { GAMES } from "@/games/registry";
+import { Link } from "@/i18n/navigation";
 import type { DateKey } from "@/shared/engine/pacific-time";
 import { buildPlayPath } from "@/shared/platform/share-text";
 import { ArrowRightIcon } from "@/shared/ui/icons";
@@ -11,7 +14,8 @@ const GAME = GAMES.termo;
 
 export type TermoDayMode = "termo" | TermoDailyVariant;
 
-type Step = { key: string; label: string; href: string };
+/** `key` names the label in the messages, under `next`. */
+type Step = { key: TermoDayMode | "practice"; href: string };
 
 /**
  * Where a finished puzzle of the day can lead: the day's other modes, then
@@ -21,10 +25,10 @@ type Step = { key: string; label: string; href: string };
  */
 export function termoNextSteps(date: DateKey, current: TermoDayMode, language: TermoLanguage): Step[] {
   const steps: Step[] = [];
-  if (current !== "termo") steps.push({ key: "termo", label: "Play the daily Termo", href: GAME.path });
-  if (current !== "dueto") steps.push({ key: "dueto", label: "Play the daily Dueto", href: buildPlayPath(GAME.path, termoSeeds, termoDailyVariantSpec(date, "dueto", language)) });
-  if (current !== "quarteto") steps.push({ key: "quarteto", label: "Play the daily Quarteto", href: buildPlayPath(GAME.path, termoSeeds, termoDailyVariantSpec(date, "quarteto", language)) });
-  steps.push({ key: "practice", label: "Practice", href: `${GAME.path}/practice` });
+  if (current !== "termo") steps.push({ key: "termo", href: GAME.path });
+  if (current !== "dueto") steps.push({ key: "dueto", href: buildPlayPath(GAME.path, termoSeeds, termoDailyVariantSpec(date, "dueto", language)) });
+  if (current !== "quarteto") steps.push({ key: "quarteto", href: buildPlayPath(GAME.path, termoSeeds, termoDailyVariantSpec(date, "quarteto", language)) });
+  steps.push({ key: "practice", href: `${GAME.path}/practice` });
   return steps;
 }
 
@@ -34,11 +38,12 @@ export function termoNextSteps(date: DateKey, current: TermoDayMode, language: T
  * how a player gets to two or four. `testId` tells the two copies apart.
  */
 export function TermoNextModes({ date, current, language, testId = "termo-next" }: { date: DateKey; current: TermoDayMode; language: TermoLanguage; testId?: string }) {
+  const t = useTranslations("termo.next");
   return (
-    <nav className="termo-next" aria-label="More Termo" data-testid={testId}>
+    <nav className="termo-next" aria-label={t("label")} data-testid={testId}>
       {termoNextSteps(date, current, language).map((step) => (
         <Link key={step.key} href={step.href} prefetch={false} className="mg-button justify-between" data-testid={`${testId}-${step.key}`}>
-          {step.label} <ArrowRightIcon />
+          {t(step.key)} <ArrowRightIcon />
         </Link>
       ))}
     </nav>

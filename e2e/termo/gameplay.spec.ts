@@ -3,11 +3,18 @@ import { displayWord, generateTermoFromSpec, getTermoDailyInfo, plainLetters, sc
 import { confirmReveal, result, seconds, skipTutorials, status, timer, watchConsole } from "../shared";
 import { board, grid, guess, key, keyboard, openTermo, row, rowMarks, rowText, tapGuess, termoPuzzle, tiles, wrongWords } from "./helpers";
 
+/**
+ * The game itself. The words are Portuguese here and the interface is English,
+ * which is what `skipTutorials` sets up: the two languages are independent.
+ * Everything about choosing a language is in languages.spec.ts.
+ */
 const { puzzle, url } = termoPuzzle("e2e-termo-1", "medium");
 const answer = puzzle.answers[0];
 const [miss, second] = wrongWords(puzzle, 2);
 const duo = termoPuzzle("e2e-termo-2", "hard");
 const quartet = termoPuzzle("e2e-termo-4", "expert");
+/** A word as the board and the status line write it: with its accents, in capitals. */
+const shown = (word: string): string => displayWord(word, "pt-br").toUpperCase();
 
 test.beforeEach(async ({ page }) => {
   await skipTutorials(page);
@@ -16,22 +23,22 @@ test.beforeEach(async ({ page }) => {
 test("a typed guess is marked letter by letter, and the right word wins", async ({ page }) => {
   const problems = watchConsole(page);
   await openTermo(page, url);
-  await expect(status(page)).toContainText("Descubra a palavra em 6 tentativas");
+  await expect(status(page)).toContainText("Find the word in 6 guesses");
   await expect(board(page).getByTestId("termo-grid")).toHaveCount(1);
   await expect(board(page).getByTestId("termo-row")).toHaveCount(6);
 
   await guess(page, miss);
   expect(await rowMarks(page, 0)).toEqual(scoreGuess(answer, miss));
-  expect(await rowText(page, 0)).toBe(displayWord(miss, "pt-br").toUpperCase());
+  expect(await rowText(page, 0)).toBe(shown(miss));
   await expect(row(page, 0)).toHaveAttribute("data-kind", "played");
   await expect(row(page, 1)).toHaveAttribute("data-kind", "current");
-  await expect(status(page)).toContainText("Tentativa 2 de 6");
+  await expect(status(page)).toContainText("Guess 2 of 6");
 
   await guess(page, answer);
   expect(await rowMarks(page, 1)).toEqual(["right", "right", "right", "right", "right"]);
   // The row shows the word as it is written, accents included.
-  expect(await rowText(page, 1)).toBe(displayWord(answer, "pt-br").toUpperCase());
-  await expect(status(page)).toContainText("Você acertou em 2 tentativas");
+  expect(await rowText(page, 1)).toBe(shown(answer));
+  await expect(status(page)).toContainText("You got it in 2 guesses");
   await expect(board(page)).toHaveAttribute("data-locked", "true");
   await expect(result(page)).toBeVisible();
   await expect(result(page)).toContainText("Solved without hints");
@@ -62,16 +69,41 @@ test("the on-screen keyboard types, erases one letter, clears the row and colour
   await expect(keyboard(page).locator(".termo-key[data-mark]")).not.toHaveCount(0);
 });
 
+test("the board, its tiles and the keys are labelled for a screen reader in the interface language", async ({ page }) => {
+  await openTermo(page, url);
+  await expect(board(page)).toHaveAccessibleName("Termo: one 5-letter word, 6 guesses.");
+  await expect(grid(page)).toHaveAccessibleName("Guesses");
+  await expect(row(page, 0)).toHaveAccessibleName("Guess 1");
+  await expect(keyboard(page)).toHaveAccessibleName("Keyboard");
+  await expect(key(page, "backspace")).toHaveAccessibleName("Erase letter");
+  await expect(key(page, "clear")).toHaveAccessibleName("Clear every letter of the row");
+  await expect(key(page, "clear")).toHaveText("clear");
+  await expect(key(page, "enter")).toHaveAccessibleName("Play the word");
+  await expect(tiles(page, 0).nth(0)).toHaveAccessibleName("Position 1: empty, cursor");
+  await expect(tiles(page, 1).nth(0)).toHaveAccessibleName("empty");
+
+  await page.keyboard.type(miss.slice(0, 1));
+  await expect(tiles(page, 0).nth(0)).toHaveAccessibleName(`Position 1: ${miss[0].toUpperCase()}`);
+  await page.keyboard.press("Delete");
+  await guess(page, miss);
+  const marks = scoreGuess(answer, miss);
+  const text = { right: "in the right place", place: "in another position", wrong: "not in the word" };
+  await expect(tiles(page, 0).nth(0)).toHaveAccessibleName(`${shown(miss)[0]}, ${text[marks[0]]}`);
+  // A letter that appears once in the guess has one mark, and its key says the same.
+  const once = [...miss].findIndex((letter) => miss.indexOf(letter) === miss.lastIndexOf(letter));
+  await expect(key(page, miss[once])).toHaveAccessibleName(`${miss[once].toUpperCase()}, ${text[marks[once]]}`);
+});
+
 test("a short row and an unknown word are refused, each with its message", async ({ page }) => {
   await openTermo(page, url);
   await page.keyboard.type("fes");
   await page.keyboard.press("Enter");
-  await expect(status(page)).toContainText("A palavra precisa ter 5 letras.");
+  await expect(status(page)).toContainText("The word needs 5 letters.");
   await expect(status(page)).toHaveAttribute("data-kind", "invalid");
 
   await page.keyboard.type("xx");
   await page.keyboard.press("Enter");
-  await expect(status(page)).toContainText("Essa palavra não está na lista.");
+  await expect(status(page)).toContainText("That word is not in the list.");
   await expect(row(page, 0)).toHaveAttribute("data-kind", "current");
   expect(await rowText(page, 0)).toBe("FESXX");
 
@@ -112,9 +144,10 @@ test("Z and H are letters here: they type and do not fire the frame's shortcuts"
 test("a hint gives one letter in its place and is counted", async ({ page }) => {
   await openTermo(page, url);
   await page.getByRole("button", { name: /Hint/ }).click();
-  await expect(status(page)).toContainText(`A 1ª letra é ${answer[0].toUpperCase()}.`);
+  await expect(status(page)).toContainText(`The 1st letter is ${answer[0].toUpperCase()}.`);
   await expect(tiles(page, 0).nth(0)).toHaveAttribute("data-hint", "true");
   await expect(tiles(page, 0).nth(0)).toHaveText(answer[0].toUpperCase());
+  await expect(tiles(page, 0).nth(0)).toHaveAccessibleName(`Position 1: empty, hint ${answer[0].toUpperCase()}, cursor`);
   await expect(page.getByRole("button", { name: "Hint. 1 used." })).toBeVisible();
 
   // The hint stays for the next row, and a second hint moves on to the next letter.
@@ -130,8 +163,8 @@ test("a hint gives one letter in its place and is counted", async ({ page }) => 
 test("running out of guesses ends the game and shows the word", async ({ page }) => {
   await openTermo(page, url);
   for (const word of wrongWords(puzzle, 6)) await guess(page, word);
-  await expect(status(page)).toContainText(`A palavra era ${displayWord(answer, "pt-br").toUpperCase()}`);
-  await expect(board(page).getByTestId("termo-answer")).toHaveText(displayWord(answer, "pt-br").toUpperCase());
+  await expect(status(page)).toContainText(`Out of guesses. The word was ${shown(answer)}.`);
+  await expect(board(page).getByTestId("termo-answer")).toHaveText(shown(answer));
   await expect(board(page)).toHaveAttribute("data-locked", "true");
   await expect(result(page)).toBeVisible();
   await expect(result(page)).toContainText("Out of guesses");
@@ -144,7 +177,7 @@ test("reveal shows the word and ends the game", async ({ page }) => {
   await openTermo(page, url);
   await guess(page, miss);
   await confirmReveal(page);
-  await expect(status(page)).toContainText(`Solução revelada. A palavra era ${displayWord(answer, "pt-br").toUpperCase()}`);
+  await expect(status(page)).toContainText(`Solution revealed. The word was ${shown(answer)}.`);
   await expect(result(page)).toBeVisible();
   await expect(result(page)).toContainText("Solution revealed");
   await expect(key(page, "enter")).toBeDisabled();
@@ -171,8 +204,33 @@ test("guesses and the row being typed survive a reload, with the clock still run
   await expect(result(page)).toBeVisible();
   await page.reload();
   await expect(board(page)).toHaveAttribute("data-locked", "true");
-  await expect(status(page)).toContainText("Você acertou em 2 tentativas");
+  await expect(status(page)).toContainText("You got it in 2 guesses");
   await expect(result(page)).toBeVisible();
+});
+
+test("a board saved before the game had two languages still opens", async ({ page }) => {
+  // What the game wrote to disk then: the same snapshot, without a language. The seed is unchanged, so the puzzle id is too.
+  await openTermo(page, url);
+  await page.evaluate(
+    async ([id, seed, word]) => {
+      const open = indexedDB.open("minigames");
+      const db = await new Promise<IDBDatabase>((resolve, reject) => {
+        open.onsuccess = () => resolve(open.result);
+        open.onerror = () => reject(open.error);
+      });
+      const transaction = db.transaction("games", "readwrite");
+      const snapshot = { snapshotVersion: 1, puzzleId: id, seed, guesses: [word], draft: ["", "", "", "", ""], cursor: 0, hints: [], revealed: false, startedAt: Date.now() - 5_000, finishedMs: null };
+      transaction.objectStore("games").put(snapshot, `termo:${id}`);
+      await new Promise((resolve) => (transaction.oncomplete = resolve));
+      db.close();
+    },
+    [puzzle.id, puzzle.seed, miss],
+  );
+  await page.reload();
+  await expect(board(page)).toHaveAttribute("data-locked", "false");
+  await expect(row(page, 0)).toHaveAttribute("data-kind", "played");
+  expect(await rowText(page, 0)).toBe(shown(miss));
+  await expect(status(page)).toContainText("Guess 2 of 6");
 });
 
 test("leaving a game that has started asks first", async ({ page }) => {
@@ -189,8 +247,10 @@ test("hard hides two words: one guess plays on both, and a found word stops taki
   const [wrong] = wrongWords(duo.puzzle, 1);
   await openTermo(page, duo.url);
   await expect(board(page)).toHaveAttribute("data-boards", "2");
+  await expect(board(page)).toHaveAccessibleName("Termo: 2 5-letter words, 7 guesses. Every guess is played on all of them.");
   await expect(grid(page, 0).getByTestId("termo-row")).toHaveCount(7);
-  await expect(status(page)).toContainText("Descubra as 2 palavras em 7 tentativas");
+  await expect(grid(page, 1)).toHaveAccessibleName("Word 2 of 2");
+  await expect(status(page)).toContainText("Find the 2 words in 7 guesses");
 
   await guess(page, wrong);
   expect(await rowMarks(page, 0, 0)).toEqual(scoreGuess(first, wrong));
@@ -200,13 +260,18 @@ test("hard hides two words: one guess plays on both, and a found word stops taki
 
   await guess(page, first);
   await expect(grid(page, 0)).toHaveAttribute("data-solved", "true");
-  await expect(status(page)).toContainText(`${displayWord(first, "pt-br").toUpperCase()} encontrada. Falta 1 palavra.`);
+  await expect(grid(page, 0)).toHaveAccessibleName("Word 1 of 2, found");
+  await expect(status(page)).toContainText(`${shown(first)} found. 1 word to go.`);
   await expect(row(page, 2, 0)).toHaveAttribute("data-kind", "empty");
   await expect(row(page, 2, 1)).toHaveAttribute("data-kind", "current");
 
+  // A hint on two boards names the board it is about.
+  await page.getByRole("button", { name: /Hint/ }).click();
+  await expect(status(page)).toContainText(/^In word 2, the \d(st|nd|rd|th) letter is [A-Z]\.$/);
+
   await guess(page, other);
   await expect(result(page)).toBeVisible();
-  await expect(status(page)).toContainText("Você encontrou as 2 palavras em 3 tentativas");
+  await expect(status(page)).toContainText("You found the 2 words in 3 guesses");
   expect(await rowText(page, 2, 0)).toBe("");
   await expect(result(page).locator(".mg-stat").nth(1)).toContainText("1");
 });
@@ -271,7 +336,7 @@ test("practice asks for a mode by name: Termo, Dueto or Quarteto", async ({ page
   await expect(page.getByTestId("termo-mode-summary")).toHaveText("Dueto: 2 words at once, 7 guesses.");
   await page.getByTestId("game-seed-input").fill("modo-dueto");
   await page.getByTestId("game-start").click();
-  await expect(page).toHaveURL(/seed=TERMO%3Amodo-dueto%3A1%3Ahard/);
+  await expect(page).toHaveURL(/\/en\/termo\/play\?seed=TERMO%3Amodo-dueto%3A1%3Ahard$/);
   await expect(board(page)).toHaveAttribute("data-boards", "2");
 });
 
@@ -297,11 +362,12 @@ test("the daily is always one board, and once it is over it offers the day's Due
   await result(page).getByRole("button", { name: "Close" }).click();
   await expect(keyboard(page)).toHaveCount(0);
   const next = page.getByTestId("termo-next");
+  await expect(next).toHaveAccessibleName("More Termo");
   await expect(next.getByRole("link")).toHaveText(["Play the daily Dueto", "Play the daily Quarteto", "Practice"]);
-  await expect(page.getByTestId("termo-next-practice")).toHaveAttribute("href", "/termo/practice");
+  await expect(page.getByTestId("termo-next-practice")).toHaveAttribute("href", "/en/termo/practice");
 
   await page.getByTestId("termo-next-dueto").click();
-  await expect(page).toHaveURL(new RegExp(`seed=TERMO%3A${date}-dueto%3A1%3Ahard`));
+  await expect(page).toHaveURL(new RegExp(`/en/termo/play\\?seed=TERMO%3A${date}-dueto%3A1%3Ahard$`));
   await expect(board(page)).toHaveAttribute("data-boards", "2");
   await expect(board(page)).toHaveAttribute("data-locked", "false");
   // The day's Dueto is one puzzle, like the daily: no "New game", and it is the same for everyone.
@@ -322,18 +388,19 @@ test("the daily is always one board, and once it is over it offers the day's Due
   await expect(page.getByTestId("termo-next-dueto")).toBeVisible();
 });
 
-test("the tutorial explains the three marks in Portuguese before the clock starts", async ({ page }) => {
+test("the tutorial explains the three marks before the clock starts", async ({ page }) => {
   await page.addInitScript(() => localStorage.setItem("minigames:settings:v1", JSON.stringify({ sound: false, haptics: false, tutorials: {} })));
   await page.goto(url);
   const tutorial = page.getByTestId("game-tutorial");
   await expect(tutorial).toBeVisible();
-  await expect(tutorial).toContainText("Como jogar Termo");
-  await expect(tutorial).toContainText("no lugar certo");
-  await expect(tutorial).toContainText("Acentos e cedilha não são digitados");
+  await expect(tutorial).toContainText("How to play Termo");
+  await expect(tutorial).toContainText("The letter F is in the word and in the right place.");
+  await expect(tutorial).toContainText("The letter M is in the word, but in another position.");
+  await expect(tutorial).toContainText("The letter E is not in the word.");
   // Typing while the tutorial is open does not reach the board, and the clock waits.
   await page.keyboard.type("festa");
   await expect(timer(page)).toHaveText("00:00");
-  await tutorial.getByRole("button", { name: "Começar" }).click();
+  await tutorial.getByRole("button", { name: "Start playing" }).click();
   await expect(tutorial).toBeHidden();
   await expect(board(page)).toHaveAttribute("data-locked", "false");
   expect(await rowText(page, 0)).toBe("");

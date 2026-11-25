@@ -1,1 +1,78 @@
-{}
+{
+  "board": {
+    "label": "{count, plural, =1 {Termo: one {length}-letter word, {guesses} guesses.} other {Termo: # {length}-letter words, {guesses} guesses. Every guess is played on all of them.}}",
+    "guesses": "Guesses",
+    "word": "{found, select, yes {Word {number} of {count}, found} other {Word {number} of {count}}}",
+    "row": "Guess {number}",
+    "tile": "{letter}, {mark}",
+    "empty": "empty",
+    "cell": "Position {position}: {filled, select, yes {{letter}} other {empty}}{hinted, select, yes {, hint {hint}} other {}}{cursor, select, yes {, cursor} other {}}"
+  },
+  "mark": {
+    "right": "in the right place",
+    "place": "in another position",
+    "wrong": "not in the word"
+  },
+  "keyboard": {
+    "label": "Keyboard",
+    "key": "{letter}, {marks}",
+    "onBoard": "word {number}: {mark}",
+    "erase": "Erase letter",
+    "clear": "clear",
+    "clearLabel": "Clear every letter of the row",
+    "clearTitle": "Clear the row",
+    "enter": "enter",
+    "enterLabel": "Play the word"
+  },
+  "idle": {
+    "start": "{count, plural, =1 {Find the word in {guesses} guesses.} other {Find the # words in {guesses} guesses.}} Type a {length}-letter word and press Enter.",
+    "progress": "Guess {number} of {total}."
+  },
+  "status": {
+    "solved": "{count, plural, =1 {First try! You got the word.} other {You got it in # guesses.}}",
+    "solvedAll": "You found the {words} words in {count} guesses.",
+    "revealed": "{words, plural, =1 {Solution revealed. The word was {answers}.} other {Solution revealed. The words were {answers}.}}",
+    "lost": "{words, plural, =1 {Out of guesses. The word was {answers}.} other {Out of guesses. The words were {answers}.}}",
+    "found": "{word} found. {left, plural, =1 {1 word to go.} other {# words to go.}}"
+  },
+  "list": "{head} and {last}",
+  "error": {
+    "incomplete": "The word needs {length} letters.",
+    "unknown": "That word is not in the list."
+  },
+  "hint": {
+    "none": "You already know every letter. All that is left is to put the word together.",
+    "letter": "The {position, selectordinal, one {#st} two {#nd} few {#rd} other {#th}} letter is {letter}.",
+    "letterOnBoard": "In word {board}, the {position, selectordinal, one {#st} two {#nd} few {#rd} other {#th}} letter is {letter}."
+  },
+  "words": {
+    "unavailable": "The word list could not be loaded",
+    "unavailableBody": "The words of a language are downloaded the first time you play in it. Check your connection and try again."
+  },
+  "next": {
+    "label": "More Termo",
+    "termo": "Play the daily Termo",
+    "dueto": "Play the daily Dueto",
+    "quarteto": "Play the daily Quarteto",
+    "practice": "Practice"
+  },
+  "practice": {
+    "mode": "Mode",
+    "summary": "{boards, plural, =1 {1 word} other {# words at once}}, {guesses} guesses",
+    "modeSummary": "{name}: {summary}.",
+    "seedNote": "The same seed, mode and language always hide the same words."
+  },
+  "tutorial": {
+    "title": "How to play Termo",
+    "intro": "Find the hidden {length}-letter word. Type a word and press Enter: every letter shows how close you got.",
+    "example": "{word}. {text}",
+    "right": "The letter {letter} is in the word and in the right place.",
+    "place": "The letter {letter} is in the word, but in another position.",
+    "wrong": "The letter {letter} is not in the word.",
+    "accents": "Accents and the cedilla are not typed. The game adds them, and they do not count.",
+    "repeats": "A word can repeat a letter.",
+    "keyboard": "The erase key removes one letter, Clear empties the row. Tap a tile to move the cursor.",
+    "modes": "Termo is 1 word in 6 guesses. Dueto is 2 words at once in 7, and Quarteto is 4 in 9. Every guess counts for all of them.",
+    "controls": "Hint reveals one letter in its place. Reveal shows the answer and ends the game."
+  }
+}

@@ -1,13 +1,16 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import { useTranslations } from "next-intl";
 import { useEffect, useMemo, useState } from "react";
 import { GAMES } from "@/games/registry";
 import type { DailyInfo } from "@/shared/engine/daily";
 import { useGeneratedPuzzle } from "@/shared/hooks/use-generated-puzzle";
 import { useSettings } from "@/shared/hooks/use-settings";
 import { buildPlayUrl } from "@/shared/platform/share-text";
+import { GameFooter } from "@/shared/ui/game-footer";
 import { GameFrame } from "@/shared/ui/game-frame";
+import { GameHeader } from "@/shared/ui/game-header";
 import { GameLoading } from "@/shared/ui/game-loading";
 import { PuzzleAttempts } from "@/shared/ui/puzzle-attempts";
 import { type StatusMessage, StatusLine } from "@/shared/ui/status-line";
@@ -15,10 +18,11 @@ import { termoDailyVariantFromSpec } from "../../engine/daily";
 import { boardRows, hintLetters, solvedBoards } from "../../engine/game/state";
 import { loadTermoPuzzle } from "../../engine/generator";
 import { letterStates } from "../../engine/rules";
-import { type PuzzleSpec, TERMO_WORD_LENGTH, termoSeeds } from "../../engine/seed";
+import { type PuzzleSpec, TERMO_WORD_LENGTH, termoLanguage, termoSeeds } from "../../engine/seed";
 import { termoShareGrid } from "../../engine/share";
+import { boardLabelText, idleText } from "../../engine/text";
 import type { TermoPuzzle } from "../../engine/types";
-import { plainLetters } from "../../engine/words";
+import { hasTermoWords, plainLetters } from "../../engine/words";
 import { useTermoGame } from "../../hooks/use-termo-game";
 import { TermoBoard, type TermoBoardView } from "../board/termo-board";
 import { TermoKeyboard } from "../keyboard/termo-keyboard";
@@ -39,9 +43,37 @@ type GameProps = {
   onNext?: () => void;
 };
 
+/**
+ * The word list of a language is fetched the first time that language is
+ * played. Without a connection, and without a copy kept by the offline worker,
+ * that fails. It is not a bad seed, so it gets its own message and a way to
+ * try again.
+ */
+function WordsUnavailable({ daily, onRetry }: { daily?: DailyInfo; onRetry: () => void }) {
+  const t = useTranslations("termo.words");
+  const common = useTranslations("common.controls");
+  return (
+    <main className="mg-shell">
+      <GameHeader game={GAME} mode={daily ? "daily" : "practice"} numberLabel={daily ? `#${daily.number}` : undefined} elapsedMs={0} />
+      <div className="mg-stage">
+        <div className="rounded-2xl p-6 text-center bg-[var(--surface)]" role="alert" data-testid="termo-words-unavailable">
+          <p className="font-semibold mb-1">{t("unavailable")}</p>
+          <p className="text-sm text-[var(--ink-soft)] mb-4">{t("unavailableBody")}</p>
+          <button type="button" className="mg-button" onClick={onRetry}>
+            {common("tryAgain")}
+          </button>
+        </div>
+      </div>
+      <GameFooter current={GAME.id} />
+    </main>
+  );
+}
+
 export function TermoGame({ spec, daily, onNext }: GameProps) {
   // The word list of the seed's language is fetched here, and only that one. The loading board stays up meanwhile.
   const generated = useGeneratedPuzzle(termoSeeds.format(spec), () => loadTermoPuzzle(spec));
+  // Trying again reloads the page: the bundler remembers a script that failed to load and would not fetch it a second time.
+  if (generated && "error" in generated && !hasTermoWords(termoLanguage(spec))) return <WordsUnavailable daily={daily} onRetry={() => window.location.reload()} />;
   if (!generated || "error" in generated) return <GameLoading game={GAME} daily={daily} error={generated && "error" in generated ? generated.error : undefined} />;
   return (
     <PuzzleAttempts game="termo" puzzle={generated.puzzle} enabled={onNext !== undefined}>
@@ -53,6 +85,7 @@ export function TermoGame({ spec, daily, onNext }: GameProps) {
 type ViewProps = { spec: PuzzleSpec; puzzle: TermoPuzzle; generationMs: number; daily?: DailyInfo; onNext?: () => void };
 
 function GameView({ spec, puzzle, generationMs, daily, onNext }: ViewProps) {
+  const t = useTranslations("termo");
   const { settings } = useSettings();
   const [showSolution, setShowSolution] = useState(false);
   const game = useTermoGame({ puzzle, settings });
@@ -104,9 +137,8 @@ function GameView({ spec, puzzle, generationMs, daily, onNext }: ViewProps) {
   const variant = daily ? null : termoDailyVariantFromSpec(spec);
   const ofTheDay: { date: string; mode: TermoDayMode } | null = daily ? { date: daily.date, mode: "termo" } : variant ? { date: variant.date, mode: variant.variant } : null;
 
-  const words = count === 1 ? "a palavra" : `as ${count} palavras`;
-  const idleText = state.guesses.length === 0 ? `Descubra ${words} em ${puzzle.maxGuesses} tentativas. Digite uma palavra de 5 letras e aperte Enter.` : `Tentativa ${Math.min(state.guesses.length + 1, puzzle.maxGuesses)} de ${puzzle.maxGuesses}.`;
-  const status: StatusMessage = game.status.kind === "idle" ? { kind: "idle", text: game.summary ? "" : idleText } : game.status;
+  const idle = idleText(t, puzzle, state);
+  const status: StatusMessage = game.status.kind === "idle" ? { kind: "idle", text: game.summary ? "" : idle } : game.status;
 
   return (
     <GameFrame
@@ -118,22 +150,11 @@ function GameView({ spec, puzzle, generationMs, daily, onNext }: ViewProps) {
       shareUrl={() => (daily ? `${window.location.origin}${GAME.path}` : buildPlayUrl(window.location.origin, GAME.path, termoSeeds, spec))}
       shareDetail={() => termoShareGrid(puzzle, state.guesses)}
       session={game}
-      idleText={idleText}
+      idleText={idle}
       hiddenControls={["undo", "reset"]}
       resultActions={ofTheDay ? <TermoNextModes date={ofTheDay.date} current={ofTheDay.mode} language={puzzle.language} testId="termo-result-next" /> : undefined}
       onNext={onNext}
-      board={
-        <TermoBoard
-          boards={boards}
-          language={puzzle.language}
-          cursor={state.cursor}
-          freshRow={game.freshRow}
-          shaking={game.shaking}
-          locked={!active}
-          label={count === 1 ? `Termo: uma palavra de 5 letras, ${puzzle.maxGuesses} tentativas.` : `Termo: ${count} palavras de 5 letras, ${puzzle.maxGuesses} tentativas. Cada palpite vale para todas.`}
-          onCell={game.placeCursor}
-        />
-      }
+      board={<TermoBoard boards={boards} language={puzzle.language} cursor={state.cursor} freshRow={game.freshRow} shaking={game.shaking} locked={!active} label={boardLabelText(t, puzzle)} onCell={game.placeCursor} />}
       statusSlot={
         <div className="termo-below" data-boards={count}>
           <StatusLine status={status} />
@@ -144,7 +165,8 @@ function GameView({ spec, puzzle, generationMs, daily, onNext }: ViewProps) {
           )}
         </div>
       }
-      tutorial={(props) => <TermoTutorialDialog {...props} />}
+      // The example words are in the language being played. The explanations are in the interface locale.
+      tutorial={(props) => <TermoTutorialDialog {...props} language={puzzle.language} />}
       debug={DebugPanel ? <DebugPanel puzzle={puzzle} generationMs={generationMs} showSolution={showSolution} onToggleSolution={setShowSolution} /> : undefined}
     />
   );

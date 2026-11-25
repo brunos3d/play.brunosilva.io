@@ -173,18 +173,18 @@ describe("scoring", () => {
     expect(scoreGuess(plainLetters("maçãs"), plainLetters("macas"))).toEqual(["right", "right", "right", "right", "right"]);
   });
 
-  it("refuses a short row and an unknown word, each with its own message", () => {
-    expect(checkGuess(["f", "e", "s", "", "a"], PT)).toEqual({ code: "incomplete", message: "A palavra precisa ter 5 letras." });
+  it("refuses a short row and an unknown word, each with its own code and no sentence", () => {
+    expect(checkGuess(["f", "e", "s", "", "a"], PT)).toEqual({ code: "incomplete", values: { length: 5 } });
     expect(checkGuess(["f", "e", "s", "t"], PT)?.code).toBe("incomplete");
-    expect(checkGuess([..."xxxxx"], PT)).toEqual({ code: "unknown", message: "Essa palavra não está na lista." });
+    expect(checkGuess([..."xxxxx"], PT)).toEqual({ code: "unknown" });
     expect(checkGuess([..."festa"], PT)).toBeNull();
   });
 
   it("checks a guess against the list of the puzzle's language", () => {
     expect(checkGuess([..."house"], EN)).toBeNull();
-    expect(checkGuess([..."house"], PT)?.code).toBe("unknown");
-    expect(checkGuess([..."festa"], EN)?.code).toBe("unknown");
-    expect(checkGuess(["h", "o", "u", "s", ""], EN)?.code).toBe("incomplete");
+    expect(checkGuess([..."house"], PT)).toEqual({ code: "unknown" });
+    expect(checkGuess([..."festa"], EN)).toEqual({ code: "unknown" });
+    expect(checkGuess(["h", "o", "u", "s", ""], EN)).toEqual({ code: "incomplete", values: { length: 5 } });
   });
 
   it("keeps the best mark of each letter for the keyboard and stops at the guess that found the word", () => {

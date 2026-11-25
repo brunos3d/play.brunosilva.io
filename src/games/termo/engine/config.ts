@@ -29,14 +29,16 @@ export const TERMO_TIERS: Record<Difficulty, TermoTier> = {
  * What the player picks is a mode, named as on term.ooo, and not a difficulty:
  * Termo is one word, Dueto is two at once and Quarteto is four at once. Seeds
  * keep the platform's four tiers, so each mode maps to one of them. "easy" is
- * also Termo: the daily uses it early in the week, with the more common words.
+ * also Termo, with the more common words. The names are proper names and are
+ * the same in every interface language. What a mode is ("2 words at once, 7
+ * guesses") is a sentence, built by `modeSummaryText` in ./text from the tier.
  */
-export type TermoMode = { name: string; difficulty: Difficulty; summary: string };
+export type TermoMode = { name: string; difficulty: Difficulty };
 
 export const TERMO_MODES: readonly TermoMode[] = [
-  { name: "Termo", difficulty: "medium", summary: "1 word, 6 guesses" },
-  { name: "Dueto", difficulty: "hard", summary: "2 words at once, 7 guesses" },
-  { name: "Quarteto", difficulty: "expert", summary: "4 words at once, 9 guesses" },
+  { name: "Termo", difficulty: "medium" },
+  { name: "Dueto", difficulty: "hard" },
+  { name: "Quarteto", difficulty: "expert" },
 ];
 
 /** Name shown for a tier wherever the platform would say "easy" or "expert". */
