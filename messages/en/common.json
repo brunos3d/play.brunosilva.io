@@ -1,0 +1,122 @@
+{
+  "header": {
+    "home": "{game}. Back to all games",
+    "help": "How to play",
+    "settings": "Settings",
+    "mode": "Game mode",
+    "daily": "Daily",
+    "practice": "Practice",
+    "time": "Time {time}",
+    "themeToDark": "Switch to the dark theme",
+    "themeToLight": "Switch to the light theme"
+  },
+  "switcher": {
+    "label": "Interface language",
+    "current": "Interface language: {language}"
+  },
+  "difficulty": {
+    "easy": "easy",
+    "medium": "medium",
+    "hard": "hard",
+    "expert": "expert"
+  },
+  "controls": {
+    "label": "Game controls",
+    "undo": "Undo",
+    "hint": "Hint",
+    "hintCount": "Hint · {count}",
+    "hintUsed": "Hint. {count} used.",
+    "reveal": "Reveal",
+    "reset": "Reset",
+    "new": "New",
+    "newGame": "New game",
+    "viewResult": "View result",
+    "tryAgain": "Try again"
+  },
+  "reveal": {
+    "title": "Reveal the solution?",
+    "confirm": "Reveal",
+    "daily": "The puzzle solves itself and ends here. Today's puzzle will not count toward your streak, and it will not set a best time.",
+    "practice": "The puzzle solves itself and ends here. It will not set a best time."
+  },
+  "leave": {
+    "title": "Leave this puzzle?",
+    "confirm": "Leave",
+    "body": "Your progress is saved on this device, but the clock keeps running until the puzzle is solved."
+  },
+  "dialog": {
+    "close": "Close",
+    "keepPlaying": "Keep playing"
+  },
+  "result": {
+    "title": "Result",
+    "failed": "Out of guesses",
+    "revealed": "Solution revealed",
+    "flawless": "Flawless",
+    "noHints": "Solved without hints",
+    "solved": "Solved",
+    "daily": "{game} #{number}",
+    "practice": "Practice puzzle",
+    "noCredit": "This one does not count toward your streak or best time.",
+    "replay": "A replay does not set a best time.",
+    "newBest": "New personal best",
+    "best": "Personal best {time}",
+    "hints": "Hints",
+    "moves": "Moves",
+    "streak": "<n>{count}</n> day streak",
+    "longest": "Longest {count}",
+    "share": "Share result",
+    "shared": "Shared",
+    "copied": "Copied to clipboard",
+    "shareFailed": "Could not share",
+    "keepPracticing": "Keep playing in Practice",
+    "next": "Next puzzle",
+    "tryAgain": "Try again",
+    "playToday": "Play today's {game}",
+    "allGames": "All games",
+    "otherGames": "See the other games",
+    "nextIn": "Next puzzle in <time></time>"
+  },
+  "share": {
+    "hints": "Hints",
+    "streak": "Streak"
+  },
+  "practice": {
+    "difficulty": "Difficulty",
+    "size": "Board size",
+    "auto": "Auto",
+    "autoSize": "Automatic size",
+    "sizeOption": "{size} by {size}",
+    "language": "Language of the words",
+    "seed": "Seed (optional)",
+    "seedPlaceholder": "A word, a number, or a shared {prefix}:… seed",
+    "seedNoteSized": "The same seed, difficulty and size always build the same puzzle.",
+    "seedNote": "The same seed and difficulty always build the same puzzle.",
+    "random": "Random puzzle",
+    "playSeed": "Play this seed"
+  },
+  "footer": {
+    "allGames": "All games",
+    "play": "Play {game}",
+    "github": "GitHub"
+  },
+  "loading": {
+    "badSeed": "This seed cannot be played",
+    "badSeedBody": "The game could not build a puzzle from it.",
+    "pickAnother": "Pick another puzzle",
+    "newDaily": "A new daily puzzle is out.",
+    "playIt": "Play it"
+  },
+  "tutorial": {
+    "undo": "Undo",
+    "hint": "Hint",
+    "skip": "Skip",
+    "start": "Start playing",
+    "step": "{number}. {title}"
+  },
+  "notFound": {
+    "title": "This page does not exist",
+    "body": "The link may be old, or the address may have a typo.",
+    "home": "See all games"
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "title": "Configurações",
+  "theme": {
+    "label": "Tema",
+    "hint": "Sistema acompanha o seu aparelho.",
+    "system": "Sistema",
+    "light": "Claro",
+    "dark": "Escuro"
+  },
+  "interface": {
+    "label": "Idioma da interface",
+    "hint": "Menus, botões e mensagens."
+  },
+  "gameLanguage": {
+    "label": "Idioma dos jogos",
+    "hint": "As palavras do Termo e do Wend e o que a treinadora de xadrez diz. Não muda a interface."
+  },
+  "sound": {
+    "label": "Som",
+    "hint": "Sons curtos para jogadas, erros e vitórias."
+  },
+  "vibration": {
+    "label": "Vibração",
+    "supported": "Toques leves em celulares compatíveis.",
+    "unsupported": "Este aparelho não tem vibração."
+  },
+  "replay": "Rever o tutorial",
+  "note": "Estas configurações valem para todos os jogos. Progresso, sequências e melhores tempos ficam salvos só neste aparelho. As animações seguem a configuração de movimento reduzido do sistema."
+}

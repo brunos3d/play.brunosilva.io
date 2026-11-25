@@ -1,0 +1,51 @@
+{
+  "zip": {
+    "name": "Zip",
+    "tagline": "Um caminho, todas as casas",
+    "description": "Desenhe uma única linha que passa pelos números em ordem e preenche o tabuleiro inteiro.",
+    "mistakes": "Recuos",
+    "practiceBlurb": "Tabuleiros sem limite, do mesmo gerador do desafio diário, de 5x5 a 8x8. A prática nunca mexe na sua sequência."
+  },
+  "patches": {
+    "name": "Patches",
+    "tagline": "Uma pista, um retângulo",
+    "description": "Cubra o tabuleiro com retângulos, de modo que cada um contenha exatamente uma pista.",
+    "mistakes": "Redesenhos",
+    "practiceBlurb": "Desafios sem limite, do mesmo gerador do desafio diário. A prática nunca mexe na sua sequência."
+  },
+  "chess": {
+    "name": "Xadrez",
+    "tagline": "Encontre o melhor lance",
+    "description": "Resolva uma tática de uma partida gerada: dê mate, ganhe material ou salve a posição, com uma treinadora ao seu lado.",
+    "mistakes": "Erros",
+    "practiceBlurb": "Problemas sem limite, do mesmo gerador do desafio diário: um lance no fácil, até mate em três no expert. Cada um vem de uma partida jogada desde a posição inicial. A prática nunca mexe na sua sequência."
+  },
+  "queens": {
+    "name": "Queens",
+    "tagline": "Uma rainha por linha, coluna e cor",
+    "description": "Coloque uma rainha em cada linha, coluna e região colorida, sem que duas rainhas se toquem.",
+    "mistakes": "Retiradas",
+    "practiceBlurb": "Tabuleiros sem limite, do mesmo gerador do desafio diário, de 5x5 a 10x10. A prática nunca mexe na sua sequência."
+  },
+  "sumbreak": {
+    "name": "Sumbreak",
+    "tagline": "Junte tudo em uma só peça",
+    "description": "Junte vizinhos iguais na soma dos dois, na ordem certa, até sobrar uma única peça.",
+    "mistakes": "Tropeços",
+    "practiceBlurb": "Tabuleiros sem limite, do mesmo gerador do desafio diário, de 3x3 a 5x5. A prática nunca mexe na sua sequência."
+  },
+  "wend": {
+    "name": "Wend",
+    "tagline": "Palavras escondidas, todas as letras",
+    "description": "Trace as palavras escondidas pelas letras vizinhas até usar todas as letras.",
+    "mistakes": "Apagados",
+    "practiceBlurb": "Tabuleiros temáticos sem limite, do mesmo gerador do desafio diário, de 5x5 a 8x8. A prática nunca mexe na sua sequência."
+  },
+  "termo": {
+    "name": "Termo",
+    "tagline": "Cinco letras, seis tentativas",
+    "description": "Descubra a palavra escondida. Cada tentativa mostra quais letras estão certas, fora de lugar ou ausentes.",
+    "mistakes": "Erros",
+    "practiceBlurb": "Palavras sem limite, das mesmas listas do desafio diário. Toda palavra tem cinco letras. A prática nunca mexe na sua sequência."
+  }
+}

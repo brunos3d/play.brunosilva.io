@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { type CSSProperties, type KeyboardEvent, type PointerEvent, useCallback, useEffect, useId, useMemo, useRef } from "react";
 import type { Topology } from "../../engine/grid";
 import { nextNumber } from "../../engine/rules";
@@ -33,6 +34,7 @@ type BoardProps = {
 const SHAKE_MS = 300;
 
 export function ZipBoard({ puzzle, topology, path, colors, locked, solved, shakeSignal, refusedCell, wrongCells, missingCells, debugSolution, label, onPress, onDrag, onRelease, onKeyStep }: BoardProps) {
+  const t = useTranslations("zip.board");
   const boardRef = useRef<HTMLDivElement>(null);
   const gridRef = useRef<HTMLDivElement>(null);
   // Source of truth for the handlers. React batches pointermove updates, so state would lag behind fast input.
@@ -155,10 +157,10 @@ export function ZipBoard({ puzzle, topology, path, colors, locked, solved, shake
               const cell = row * width + column;
               const order = orderOf.get(cell);
               const number = topology.numberAt[cell];
-              const parts = [`Row ${row + 1}, column ${column + 1}.`];
-              if (number) parts.push(topology.hiddenAt[cell] ? (placeOf.has(cell) ? `Hidden number, number ${placeOf.get(cell)} on this path.` : "Hidden number.") : `Number ${number}.`);
-              if (topology.blockedAt[cell]) parts.push("Blocked.");
-              else parts.push(order === undefined ? "Empty." : cell === head ? `End of the path, step ${order + 1}.` : `On the path, step ${order + 1}.`);
+              const parts = [t("cell", { row: row + 1, column: column + 1 })];
+              if (number) parts.push(topology.hiddenAt[cell] ? (placeOf.has(cell) ? t("hiddenPlaced", { number: placeOf.get(cell) ?? 0 }) : t("hidden")) : t("number", { number }));
+              if (topology.blockedAt[cell]) parts.push(t("blocked"));
+              else parts.push(order === undefined ? t("empty") : t(cell === head ? "head" : "onPath", { step: order + 1 }));
               return (
                 <div
                   key={cell}

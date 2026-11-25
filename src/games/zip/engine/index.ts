@@ -11,4 +11,5 @@ export * from "./generator/figures";
 export * from "./generator/paths";
 export * from "./daily";
 export * from "./hint";
+export * from "./text";
 export * from "./game/state";

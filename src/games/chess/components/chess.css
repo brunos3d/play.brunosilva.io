@@ -158,13 +158,11 @@
 .chess-promotion button:focus-visible { background: #f3dc8f; }
 .chess-promotion svg { width: 100%; height: 100%; display: block; }
 
-@media (prefers-color-scheme: dark) {
-  .chess-board {
-    --square-light: #d9d8be;
-    --square-dark: #67874a;
-    --square-ink-on-light: #67874a;
-    --square-ink-on-dark: #d9d8be;
-  }
+:root[data-theme="dark"] .chess-board {
+  --square-light: #d9d8be;
+  --square-dark: #67874a;
+  --square-ink-on-light: #67874a;
+  --square-ink-on-dark: #d9d8be;
 }
 
 /* ---------- Coach ---------- */

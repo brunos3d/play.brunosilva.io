@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
 import type { Settings } from "@/shared/storage/settings";
 import { Dialog } from "@/shared/ui/dialog";
@@ -14,34 +15,21 @@ import { ZipBoard } from "../board/zip-board";
 export const ZIP_TUTORIAL_SEED = "tutorial-1";
 const TUTORIAL_SIZE = 5;
 
-type Step = { title: string; body: string; done: (game: ZipState, numberTwoCell: number) => boolean };
+/** The steps in order. Titles and bodies are in the "zip" messages, under tutorial.steps.<id>. */
+type Step = { id: "draw" | "order" | "back" | "fill"; done: (game: ZipState, numberTwoCell: number) => boolean };
 
 const STEPS: Step[] = [
-  {
-    title: "Draw the path",
-    body: "The path starts on 1. Press it and drag through the cells next to it. Each cell can be used once.",
-    done: (game) => game.path.length >= 4,
-  },
-  {
-    title: "Numbers in order",
-    body: "The path has to pass the numbers in order, so head for 2. The ringed number is the one you need next. Thick lines are walls, and the path cannot cross them.",
-    done: (game, numberTwo) => game.path.includes(numberTwo),
-  },
-  {
-    title: "Take it back",
-    body: "Made a wrong turn? Drag backwards along the path, or tap any cell on it to cut the path there. Try it now.",
-    done: (game) => game.backtracks >= 1,
-  },
-  {
-    title: "Fill every cell",
-    body: "The puzzle is solved when the path covers every cell and ends on the last number. If you get stuck in a real puzzle, Hint draws the way to the next number.",
-    done: (game) => game.status === "solved",
-  },
+  { id: "draw", done: (game) => game.path.length >= 4 },
+  { id: "order", done: (game, numberTwo) => game.path.includes(numberTwo) },
+  { id: "back", done: (game) => game.backtracks >= 1 },
+  { id: "fill", done: (game) => game.status === "solved" },
 ];
 
 type Props = { open: boolean; settings: Settings; onClose: () => void };
 
 function TutorialBody({ settings, onClose }: Omit<Props, "open">) {
+  const t = useTranslations("zip");
+  const common = useTranslations("common.tutorial");
   const puzzle = useMemo(() => generateZipPuzzle(ZIP_TUTORIAL_SEED, "easy", { size: TUTORIAL_SIZE, version: 1 }), []);
   const game = useZipGame({ puzzle, settings, persist: false });
   const colors = useMemo(() => pathColors(puzzle.id, puzzle.width * puzzle.height), [puzzle]);
@@ -61,14 +49,14 @@ function TutorialBody({ settings, onClose }: Omit<Props, "open">) {
     <div className="flex flex-col gap-3">
       <div className="flex gap-1.5" aria-hidden="true">
         {STEPS.map((entry, index) => (
-          <span key={entry.title} className="h-1.5 flex-1 rounded-full" style={{ background: index < stepIndex ? "var(--valid)" : index === stepIndex ? "var(--ink)" : "var(--thread)" }} />
+          <span key={entry.id} className="h-1.5 flex-1 rounded-full" style={{ background: index < stepIndex ? "var(--valid)" : index === stepIndex ? "var(--ink)" : "var(--thread)" }} />
         ))}
       </div>
 
       <div aria-live="polite" className="min-h-[104px]">
-        <h3 className="font-bold mb-1">{finished ? "That is the whole game" : `${stepIndex + 1}. ${step.title}`}</h3>
+        <h3 className="font-bold mb-1">{finished ? t("tutorial.doneTitle") : common("step", { number: stepIndex + 1, title: t(`tutorial.steps.${step.id}.title`) })}</h3>
         <p className="text-sm leading-relaxed text-[var(--ink-soft)]">
-          {finished ? "One path, every cell, numbers in order. On hard and expert boards some numbers show a ? instead, and the path tells you which they are. The clock starts when you first see a board and only stops when it is solved." : step.body}
+          {finished ? t("tutorial.doneBody") : t(`tutorial.steps.${step.id}.body`)}
         </p>
       </div>
 
@@ -84,7 +72,7 @@ function TutorialBody({ settings, onClose }: Omit<Props, "open">) {
           refusedCell={game.refusedCell}
           wrongCells={game.wrongCells}
           missingCells={game.missingCells}
-          label="Tutorial board, 5 by 5"
+          label={t("board.tutorialLabel", { size: TUTORIAL_SIZE })}
           onPress={game.press}
           onDrag={game.drag}
           onRelease={game.release}
@@ -96,18 +84,18 @@ function TutorialBody({ settings, onClose }: Omit<Props, "open">) {
 
       {finished ? (
         <button type="button" className="mg-button" data-variant="primary" onClick={onClose}>
-          Start playing
+          {common("start")}
         </button>
       ) : (
         <div className="grid grid-cols-3 gap-2">
           <button type="button" className="mg-button" onClick={game.undo} disabled={!game.canUndo}>
-            <UndoIcon /> Undo
+            <UndoIcon /> {common("undo")}
           </button>
           <button type="button" className="mg-button" onClick={game.requestHint}>
-            <HintIcon /> Hint
+            <HintIcon /> {common("hint")}
           </button>
           <button type="button" className="mg-button" onClick={onClose}>
-            Skip
+            {common("skip")}
           </button>
         </div>
       )}
@@ -116,8 +104,9 @@ function TutorialBody({ settings, onClose }: Omit<Props, "open">) {
 }
 
 export function ZipTutorialDialog({ open, settings, onClose }: Props) {
+  const t = useTranslations("zip.tutorial");
   return (
-    <Dialog open={open} onClose={onClose} title="How to play Zip" testId="game-tutorial">
+    <Dialog open={open} onClose={onClose} title={t("title")} testId="game-tutorial">
       <TutorialBody settings={settings} onClose={onClose} />
     </Dialog>
   );

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createRng } from "@/shared/engine/prng";
+import { translator } from "../i18n";
 import {
   BLOCK_FIGURES,
   DIFFICULTIES,
@@ -20,6 +21,8 @@ import {
   getZipDailyInfo,
   getZipDailyPuzzle,
   getZipHint,
+  hintText,
+  moveErrorText,
   isHamiltonianPath,
   mapCell,
   measureTraps,
@@ -54,6 +57,9 @@ const SNAKE_PATH = [0, 1, 2, 5, 4, 3, 6, 7, 8];
 
 const BULK = Number(process.env.ZIP_BULK ?? 40);
 
+/** The English sentences, as a player with the interface in English reads them. */
+const t = translator("zip");
+
 describe("rules", () => {
   const topology = buildTopology(SNAKE);
 
@@ -76,7 +82,8 @@ describe("rules", () => {
     const skipping: ZipShape = { ...SNAKE, checkpoints: [{ number: 1, row: 0, column: 0 }, { number: 3, row: 0, column: 1 }, { number: 2, row: 2, column: 2 }] };
     const error = checkStep(buildTopology(skipping), [0], 1);
     expect(error?.code).toBe("wrong-number");
-    expect(error?.message).toBe("Reach 2 before 3.");
+    expect(moveErrorText(t, error!)).toBe("Reach 2 before 3.");
+    expect(moveErrorText(translator("zip", "pt-br"), error!)).toBe("Chegue ao 2 antes do 3.");
   });
 
   it("respects walls in both directions", () => {
@@ -369,7 +376,8 @@ describe("hidden numbers", () => {
     // Reading the numbers, 3 comes before 2 here. The player cannot see the 2, so the step onto 3 is judged by place: it is the second numbered cell, and it must be the third.
     const refusal = checkStep(topology, [0], 1);
     expect(refusal?.code).toBe("wrong-number");
-    expect(refusal?.message).toContain("third");
+    // The sentence talks about places, so it does not give the hidden number away.
+    expect(moveErrorText(t, refusal!)).toBe("3 has to be the third numbered cell on the path. Here it would be the second.");
     // A hidden cell is never refused for its number, whatever place it takes.
     expect(checkStep(buildTopology(HIDDEN), [0, 1], 4)).toBeNull();
     expect(checkStep(buildTopology(HIDDEN), [0, 3], 4)).toBeNull();
@@ -604,6 +612,16 @@ describe("hints and reveal", () => {
     const detour = topology.neighbors[start].find((cell) => cell !== puzzle.solution[1] && topology.numberAt[cell] === 0)!;
     const hint = getZipHint(topology, puzzle.solution, [start, detour]);
     expect(hint).toMatchObject({ kind: "wrong-turn", keep: 1, wrongCells: [detour] });
+  });
+
+  it("says what it did in the player's language", () => {
+    const start = puzzle.solution[0];
+    const detour = topology.neighbors[start].find((cell) => cell !== puzzle.solution[1] && topology.numberAt[cell] === 0)!;
+    expect(hintText(t, getZipHint(topology, puzzle.solution, []))).toBe("This is the only way to 2 that still leaves every other cell reachable.");
+    expect(hintText(t, getZipHint(topology, puzzle.solution, [detour]))).toBe("The path has to start on 1.");
+    expect(hintText(t, getZipHint(topology, puzzle.solution, [start, detour]))).toBe("The path goes wrong right after 1. From here it can no longer cover every cell, so that part comes off.");
+    expect(hintText(translator("zip", "pt-br"), getZipHint(topology, puzzle.solution, []))).toBe("Este é o único caminho até o 2 que ainda deixa todas as outras casas alcançáveis.");
+    expect(hintText(t, getZipHint(topology, puzzle.solution, puzzle.solution))).toBe("");
   });
 
   it("following hints alone solves every tier", () => {

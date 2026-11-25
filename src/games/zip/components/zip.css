@@ -151,8 +151,6 @@
 }
 
 :root { --visited-tint: 62%; }
-@media (prefers-color-scheme: dark) {
-  :root { --visited-tint: 86%; }
-}
+:root[data-theme="dark"] { --visited-tint: 86%; }
 
 @keyframes zip-celebrate { 0% { transform: scale(1); } 45% { transform: scale(0.84); } 75% { transform: scale(1.05); } 100% { transform: scale(1); } }

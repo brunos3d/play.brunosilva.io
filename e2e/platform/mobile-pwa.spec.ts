@@ -116,9 +116,10 @@ test("after one online visit the hub and every game load and play offline", asyn
   await page.evaluate(async () => {
     await navigator.serviceWorker.ready;
     for (let i = 0; i < 150; i++) {
-      const keys = await (await caches.open("minigames-shell-v4")).keys();
+      const keys = await (await caches.open("minigames-shell-v5")).keys();
       const has = (suffix: string) => keys.some((key) => new URL(key.url).pathname === suffix);
-      if (navigator.serviceWorker.controller && has("/zip/play") && has("/patches/play") && has("/chess/play") && has("/queens/play") && has("/sumbreak/play") && has("/wend/play") && has("/termo/play") && keys.some((key) => key.url.includes("/_next/static/"))) return;
+      // The worker caches the pages of the locale in use, and marks the locale once all of them are in.
+      if (navigator.serviceWorker.controller && has("/__sw/precached/en") && has("/en/zip/play") && has("/en/termo/play") && !has("/pt-br/zip/play") && keys.some((key) => key.url.includes("/_next/static/"))) return;
       await new Promise((resolve) => setTimeout(resolve, 100));
     }
     throw new Error("service worker did not finish precaching");
@@ -127,6 +128,11 @@ test("after one online visit the hub and every game load and play offline", asyn
   await context.setOffline(true);
   await page.reload();
   await expect(page.getByTestId("hub-card-zip")).toBeVisible();
+
+  // The start URL and the shortcuts have no locale. Online the server redirects them. Offline the worker answers with the locale used last.
+  await page.goto("/");
+  await expect(page.getByTestId("hub-card-zip")).toBeVisible();
+  await expect(page.getByRole("link", { name: /Play today's puzzle/ }).first()).toBeVisible();
 
   // Seeds never seen online: the page comes from cache and the puzzle is built on the device.
   await openZip(page, zip.url);

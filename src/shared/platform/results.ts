@@ -44,8 +44,8 @@ export async function buildResult({ game, daily, difficulty, size, seed, summary
 
   if (daily) {
     const stored = record
-      ? await saveDailyResult({ game, date: daily.date, number: daily.number, difficulty: daily.difficulty, seed: daily.seed, ...summary })
-      : await loadDailyResult(game, daily.date);
+      ? await saveDailyResult({ game, ...(daily.variant ? { variant: daily.variant } : {}), date: daily.date, number: daily.number, difficulty: daily.difficulty, seed: daily.seed, ...summary })
+      : await loadDailyResult(game, daily.date, daily.variant);
     if (stored) shown = { elapsedMs: stored.elapsedMs, hintsUsed: stored.hintsUsed, mistakes: stored.mistakes, moves: stored.moves, revealed: stored.revealed, ...(stored.failed ? { failed: true } : {}) };
     streak = computeStreak(streakDates(await loadDailyResults(game)), pacificDateKey(new Date()));
   }

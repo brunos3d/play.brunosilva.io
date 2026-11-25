@@ -21,7 +21,8 @@ export const TERMO_DAILY_CONFIG: daily.DailyConfig = {
   generatorVersion: TERMO_GENERATOR_VERSION,
 };
 
-export const getTermoDailyInfo = (date: DateKey, config = TERMO_DAILY_CONFIG): daily.DailyInfo => daily.getDailyInfo(termoSeeds, config, date);
+/** One daily puzzle per game language: the same date, number and tier, with that language's words. */
+export const getTermoDailyInfo = (date: DateKey, language?: string | null, config = TERMO_DAILY_CONFIG): daily.DailyInfo => daily.getDailyInfo(termoSeeds, config, date, language);
 export const termoDailyDateFromSpec = (spec: PuzzleSpec, config = TERMO_DAILY_CONFIG): DateKey | null => daily.dailyDateFromSpec(termoSeeds, config, spec);
 
 /**

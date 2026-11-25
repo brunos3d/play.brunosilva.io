@@ -51,7 +51,7 @@ export function generateWendPuzzle(seed: string | number, difficulty: Difficulty
 /** Daily puzzle for a Pacific calendar date, or for the Pacific date of an instant. */
 export function getWendDailyPuzzle(when: DateKey | Date, config = WEND_DAILY_CONFIG): { info: DailyInfo; puzzle: WendPuzzle } {
   const date = typeof when === "string" ? when : pacificDateKey(when);
-  const info = getWendDailyInfo(date, config);
+  const info = getWendDailyInfo(date, null, config);
   return { info, puzzle: generateWendFromSpec(info.spec) };
 }
 

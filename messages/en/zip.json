@@ -1,0 +1,66 @@
+{
+  "board": {
+    "label": "Zip board, {width} by {height}, numbers 1 to {last}. Arrow keys move the end of the path. Backspace takes a step back.",
+    "tutorialLabel": "Tutorial board, {size} by {size}",
+    "cell": "Row {row}, column {column}.",
+    "number": "Number {number}.",
+    "hidden": "Hidden number.",
+    "hiddenPlaced": "Hidden number, number {number} on this path.",
+    "blocked": "Blocked.",
+    "empty": "Empty.",
+    "head": "End of the path, step {step}.",
+    "onPath": "On the path, step {step}."
+  },
+  "idle": {
+    "start": "Press 1 and drag to draw the path.",
+    "startHidden": "Press 1 and drag. A ? is a number too, and working out which one is up to you.",
+    "progress": "{filled} of {total} cells. Next number: {next}."
+  },
+  "status": {
+    "solved": "Solved. One path through every cell.",
+    "revealed": "Solution revealed.",
+    "revealing": "Revealing the solution.",
+    "undone": "Last move undone.",
+    "reset": "Path cleared. The clock keeps running.",
+    "endedEarly": "The path reached {last} with {count, plural, one {# cell} other {# cells}} still empty. Back up and cover them first."
+  },
+  "error": {
+    "blocked": "That cell is blocked. The path goes around it.",
+    "start-at-one": "The path starts on 1.",
+    "path-ended": "The path ends on {last}. Back up and cover the empty cells first.",
+    "not-adjacent": "Move to a cell next to the end of the path.",
+    "wall": "A wall blocks the way.",
+    "revisit": "The path cannot cross itself.",
+    "wrong-number": "Reach {position} before {number}.",
+    "wrong-number-hidden": "{number} has to be the {number, select, 1 {first} 2 {second} 3 {third} 4 {fourth} 5 {fifth} 6 {sixth} 7 {seventh} 8 {eighth} 9 {ninth} 10 {tenth} other {{number}th}} numbered cell on the path. Here it would be the {position, select, 1 {first} 2 {second} 3 {third} 4 {fourth} 5 {fifth} 6 {sixth} 7 {seventh} 8 {eighth} 9 {ninth} 10 {tenth} other {{position}th}}."
+  },
+  "hint": {
+    "startOnOne": "The path has to start on 1.",
+    "wrongAfterNumber": "The path goes wrong right after {number}. From here it can no longer cover every cell, so that part comes off.",
+    "wrongAfterCells": "The path goes wrong after {count} cells. From here it can no longer cover every cell, so that part comes off.",
+    "extend": "This is the only way to {target} that still leaves every other cell reachable."
+  },
+  "tutorial": {
+    "title": "How to play Zip",
+    "steps": {
+      "draw": {
+        "title": "Draw the path",
+        "body": "The path starts on 1. Press it and drag through the cells next to it. Each cell can be used once."
+      },
+      "order": {
+        "title": "Numbers in order",
+        "body": "The path has to pass the numbers in order, so head for 2. The ringed number is the one you need next. Thick lines are walls, and the path cannot cross them."
+      },
+      "back": {
+        "title": "Take it back",
+        "body": "Made a wrong turn? Drag backwards along the path, or tap any cell on it to cut the path there. Try it now."
+      },
+      "fill": {
+        "title": "Fill every cell",
+        "body": "The puzzle is solved when the path covers every cell and ends on the last number. If you get stuck in a real puzzle, Hint draws the way to the next number."
+      }
+    },
+    "doneTitle": "That is the whole game",
+    "doneBody": "One path, every cell, numbers in order. On hard and expert boards some numbers show a ? instead, and the path tells you which they are. The clock starts when you first see a board and only stops when it is solved."
+  }
+}

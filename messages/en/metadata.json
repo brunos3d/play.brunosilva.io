@@ -1,0 +1,20 @@
+{
+  "home": {
+    "title": "Minigames | Daily Logic Puzzles",
+    "description": "Small daily logic puzzles. A new board for every game each day, with streaks, hints and unlimited practice.",
+    "imageAlt": "Minigames: small daily logic puzzles"
+  },
+  "daily": "{game} | Daily Puzzle",
+  "practice": "Practice",
+  "play": "Practice puzzle",
+  "imageAlt": "{game}: {tagline}",
+  "games": {
+    "zip": "Draw one path through every cell, passing the numbers in order. A new board every day, plus unlimited practice.",
+    "patches": "Cover the grid with rectangles, one clue each. A new board every day, plus unlimited practice.",
+    "chess": "Solve a chess tactic from a generated game: give mate, win material or save the position, with a coach who explains every move. A new puzzle every day, plus unlimited practice.",
+    "queens": "Place one queen in every row, column and coloured region so that no two queens touch. A new board every day, plus unlimited practice.",
+    "sumbreak": "Merge equal neighbours into their sum, in the right order, until a single tile is left. A new board every day, plus unlimited practice.",
+    "wend": "Trace the hidden words through neighbouring letters until every letter is used. A new themed board every day, in English or Portuguese, plus unlimited practice.",
+    "termo": "Guess the hidden five-letter word in six tries, or two and four words at once. A new word every day, in English or Portuguese, plus unlimited practice."
+  }
+}

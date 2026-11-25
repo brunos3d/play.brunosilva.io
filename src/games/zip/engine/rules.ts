@@ -2,7 +2,12 @@ import { type Topology, areAdjacent, wallKey } from "./grid";
 
 export type MoveErrorCode = "start-at-one" | "blocked" | "not-adjacent" | "wall" | "revisit" | "wrong-number" | "path-ended";
 
-export type MoveError = { code: MoveErrorCode; message: string };
+/**
+ * Why a step is refused, as data: the rule that stops it and the numbers its
+ * sentence needs. The sentence itself is built in ./text.ts, in the player's
+ * language.
+ */
+export type MoveError = { code: MoveErrorCode; values?: Record<string, number>; /** For "wrong-number": the board hides numbers, so the sentence must not give a position away. */ hidden?: boolean };
 
 /**
  * The number the path has to reach next: one more than the numbered cells it
@@ -14,9 +19,6 @@ export function nextNumber(topology: Topology, path: readonly number[]): number 
   for (const cell of path) if (topology.numberAt[cell] !== 0) count++;
   return count + 1;
 }
-
-const ORDINALS = ["", "first", "second", "third", "fourth", "fifth", "sixth", "seventh", "eighth", "ninth", "tenth"];
-const ordinal = (value: number): string => ORDINALS[value] ?? `${value}th`;
 
 /**
  * Can the path grow into `cell`? Returns null when it can, or the rule that
@@ -31,31 +33,29 @@ const ordinal = (value: number): string => ORDINALS[value] ?? `${value}th`;
  * looser rule.
  */
 export function checkStep(topology: Topology, path: readonly number[], cell: number): MoveError | null {
-  if (topology.blockedAt[cell]) return { code: "blocked", message: "That cell is blocked. The path goes around it." };
+  if (topology.blockedAt[cell]) return { code: "blocked" };
   if (path.length === 0) {
-    return cell === topology.start ? null : { code: "start-at-one", message: "The path starts on 1." };
+    return cell === topology.start ? null : { code: "start-at-one" };
   }
   const head = path[path.length - 1];
   if (topology.numberAt[head] === topology.lastNumber) {
-    return { code: "path-ended", message: `The path ends on ${topology.lastNumber}. Back up and cover the empty cells first.` };
+    return { code: "path-ended", values: { last: topology.lastNumber } };
   }
-  if (!areAdjacent(topology.width, head, cell)) return { code: "not-adjacent", message: "Move to a cell next to the end of the path." };
-  if (topology.walls.has(wallKey(head, cell))) return { code: "wall", message: "A wall blocks the way." };
-  if (path.includes(cell)) return { code: "revisit", message: "The path cannot cross itself." };
+  if (!areAdjacent(topology.width, head, cell)) return { code: "not-adjacent" };
+  if (topology.walls.has(wallKey(head, cell))) return { code: "wall" };
+  if (path.includes(cell)) return { code: "revisit" };
 
   const number = topology.numberAt[cell];
   if (number !== 0 && !topology.hiddenAt[cell]) {
     const position = nextNumber(topology, path);
     if (number !== position) {
-      const hasHidden = topology.hiddenAt.some((flag) => flag === 1);
-      const message = hasHidden ? `${number} has to be the ${ordinal(number)} numbered cell on the path. Here it would be the ${ordinal(position)}.` : `Reach ${position} before ${number}.`;
-      return { code: "wrong-number", message };
+      return { code: "wrong-number", values: { number, position }, hidden: topology.hiddenAt.some((flag) => flag === 1) };
     }
   }
   return null;
 }
 
-export type PathValidation = { complete: boolean; error: string | null; uncovered: number[] };
+export type PathValidation = { complete: boolean; /** The first rule the path breaks, or "off-board" for a cell that does not exist. */ error: MoveErrorCode | "off-board" | null; uncovered: number[] };
 
 /**
  * Full check of a path, from scratch. Completion is decided here and nowhere
@@ -66,9 +66,9 @@ export function validatePath(topology: Topology, path: readonly number[]): PathV
   const seen = new Set<number>();
   const walked: number[] = [];
   for (const cell of path) {
-    if (!Number.isInteger(cell) || cell < 0 || cell >= topology.cellCount) return { complete: false, error: "The path leaves the board.", uncovered: [] };
+    if (!Number.isInteger(cell) || cell < 0 || cell >= topology.cellCount) return { complete: false, error: "off-board", uncovered: [] };
     const error = checkStep(topology, walked, cell);
-    if (error) return { complete: false, error: error.message, uncovered: [] };
+    if (error) return { complete: false, error: error.code, uncovered: [] };
     walked.push(cell);
     seen.add(cell);
   }

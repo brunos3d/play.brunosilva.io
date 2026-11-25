@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import { useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
 import { GAMES } from "@/games/registry";
 import type { DailyInfo } from "@/shared/engine/daily";
@@ -40,6 +41,7 @@ export function ZipGame({ spec, daily, onNext }: GameProps) {
 type ViewProps = { spec: PuzzleSpec; puzzle: ZipPuzzle; generationMs: number; daily?: DailyInfo; onNext?: () => void };
 
 function GameView({ spec, puzzle, generationMs, daily, onNext }: ViewProps) {
+  const t = useTranslations("zip");
   const { settings } = useSettings();
   const [showSolution, setShowSolution] = useState(false);
   const game = useZipGame({ puzzle, settings });
@@ -48,8 +50,7 @@ function GameView({ spec, puzzle, generationMs, daily, onNext }: ViewProps) {
 
   const filled = game.game.path.length;
   const hiddenCount = puzzle.checkpoints.filter((checkpoint) => checkpoint.hidden).length;
-  const startText = hiddenCount === 0 ? "Press 1 and drag to draw the path." : "Press 1 and drag. A ? is a number too, and working out which one is up to you.";
-  const idleText = filled === 0 ? startText : `${filled} of ${cellCount} cells. Next number: ${Math.min(nextNumber(game.topology, game.game.path), game.topology.lastNumber)}.`;
+  const idleText = filled === 0 ? t(hiddenCount === 0 ? "idle.start" : "idle.startHidden") : t("idle.progress", { filled, total: cellCount, next: Math.min(nextNumber(game.topology, game.game.path), game.topology.lastNumber) });
 
   return (
     <GameFrame
@@ -75,7 +76,7 @@ function GameView({ spec, puzzle, generationMs, daily, onNext }: ViewProps) {
           wrongCells={game.wrongCells}
           missingCells={game.missingCells}
           debugSolution={showSolution ? puzzle.solution : null}
-          label={`Zip board, ${puzzle.width} by ${puzzle.height}, numbers 1 to ${game.topology.lastNumber}. Arrow keys move the end of the path. Backspace takes a step back.`}
+          label={t("board.label", { width: puzzle.width, height: puzzle.height, last: game.topology.lastNumber })}
           onPress={game.press}
           onDrag={game.drag}
           onRelease={game.release}

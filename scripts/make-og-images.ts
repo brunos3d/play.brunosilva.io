@@ -4,13 +4,18 @@
  * committed, so nothing is generated per request or per build. Run it again
  * only when a name, a tagline or an icon changes.
  *
+ * The images are in English and both locales link to them: a social card is
+ * one picture per page, and the page's own title and description next to it
+ * are translated.
+ *
  * Needs network access the first time: the template loads the same two font
  * families the site uses from Google Fonts.
  */
 import { mkdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { chromium } from "@playwright/test";
-import { GAMES, PLATFORM_NAME } from "@/games/registry";
+import { GAMES, type GameId, PLATFORM_NAME } from "@/games/registry";
+import text from "../messages/en/games.json";
 import { SITE_ORIGIN } from "@/shared/platform/site";
 
 const WIDTH = 1200;
@@ -18,6 +23,9 @@ const HEIGHT = 630;
 const OUT = resolve(process.cwd(), "public/og");
 const icon = (name: string): string => readFileSync(resolve(process.cwd(), `public/icons/${name}.svg`), "utf8");
 const host = SITE_ORIGIN.replace(/^https?:\/\//, "");
+
+const tagline = (game: GameId): string => text[game].tagline;
+const description = (game: GameId): string => text[game].description;
 
 type Card = { file: string; title: string; headline: string; description: string; path: string; art: string };
 
@@ -44,12 +52,12 @@ const cards: Card[] = [
       .map(([name, x, y, turn]) => `<div class="tile mini" style="transform: translate(${x}px, ${y}px) rotate(${turn}deg)">${icon(String(name))}</div>`)
       .join("")}</div>`,
   },
-  { file: "zip.png", title: GAMES.zip.name, headline: GAMES.zip.tagline, description: `${GAMES.zip.description} A new board every day.`, path: GAMES.zip.path, art: singleArt("zip") },
-  { file: "patches.png", title: GAMES.patches.name, headline: GAMES.patches.tagline, description: `${GAMES.patches.description} A new board every day.`, path: GAMES.patches.path, art: singleArt("patches") },
-  { file: "chess.png", title: GAMES.chess.name, headline: GAMES.chess.tagline, description: "Mate, win material or save the position, with a coach at your side. A new puzzle every day.", path: GAMES.chess.path, art: singleArt("chess") },
-  { file: "sumbreak.png", title: GAMES.sumbreak.name, headline: GAMES.sumbreak.tagline, description: "Merge equal neighbours into their sum, in the right order. A new board every day.", path: GAMES.sumbreak.path, art: singleArt("sumbreak") },
-  { file: "wend.png", title: GAMES.wend.name, headline: GAMES.wend.tagline, description: "Trace the hidden Portuguese words through neighbouring letters. A new themed board every day.", path: GAMES.wend.path, art: singleArt("wend") },
-  { file: "termo.png", title: GAMES.termo.name, headline: GAMES.termo.tagline, description: "Guess the hidden Portuguese word. Each guess shows how close you are. A new word every day.", path: GAMES.termo.path, art: singleArt("termo") },
+  { file: "zip.png", title: GAMES.zip.name, headline: tagline("zip"), description: `${description("zip")} A new board every day.`, path: GAMES.zip.path, art: singleArt("zip") },
+  { file: "patches.png", title: GAMES.patches.name, headline: tagline("patches"), description: `${description("patches")} A new board every day.`, path: GAMES.patches.path, art: singleArt("patches") },
+  { file: "chess.png", title: GAMES.chess.name, headline: tagline("chess"), description: "Mate, win material or save the position, with a coach at your side. A new puzzle every day.", path: GAMES.chess.path, art: singleArt("chess") },
+  { file: "sumbreak.png", title: GAMES.sumbreak.name, headline: tagline("sumbreak"), description: "Merge equal neighbours into their sum, in the right order. A new board every day.", path: GAMES.sumbreak.path, art: singleArt("sumbreak") },
+  { file: "wend.png", title: GAMES.wend.name, headline: tagline("wend"), description: "Trace the hidden words through neighbouring letters. A new themed board every day.", path: GAMES.wend.path, art: singleArt("wend") },
+  { file: "termo.png", title: GAMES.termo.name, headline: tagline("termo"), description: "Guess the hidden word. Each guess shows how close you are. A new word every day.", path: GAMES.termo.path, art: singleArt("termo") },
   { file: "queens.png", title: GAMES.queens.name, headline: "One queen per row, column and colour", description: "Place the queens so that no two touch. A new board every day.", path: GAMES.queens.path, art: singleArt("queens") },
 ];
 

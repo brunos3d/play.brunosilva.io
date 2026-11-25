@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useGameClock } from "@/shared/hooks/use-game-clock";
 import { type SoundName, playSound } from "@/shared/platform/audio";
@@ -11,7 +12,8 @@ import { IDLE_STATUS, type StatusMessage } from "@/shared/ui/status-line";
 import { type ZipState, canUndoZip, commitGesture, createZipGame, isZipLocked, recordZipHint, resetZip, revealZipStep, stepTo, truncateTo, undoZip } from "../engine/game/state";
 import { buildTopology } from "../engine/grid";
 import { getZipHint } from "../engine/hint";
-import { validatePath } from "../engine/rules";
+import { type MoveError, validatePath } from "../engine/rules";
+import { hintText, moveErrorText } from "../engine/text";
 import type { ZipShape } from "../engine/types";
 import { fromZipSnapshot, toZipSnapshot } from "../storage/progress";
 
@@ -37,11 +39,14 @@ const summarize = (state: ZipState, elapsedMs: number): FinishSummary => ({
 });
 
 /**
- * Glue between the pure Zip engine and React: the clock, storage, sound and
- * the gesture that turns pointer cells into steps. Mount it with
- * `key={puzzle.id}` so a new puzzle starts from a clean slate.
+ * Glue between the pure Zip engine and React: the clock, storage, sound, the
+ * gesture that turns pointer cells into steps, and the words. The engine
+ * reports what happened as data, and the sentences come from the "zip"
+ * messages of the page's locale. Mount it with `key={puzzle.id}` so a new
+ * puzzle starts from a clean slate.
  */
 export function useZipGame({ puzzle, settings, persist = true }: Options) {
+  const t = useTranslations("zip");
   const topology = useMemo(() => buildTopology(puzzle), [puzzle]);
   const [game, setGame] = useState<ZipState>(() => createZipGame(puzzle.id));
   const [ready, setReady] = useState(!persist);
@@ -88,10 +93,10 @@ export function useZipGame({ puzzle, settings, persist = true }: Options) {
       setMissingCells([]);
       setEndedNow(true);
       setSummary(summarize(state, elapsedMs));
-      setStatus({ kind: "success", text: state.revealed ? "Solution revealed." : "Solved. One path through every cell." });
+      setStatus({ kind: "success", text: t(state.revealed ? "status.revealed" : "status.solved") });
       feedback("complete", "complete");
     },
-    [feedback, finishClock, save],
+    [feedback, finishClock, save, t],
   );
 
   const begin = useCallback(() => {
@@ -100,15 +105,15 @@ export function useZipGame({ puzzle, settings, persist = true }: Options) {
   }, [beginClock, save]);
 
   const refuse = useCallback(
-    (cell: number, message: string) => {
-      setStatus({ kind: "invalid", text: message });
+    (cell: number, error: MoveError) => {
+      setStatus({ kind: "invalid", text: moveErrorText(t, error) });
       setShakeSignal((signal) => signal + 1);
       setRefusedCell(cell);
       window.clearTimeout(refusedTimer.current);
       refusedTimer.current = window.setTimeout(() => setRefusedCell(null), REFUSED_MS);
       feedback("invalid", "invalid");
     },
-    [feedback],
+    [feedback, t],
   );
 
   /** One step of the head, with its sound. Returns false when the rules refused it. */
@@ -120,7 +125,7 @@ export function useZipGame({ puzzle, settings, persist = true }: Options) {
         // A finger resting on a forbidden cell fires many moves. Complain once per cell.
         if (result.error && gesture?.lastRefused !== cell) {
           if (gesture) gesture.lastRefused = cell;
-          refuse(cell, result.error.message);
+          refuse(cell, result.error);
         }
         return false;
       }
@@ -197,12 +202,12 @@ export function useZipGame({ puzzle, settings, persist = true }: Options) {
     if (head === topology.end) {
       const { uncovered } = validatePath(topology, next.path);
       setMissingCells(uncovered);
-      setStatus({ kind: "invalid", text: `The path reached ${topology.lastNumber} with ${uncovered.length} ${uncovered.length === 1 ? "cell" : "cells"} still empty. Back up and cover them first.` });
+      setStatus({ kind: "invalid", text: t("status.endedEarly", { last: topology.lastNumber, count: uncovered.length }) });
     } else {
       setMissingCells([]);
       setStatus(IDLE_STATUS);
     }
-  }, [end, save, show, topology]);
+  }, [end, save, show, t, topology]);
 
   const press = useCallback(
     (cell: number) => {
@@ -275,12 +280,12 @@ export function useZipGame({ puzzle, settings, persist = true }: Options) {
   const runReveal = useCallback(() => {
     setWrongCells([]);
     setMissingCells([]);
-    setStatus({ kind: "info", text: "Revealing the solution." });
+    setStatus({ kind: "info", text: t("status.revealing") });
     autoDraw(
       () => (gameRef.current.status === "solved" ? null : revealZipStep(puzzle.solution, gameRef.current)),
       () => end(gameRef.current),
     );
-  }, [autoDraw, end, puzzle.solution]);
+  }, [autoDraw, end, puzzle.solution, t]);
 
   // Restore saved progress.
   useEffect(() => {
@@ -312,9 +317,9 @@ export function useZipGame({ puzzle, settings, persist = true }: Options) {
     show(next);
     save();
     setMissingCells([]);
-    setStatus({ kind: "info", text: "Last move undone." });
+    setStatus({ kind: "info", text: t("status.undone") });
     feedback("back", "remove");
-  }, [feedback, save, show]);
+  }, [feedback, save, show, t]);
 
   const reset = useCallback(() => {
     if (busyRef.current) return;
@@ -323,9 +328,9 @@ export function useZipGame({ puzzle, settings, persist = true }: Options) {
     show(next);
     save();
     setMissingCells([]);
-    setStatus({ kind: "info", text: "Path cleared. The clock keeps running." });
+    setStatus({ kind: "info", text: t("status.reset") });
     feedback("remove", "remove");
-  }, [feedback, save, show]);
+  }, [feedback, save, show, t]);
 
   /**
    * A hint acts. If the path left the solution, the wrong stretch is flagged
@@ -338,7 +343,7 @@ export function useZipGame({ puzzle, settings, persist = true }: Options) {
     const pathBefore = gameRef.current.path;
     show(recordZipHint(gameRef.current));
     setMissingCells([]);
-    setStatus({ kind: "hint", text: hint.message });
+    setStatus({ kind: "hint", text: hintText(t, hint) });
     feedback("hint", "hint");
 
     const settle = () => {
@@ -368,7 +373,7 @@ export function useZipGame({ puzzle, settings, persist = true }: Options) {
       const result = stepTo(topology, gameRef.current, cell);
       return result.ok ? result.state : null;
     }, settle);
-  }, [autoDraw, end, feedback, puzzle.solution, save, show, topology]);
+  }, [autoDraw, end, feedback, puzzle.solution, save, show, t, topology]);
 
   const reveal = useCallback(() => {
     if (busyRef.current || isZipLocked(gameRef.current)) return;

@@ -1,0 +1,20 @@
+{
+  "home": {
+    "title": "Minigames | Desafios de lógica diários",
+    "description": "Pequenos desafios de lógica diários. Um tabuleiro novo para cada jogo todos os dias, com sequências, dicas e prática sem limite.",
+    "imageAlt": "Minigames: pequenos desafios de lógica diários"
+  },
+  "daily": "{game} | Desafio diário",
+  "practice": "Prática",
+  "play": "Desafio de prática",
+  "imageAlt": "{game}: {tagline}",
+  "games": {
+    "zip": "Desenhe um caminho por todas as casas, passando pelos números em ordem. Um tabuleiro novo todos os dias e prática sem limite.",
+    "patches": "Cubra o tabuleiro com retângulos, uma pista em cada. Um tabuleiro novo todos os dias e prática sem limite.",
+    "chess": "Resolva uma tática de xadrez de uma partida gerada: dê mate, ganhe material ou salve a posição, com uma treinadora que explica cada lance. Um problema novo todos os dias e prática sem limite.",
+    "queens": "Coloque uma rainha em cada linha, coluna e região colorida, sem que duas rainhas se toquem. Um tabuleiro novo todos os dias e prática sem limite.",
+    "sumbreak": "Junte vizinhos iguais na soma dos dois, na ordem certa, até sobrar uma única peça. Um tabuleiro novo todos os dias e prática sem limite.",
+    "wend": "Trace as palavras escondidas pelas letras vizinhas até usar todas as letras. Um tabuleiro temático novo todos os dias, em português ou inglês, e prática sem limite.",
+    "termo": "Descubra a palavra escondida de cinco letras em seis tentativas, ou duas e quatro palavras ao mesmo tempo. Uma palavra nova todos os dias, em português ou inglês, e prática sem limite."
+  }
+}

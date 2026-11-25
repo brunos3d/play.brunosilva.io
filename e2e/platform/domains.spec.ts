@@ -29,9 +29,20 @@ test("deep links and old Zip links survive the move", async ({ request }) => {
 
 test("the canonical address and unknown hosts are served normally", async ({ request }) => {
   for (const host of ["play.brunosilva.io", "preview-abc.vercel.app"]) {
-    const response = await request.get("/", from(host));
+    const response = await request.get("/en", from(host));
     expect(response.status(), host).toBe(200);
   }
-  const plain = await request.get("/zip", { maxRedirects: 0 });
+  const plain = await request.get("/en/zip", { maxRedirects: 0 });
   expect(plain.status()).toBe(200);
+});
+
+test("a shortcut domain never picks the locale: the canonical address does, in a second step", async ({ request }) => {
+  const portuguese = { headers: { "x-forwarded-host": "zip.brunosilva.io", "accept-language": "pt-BR" }, maxRedirects: 0 };
+  const first = await request.get("/", portuguese);
+  expect(first.status()).toBe(308);
+  expect(first.headers().location).toBe("https://play.brunosilva.io/zip");
+
+  const second = await request.get("/zip", { headers: { "accept-language": "pt-BR" }, maxRedirects: 0 });
+  expect(second.status()).toBe(307);
+  expect(new URL(second.headers().location, "http://localhost").pathname).toBe("/pt-br/zip");
 });

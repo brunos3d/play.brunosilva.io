@@ -1,8 +1,9 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { type MouseEvent, type ReactNode, useEffect, useState } from "react";
 import type { GameMeta } from "@/games/registry";
+import { useRouter } from "@/i18n/navigation";
 import type { DailyInfo } from "@/shared/engine/daily";
 import type { Difficulty } from "@/shared/engine/difficulty";
 import { useHydrated, useSettings } from "@/shared/hooks/use-settings";
@@ -76,6 +77,7 @@ const RESULT_DELAY_MS = 1_000;
  * moment the clock starts.
  */
 export function GameFrame({ game, daily, difficulty, size, seed, shareUrl, session, idleText, board, statusSlot, tutorial, debug, onNext, hiddenControls, shareDetail, resultActions }: FrameProps) {
+  const t = useTranslations("common");
   const { settings, update, markTutorialSeen } = useSettings();
   const hydrated = useHydrated();
   const [helpOpen, setHelpOpen] = useState(false);
@@ -172,23 +174,23 @@ export function GameFrame({ game, daily, difficulty, size, seed, shareUrl, sessi
         // A finished practice puzzle: look at the result, play the same board again, or move on to another one.
         <div className="mg-controls w-full grid grid-cols-3 gap-2">
           <button type="button" className="mg-button" data-layout="stacked" onClick={() => setResultOpen(true)} disabled={!result}>
-            <ClockIcon /> View result
+            <ClockIcon /> {t("controls.viewResult")}
           </button>
           <button type="button" className="mg-button" data-layout="stacked" onClick={retry} data-testid="game-retry">
-            <ResetIcon /> Try again
+            <ResetIcon /> {t("controls.tryAgain")}
           </button>
           <button type="button" className="mg-button" data-layout="stacked" data-variant="primary" onClick={onNext} data-testid="game-new">
-            <ShuffleIcon /> New game
+            <ShuffleIcon /> {t("controls.newGame")}
           </button>
         </div>
       ) : summary ? (
         <div className={`mg-controls w-full grid gap-2.5 ${onNext ? "grid-cols-2" : ""}`}>
           <button type="button" className="mg-button" data-variant={onNext ? undefined : "primary"} onClick={() => setResultOpen(true)} disabled={!result}>
-            View result
+            {t("controls.viewResult")}
           </button>
           {onNext && (
             <button type="button" className="mg-button" data-variant="primary" onClick={onNext} data-testid="game-new">
-              <ShuffleIcon /> New game
+              <ShuffleIcon /> {t("controls.newGame")}
             </button>
           )}
         </div>
@@ -220,23 +222,24 @@ export function GameFrame({ game, daily, difficulty, size, seed, shareUrl, sessi
           setSettingsOpen(false);
           setHelpOpen(true);
         }}
+        showGameLanguage={game.language !== undefined}
       />
       <ConfirmDialog
         open={confirmOpen}
-        title="Reveal the solution?"
-        confirmLabel="Reveal"
+        title={t("reveal.title")}
+        confirmLabel={t("reveal.confirm")}
         onClose={() => setConfirmOpen(false)}
         onConfirm={() => {
           setConfirmOpen(false);
           session.reveal();
         }}
       >
-        The puzzle solves itself and ends here. {daily ? "Today's puzzle will not count toward your streak, and it " : "It "}will not set a best time.
+        {t(daily ? "reveal.daily" : "reveal.practice")}
       </ConfirmDialog>
       <ConfirmDialog
         open={leaveOpen}
-        title="Leave this puzzle?"
-        confirmLabel="Leave"
+        title={t("leave.title")}
+        confirmLabel={t("leave.confirm")}
         testId="game-leave"
         onClose={() => setLeaveOpen(false)}
         onConfirm={() => {
@@ -244,7 +247,7 @@ export function GameFrame({ game, daily, difficulty, size, seed, shareUrl, sessi
           router.push("/");
         }}
       >
-        Your progress is saved on this device, but the clock keeps running until the puzzle is solved.
+        {t("leave.body")}
       </ConfirmDialog>
       <ResultDialog game={game} open={resultOpen} result={result} onClose={() => setResultOpen(false)} onNext={onNext} onRetry={onNext && retry ? retry : undefined} shareDetail={shareDetail} actions={resultActions} />
     </main>

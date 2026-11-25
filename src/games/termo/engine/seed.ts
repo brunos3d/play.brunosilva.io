@@ -1,3 +1,5 @@
+import { LOCALES } from "@/i18n/config";
+import { type GameLanguage, LEGACY_WORD_LANGUAGE } from "@/i18n/game-language";
 import { hashHex } from "@/shared/engine/prng";
 import { type PuzzleSpec, createSeedCodec } from "@/shared/engine/seed-codec";
 
@@ -19,7 +21,12 @@ export const termoSeeds = createSeedCodec({
   supportedVersions: [1],
   minSize: TERMO_WORD_LENGTH,
   maxSize: TERMO_WORD_LENGTH,
+  // The words exist in every interface language. A seed without a language is in Portuguese, the language the game shipped in.
+  languages: { supported: LOCALES, legacy: LEGACY_WORD_LANGUAGE },
 });
+
+/** The language a spec's words are in. */
+export const termoLanguage = (spec: PuzzleSpec): GameLanguage => (termoSeeds.languageOf(spec) ?? LEGACY_WORD_LANGUAGE) as GameLanguage;
 
 export const formatTermoSeed = (spec: PuzzleSpec): string => termoSeeds.format(spec);
 

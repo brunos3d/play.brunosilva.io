@@ -10,6 +10,8 @@ import { STORES, idbDelete, idbGet, idbGetAll, idbSet } from "./idb";
  */
 export type DailyResult = {
   game: GameId;
+  /** Language of the day's puzzle, for games with one per language. Missing for the legacy language and for every other game. */
+  variant?: string;
   date: DateKey;
   number: number;
   difficulty: Difficulty;
@@ -28,7 +30,8 @@ export type DailyResult = {
 export type BestTime = { key: string; elapsedMs: number; seed: string };
 
 const boardKey = (game: GameId, puzzleId: string): string => `${game}:${puzzleId}`;
-const dailyKey = (game: GameId, date: DateKey): string => `${game}:${date}`;
+/** The legacy language keeps the key every game has always used, so results stored before a game had languages are still found. */
+const dailyKey = (game: GameId, date: DateKey, variant?: string): string => (variant ? `${game}@${variant}:${date}` : `${game}:${date}`);
 
 export function saveBoard(game: GameId, puzzleId: string, snapshot: unknown): Promise<void> {
   return idbSet(STORES.games, boardKey(game, puzzleId), snapshot);
@@ -45,24 +48,29 @@ export function loadBoard(game: GameId, puzzleId: string): Promise<unknown> {
 
 /** The first result of a date is the one that counts. Replays do not overwrite it. */
 export async function saveDailyResult(result: DailyResult): Promise<DailyResult> {
-  const key = dailyKey(result.game, result.date);
+  const key = dailyKey(result.game, result.date, result.variant);
   const existing = await idbGet<DailyResult>(STORES.daily, key);
   if (existing) return existing;
   await idbSet(STORES.daily, key, result);
   return result;
 }
 
-export function loadDailyResult(game: GameId, date: DateKey): Promise<DailyResult | undefined> {
-  return idbGet<DailyResult>(STORES.daily, dailyKey(game, date));
+export function loadDailyResult(game: GameId, date: DateKey, variant?: string): Promise<DailyResult | undefined> {
+  return idbGet<DailyResult>(STORES.daily, dailyKey(game, date, variant));
 }
 
+/** Every stored result of a game, in all of its languages. */
 export async function loadDailyResults(game: GameId): Promise<DailyResult[]> {
   return (await idbGetAll<DailyResult>(STORES.daily)).filter((result) => result.game === game);
 }
 
-/** Dates that count toward a streak: solved by the player, not revealed. */
+/**
+ * Dates that count toward a streak: solved by the player, not revealed. A game
+ * with one daily puzzle per language has one streak: a date counts once it is
+ * solved in any language.
+ */
 export function streakDates(results: readonly DailyResult[]): DateKey[] {
-  return results.filter((result) => !result.revealed).map((result) => result.date);
+  return [...new Set(results.filter((result) => !result.revealed).map((result) => result.date))];
 }
 
 export function bestTimeKey(game: GameId, difficulty: Difficulty, size: number): string {

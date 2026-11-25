@@ -60,7 +60,7 @@ test("players can move between games and back to the hub from anywhere", async (
   await expect(page).toHaveURL(/\/patches$/);
   await expect(page.getByRole("heading", { name: "Patches" })).toBeVisible();
   await page.getByRole("link", { name: "All games" }).first().click();
-  await expect(page).toHaveURL(/\/$/);
+  await expect(page).toHaveURL(/\/en$/);
   await page.getByTestId("hub-card-patches").getByRole("link", { name: "Practice" }).click();
   await expect(page).toHaveURL(/\/patches\/practice$/);
   await page.getByRole("link", { name: "Daily" }).click();
@@ -89,7 +89,7 @@ test("the game's mark in the header leads home, and asks first once a puzzle is 
 
   // Nothing played yet: the mark is a plain link.
   await page.getByTestId("game-home").click();
-  await expect(page).toHaveURL(/\/$/);
+  await expect(page).toHaveURL(/\/en$/);
   await expect(page.getByRole("heading", { name: "Minigames" })).toBeVisible();
 
   await openZip(page, "/zip");
@@ -102,11 +102,12 @@ test("the game's mark in the header leads home, and asks first once a puzzle is 
   await expect(leave).toBeHidden();
   await expect(page).toHaveURL(/\/zip$/);
 
-  // The grid icon on the right asks the same question, and "Leave" goes home with the board saved.
-  await page.getByRole("link", { name: "All games", exact: true }).first().click();
+  // The header has no second way home: the game's mark is the one, next to help, theme, language and settings.
+  await expect(page.locator(".mg-header").getByRole("link", { name: "All games", exact: true })).toHaveCount(0);
+  await page.getByTestId("game-home").click();
   await expect(leave).toBeVisible();
   await leave.getByRole("button", { name: "Leave" }).click();
-  await expect(page).toHaveURL(/\/$/);
+  await expect(page).toHaveURL(/\/en$/);
   await expect(page.getByTestId("hub-card-zip").getByRole("link", { name: /Continue playing/ })).toBeVisible();
 
   // A solved board has nothing left to lose, so it leaves at once.
@@ -115,7 +116,7 @@ test("the game's mark in the header leads home, and asks first once a puzzle is 
   await expect(page.getByTestId("game-result")).toBeVisible();
   await page.getByTestId("game-result").getByRole("button", { name: "Close" }).click();
   await page.getByTestId("game-home").click();
-  await expect(page).toHaveURL(/\/$/);
+  await expect(page).toHaveURL(/\/en$/);
 });
 
 test("each game has its own practice setup, sizes and icon", async ({ page }) => {
@@ -138,10 +139,10 @@ test("each game has its own practice setup, sizes and icon", async ({ page }) =>
 
 test("an old Zip link lands on the new practice route", async ({ page }) => {
   await page.goto("/hard/42");
-  await expect(page).toHaveURL(/\/zip\/play\?seed=42&difficulty=hard$/);
+  await expect(page).toHaveURL(/\/en\/zip\/play\?seed=42&difficulty=hard$/);
   await expect(page.getByTestId("zip-board")).toBeVisible();
   await page.goto("/nonsense/42");
-  await expect(page).toHaveURL(/\/$/);
+  await expect(page).toHaveURL(/\/en$/);
 });
 
 test("sound is on by default and the setting is shared by both games", async ({ page }) => {

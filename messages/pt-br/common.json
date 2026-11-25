@@ -1,0 +1,122 @@
+{
+  "header": {
+    "home": "{game}. Voltar para todos os jogos",
+    "help": "Como jogar",
+    "settings": "Configurações",
+    "mode": "Modo de jogo",
+    "daily": "Diário",
+    "practice": "Prática",
+    "time": "Tempo {time}",
+    "themeToDark": "Mudar para o tema escuro",
+    "themeToLight": "Mudar para o tema claro"
+  },
+  "switcher": {
+    "label": "Idioma da interface",
+    "current": "Idioma da interface: {language}"
+  },
+  "difficulty": {
+    "easy": "fácil",
+    "medium": "médio",
+    "hard": "difícil",
+    "expert": "expert"
+  },
+  "controls": {
+    "label": "Controles do jogo",
+    "undo": "Desfazer",
+    "hint": "Dica",
+    "hintCount": "Dica · {count}",
+    "hintUsed": "Dica. {count, plural, one {# usada} other {# usadas}}.",
+    "reveal": "Revelar",
+    "reset": "Reiniciar",
+    "new": "Novo",
+    "newGame": "Novo jogo",
+    "viewResult": "Ver resultado",
+    "tryAgain": "Tentar de novo"
+  },
+  "reveal": {
+    "title": "Revelar a solução?",
+    "confirm": "Revelar",
+    "daily": "O desafio se resolve sozinho e termina aqui. O desafio de hoje não conta para a sua sequência e não registra melhor tempo.",
+    "practice": "O desafio se resolve sozinho e termina aqui. Ele não registra melhor tempo."
+  },
+  "leave": {
+    "title": "Sair deste desafio?",
+    "confirm": "Sair",
+    "body": "Seu progresso fica salvo neste aparelho, mas o relógio continua correndo até o desafio ser resolvido."
+  },
+  "dialog": {
+    "close": "Fechar",
+    "keepPlaying": "Continuar jogando"
+  },
+  "result": {
+    "title": "Resultado",
+    "failed": "Acabaram as tentativas",
+    "revealed": "Solução revelada",
+    "flawless": "Impecável",
+    "noHints": "Resolvido sem dicas",
+    "solved": "Resolvido",
+    "daily": "{game} #{number}",
+    "practice": "Desafio de prática",
+    "noCredit": "Este não conta para a sua sequência nem para o melhor tempo.",
+    "replay": "Uma nova tentativa não registra melhor tempo.",
+    "newBest": "Novo recorde pessoal",
+    "best": "Recorde pessoal {time}",
+    "hints": "Dicas",
+    "moves": "Jogadas",
+    "streak": "<n>{count}</n> {count, plural, one {dia seguido} other {dias seguidos}}",
+    "longest": "Maior sequência: {count}",
+    "share": "Compartilhar resultado",
+    "shared": "Compartilhado",
+    "copied": "Copiado para a área de transferência",
+    "shareFailed": "Não foi possível compartilhar",
+    "keepPracticing": "Continuar jogando na Prática",
+    "next": "Próximo desafio",
+    "tryAgain": "Tentar de novo",
+    "playToday": "Jogar o {game} de hoje",
+    "allGames": "Todos os jogos",
+    "otherGames": "Ver os outros jogos",
+    "nextIn": "Próximo desafio em <time></time>"
+  },
+  "share": {
+    "hints": "Dicas",
+    "streak": "Sequência"
+  },
+  "practice": {
+    "difficulty": "Dificuldade",
+    "size": "Tamanho do tabuleiro",
+    "auto": "Auto",
+    "autoSize": "Tamanho automático",
+    "sizeOption": "{size} por {size}",
+    "language": "Idioma das palavras",
+    "seed": "Seed (opcional)",
+    "seedPlaceholder": "Uma palavra, um número ou uma seed {prefix}:… compartilhada",
+    "seedNoteSized": "A mesma seed, dificuldade e tamanho sempre geram o mesmo desafio.",
+    "seedNote": "A mesma seed e dificuldade sempre geram o mesmo desafio.",
+    "random": "Desafio aleatório",
+    "playSeed": "Jogar esta seed"
+  },
+  "footer": {
+    "allGames": "Todos os jogos",
+    "play": "Jogar {game}",
+    "github": "GitHub"
+  },
+  "loading": {
+    "badSeed": "Esta seed não pode ser jogada",
+    "badSeedBody": "O jogo não conseguiu montar um desafio a partir dela.",
+    "pickAnother": "Escolher outro desafio",
+    "newDaily": "Saiu um novo desafio diário.",
+    "playIt": "Jogar"
+  },
+  "tutorial": {
+    "undo": "Desfazer",
+    "hint": "Dica",
+    "skip": "Pular",
+    "start": "Começar a jogar",
+    "step": "{number}. {title}"
+  },
+  "notFound": {
+    "title": "Esta página não existe",
+    "body": "O link pode ser antigo, ou o endereço pode ter um erro de digitação.",
+    "home": "Ver todos os jogos"
+  }
+}

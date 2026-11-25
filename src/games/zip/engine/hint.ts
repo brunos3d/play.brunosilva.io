@@ -1,11 +1,12 @@
 import type { Topology } from "./grid";
 
+/** What a hint does, as data. ./text.ts turns it into the sentence the player reads. */
 export type ZipHint =
-  /** The path left the solution. `keep` cells are right, the rest has to go. */
-  | { kind: "wrong-turn"; keep: number; wrongCells: number[]; message: string }
-  /** The next stretch of the solution, up to and including the next number. */
-  | { kind: "extend"; cells: number[]; message: string }
-  | { kind: "complete"; message: string };
+  /** The path left the solution. `keep` cells are right, the rest has to go. `lastGood` is the last number the right part reached, or 0. */
+  | { kind: "wrong-turn"; keep: number; wrongCells: number[]; lastGood: number }
+  /** The next stretch of the solution, up to and including the next number, `target`. */
+  | { kind: "extend"; cells: number[]; target: number }
+  | { kind: "complete" };
 
 /**
  * Next step for the player. Generated puzzles have exactly one solution, proven
@@ -18,18 +19,9 @@ export function getZipHint(topology: Topology, solution: readonly number[], path
   while (keep < path.length && path[keep] === solution[keep]) keep++;
 
   if (keep < path.length) {
-    const lastGood = keep > 0 ? topology.numberAt[solution[keep - 1]] : 0;
-    return {
-      kind: "wrong-turn",
-      keep,
-      wrongCells: path.slice(keep),
-      message:
-        keep === 0
-          ? "The path has to start on 1."
-          : `The path goes wrong ${lastGood ? `right after ${lastGood}` : `after ${keep} cells`}. From here it can no longer cover every cell, so that part comes off.`,
-    };
+    return { kind: "wrong-turn", keep, wrongCells: path.slice(keep), lastGood: keep > 0 ? topology.numberAt[solution[keep - 1]] : 0 };
   }
-  if (path.length === solution.length) return { kind: "complete", message: "The board is complete." };
+  if (path.length === solution.length) return { kind: "complete" };
 
   const cells: number[] = [];
   for (let index = path.length; index < solution.length; index++) {
@@ -37,6 +29,5 @@ export function getZipHint(topology: Topology, solution: readonly number[], path
     // Stop on the next number, but never hand out just the starting cell.
     if (topology.numberAt[solution[index]] !== 0 && index > 0) break;
   }
-  const target = topology.numberAt[cells[cells.length - 1]];
-  return { kind: "extend", cells, message: `This is the only way to ${target} that still leaves every other cell reachable.` };
+  return { kind: "extend", cells, target: topology.numberAt[cells[cells.length - 1]] };
 }

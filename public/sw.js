@@ -4,11 +4,17 @@
  * Every puzzle is generated on the device, so offline play only needs the app
  * shell: the pages below plus the hashed files they reference.
  *
- * - Install: fetch each page, cache it, then cache every /_next/static file the
- *   HTML mentions. This covers the first visit, when the page loaded before the
- *   worker could see its requests.
+ * - Pages live under a locale: /en/zip, /pt-br/zip. The page tells the worker
+ *   which locale it is in (a "precache" message, see
+ *   src/shared/platform/service-worker.tsx). The worker then fetches every page
+ *   of that locale, caches it, and caches every /_next/static file the HTML
+ *   mentions. Only the locale in use is fetched, once per worker version. The
+ *   other one is cached page by page if the player ever switches.
  * - Navigations: network first, cached page as fallback. The query string is
- *   ignored on fallback because /zip/play?seed=... is one page for all seeds.
+ *   ignored on fallback because /en/zip/play?seed=... is one page for all
+ *   seeds. A path without a locale (the start URL "/", a shortcut such as
+ *   "/zip", an old link) is redirected by the server when online. Offline, the
+ *   worker answers it with the page of the locale used last.
  * - /_next/static, icons and the manifest: cache first. Those URLs are
  *   content-hashed or change only with a release.
  * - React Server Component payloads are never cached. They share a URL with
@@ -16,27 +22,25 @@
  *   the failed fetch makes Next.js fall back to a full navigation, which the
  *   cached page answers.
  */
-const CACHE = "minigames-shell-v4";
-const PAGES = ["/", "/zip", "/zip/practice", "/zip/play", "/patches", "/patches/practice", "/patches/play", "/chess", "/chess/practice", "/chess/play", "/queens", "/queens/practice", "/queens/play", "/sumbreak", "/sumbreak/practice", "/sumbreak/play", "/wend", "/wend/practice", "/wend/play", "/termo", "/termo/practice", "/termo/play"];
+const CACHE = "minigames-shell-v5";
+const LOCALES = ["en", "pt-br"];
+const DEFAULT_LOCALE = "en";
+/** Routes without their locale. "" is the hub. */
+const ROUTES = ["", "/zip", "/zip/practice", "/zip/play", "/patches", "/patches/practice", "/patches/play", "/chess", "/chess/practice", "/chess/play", "/queens", "/queens/practice", "/queens/play", "/sumbreak", "/sumbreak/practice", "/sumbreak/play", "/wend", "/wend/practice", "/wend/play", "/termo", "/termo/practice", "/termo/play"];
 const EXTRAS = ["/manifest.webmanifest", "/icons/platform.svg", "/icons/zip.svg", "/icons/patches.svg", "/icons/chess.svg", "/icons/queens.svg", "/icons/sumbreak.svg", "/icons/wend.svg", "/icons/termo.svg", "/icons/icon-192.png", "/icons/icon-512.png"];
 const STATIC_ASSET = /\/_next\/static\/[^"'\\\s)<>]+/g;
+/** Cache entries that are not pages: the locale used last, and one marker per locale whose pages are all in. */
+const LOCALE_KEY = "/__sw/locale";
+const doneKey = (locale) => `/__sw/precached/${locale}`;
 
-async function precache() {
-  const cache = await caches.open(CACHE);
-  const assets = new Set(EXTRAS);
-  for (const page of PAGES) {
-    try {
-      const response = await fetch(page, { credentials: "same-origin" });
-      if (!response.ok) continue;
-      await cache.put(page, response.clone());
-      for (const match of (await response.text()).match(STATIC_ASSET) ?? []) assets.add(match);
-    } catch {
-      // A page that fails now is cached on its first online visit instead.
-    }
-  }
+const isPage = (path) => LOCALES.some((locale) => ROUTES.some((route) => path === `/${locale}${route}`));
+const localeOf = (path) => LOCALES.find((locale) => path === `/${locale}` || path.startsWith(`/${locale}/`));
+
+async function cacheAssets(cache, urls) {
   await Promise.all(
-    [...assets].map(async (url) => {
+    [...urls].map(async (url) => {
       try {
+        if (await cache.match(url)) return;
         const response = await fetch(url);
         if (response.ok) await cache.put(url, response);
       } catch {
@@ -46,8 +50,38 @@ async function precache() {
   );
 }
 
+async function precache(locale) {
+  const cache = await caches.open(CACHE);
+  await cache.put(LOCALE_KEY, new Response(locale));
+  if (await cache.match(doneKey(locale))) return;
+  const assets = new Set();
+  let complete = true;
+  for (const route of ROUTES) {
+    const page = `/${locale}${route}`;
+    try {
+      const response = await fetch(page, { credentials: "same-origin" });
+      if (!response.ok) {
+        complete = false;
+        continue;
+      }
+      await cache.put(page, response.clone());
+      for (const match of (await response.text()).match(STATIC_ASSET) ?? []) assets.add(match);
+    } catch {
+      // A page that fails now is cached on its first online visit instead, and the next message tries again.
+      complete = false;
+    }
+  }
+  await cacheAssets(cache, assets);
+  if (complete) await cache.put(doneKey(locale), new Response("1"));
+}
+
 self.addEventListener("install", (event) => {
-  event.waitUntil(precache().then(() => self.skipWaiting()));
+  event.waitUntil(
+    caches
+      .open(CACHE)
+      .then((cache) => cacheAssets(cache, EXTRAS))
+      .then(() => self.skipWaiting()),
+  );
 });
 
 self.addEventListener("activate", (event) => {
@@ -59,15 +93,29 @@ self.addEventListener("activate", (event) => {
   );
 });
 
+self.addEventListener("message", (event) => {
+  const data = event.data;
+  if (data && data.type === "precache" && LOCALES.includes(data.locale)) event.waitUntil(precache(data.locale));
+});
+
+async function lastLocale(cache) {
+  const stored = await cache.match(LOCALE_KEY);
+  const locale = stored ? await stored.text() : DEFAULT_LOCALE;
+  return LOCALES.includes(locale) ? locale : DEFAULT_LOCALE;
+}
+
 async function pageFromNetwork(request) {
   const cache = await caches.open(CACHE);
   const path = new URL(request.url).pathname.replace(/\/+$/, "") || "/";
   try {
     const response = await fetch(request);
-    if (response.ok && PAGES.includes(path)) await cache.put(path, response.clone());
+    if (response.ok && isPage(path)) await cache.put(path, response.clone());
     return response;
   } catch {
-    const cached = (await cache.match(path)) ?? (await cache.match("/"));
+    // Offline. A path without a locale would have been redirected by the server: answer it with the locale used last.
+    const locale = localeOf(path) ?? (await lastLocale(cache));
+    const localized = localeOf(path) ? path : `/${locale}${path === "/" ? "" : path}`;
+    const cached = (await cache.match(localized)) ?? (await cache.match(`/${locale}`));
     return cached ?? Response.error();
   }
 }

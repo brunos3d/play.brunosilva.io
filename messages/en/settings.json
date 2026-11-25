@@ -1,0 +1,29 @@
+{
+  "title": "Settings",
+  "theme": {
+    "label": "Theme",
+    "hint": "System follows your device.",
+    "system": "System",
+    "light": "Light",
+    "dark": "Dark"
+  },
+  "interface": {
+    "label": "Interface language",
+    "hint": "Menus, buttons and messages."
+  },
+  "gameLanguage": {
+    "label": "Game language",
+    "hint": "The words in Termo and Wend, and what the chess coach says. It does not change the interface."
+  },
+  "sound": {
+    "label": "Sound",
+    "hint": "Short tones for moves, mistakes and solving."
+  },
+  "vibration": {
+    "label": "Vibration",
+    "supported": "Light taps on supported phones.",
+    "unsupported": "This device does not support vibration."
+  },
+  "replay": "Replay the tutorial",
+  "note": "These settings apply to every game. Progress, streaks and best times are stored on this device only. Animations follow your system's reduced motion setting."
+}

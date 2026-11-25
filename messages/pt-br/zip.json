@@ -1,0 +1,66 @@
+{
+  "board": {
+    "label": "Tabuleiro do Zip, {width} por {height}, números de 1 a {last}. As setas movem a ponta do caminho. Backspace volta um passo.",
+    "tutorialLabel": "Tabuleiro do tutorial, {size} por {size}",
+    "cell": "Linha {row}, coluna {column}.",
+    "number": "Número {number}.",
+    "hidden": "Número escondido.",
+    "hiddenPlaced": "Número escondido, número {number} neste caminho.",
+    "blocked": "Bloqueada.",
+    "empty": "Vazia.",
+    "head": "Ponta do caminho, passo {step}.",
+    "onPath": "No caminho, passo {step}."
+  },
+  "idle": {
+    "start": "Pressione o 1 e arraste para desenhar o caminho.",
+    "startHidden": "Pressione o 1 e arraste. Um ? também é um número, e descobrir qual é fica por sua conta.",
+    "progress": "{filled} de {total} casas. Próximo número: {next}."
+  },
+  "status": {
+    "solved": "Resolvido. Um caminho por todas as casas.",
+    "revealed": "Solução revelada.",
+    "revealing": "Revelando a solução.",
+    "undone": "Última jogada desfeita.",
+    "reset": "Caminho apagado. O relógio continua correndo.",
+    "endedEarly": "O caminho chegou ao {last} com {count, plural, one {# casa ainda vazia} other {# casas ainda vazias}}. Volte e passe por elas antes."
+  },
+  "error": {
+    "blocked": "Essa casa está bloqueada. O caminho passa em volta dela.",
+    "start-at-one": "O caminho começa no 1.",
+    "path-ended": "O caminho termina no {last}. Volte e cubra as casas vazias antes.",
+    "not-adjacent": "Vá para uma casa ao lado da ponta do caminho.",
+    "wall": "Uma parede bloqueia a passagem.",
+    "revisit": "O caminho não pode cruzar a si mesmo.",
+    "wrong-number": "Chegue ao {position} antes do {number}.",
+    "wrong-number-hidden": "O {number} precisa ser a {number}ª casa numerada do caminho. Aqui ele seria a {position}ª."
+  },
+  "hint": {
+    "startOnOne": "O caminho precisa começar no 1.",
+    "wrongAfterNumber": "O caminho erra logo depois do {number}. Daqui ele não consegue mais cobrir todas as casas, então esse trecho sai.",
+    "wrongAfterCells": "O caminho erra depois de {count} casas. Daqui ele não consegue mais cobrir todas as casas, então esse trecho sai.",
+    "extend": "Este é o único caminho até o {target} que ainda deixa todas as outras casas alcançáveis."
+  },
+  "tutorial": {
+    "title": "Como jogar Zip",
+    "steps": {
+      "draw": {
+        "title": "Desenhe o caminho",
+        "body": "O caminho começa no 1. Pressione o 1 e arraste pelas casas vizinhas. Cada casa só pode ser usada uma vez."
+      },
+      "order": {
+        "title": "Números em ordem",
+        "body": "O caminho precisa passar pelos números em ordem, então siga para o 2. O número com um anel é o próximo. As linhas grossas são paredes, e o caminho não passa por elas."
+      },
+      "back": {
+        "title": "Volte atrás",
+        "body": "Errou o caminho? Arraste de volta por cima dele, ou toque em qualquer casa do caminho para cortá-lo ali. Experimente agora."
+      },
+      "fill": {
+        "title": "Preencha todas as casas",
+        "body": "O desafio está resolvido quando o caminho cobre todas as casas e termina no último número. Se você travar em um desafio de verdade, a Dica desenha o trecho até o próximo número."
+      }
+    },
+    "doneTitle": "O jogo é só isso",
+    "doneBody": "Um caminho, todas as casas, números em ordem. Nos tabuleiros difíceis e expert alguns números aparecem como ?, e o caminho mostra quais são. O relógio começa quando você vê o tabuleiro pela primeira vez e só para quando ele é resolvido."
+  }
+}

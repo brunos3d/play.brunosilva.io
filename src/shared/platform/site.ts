@@ -1,4 +1,5 @@
 import { GAMES, type GameId } from "@/games/registry";
+import { LOCALES } from "@/i18n/config";
 import { DIFFICULTIES } from "@/shared/engine/difficulty";
 
 /** The one canonical address of the platform. Everything else redirects here. */
@@ -14,7 +15,20 @@ export const GAME_HOSTS: Record<string, GameId> = {
 };
 
 /** First path segments that already mean something on the canonical address, so they are kept as they are. */
-const KNOWN_ROOTS = new Set<string>([...Object.values(GAMES).map((game) => game.path.slice(1)), ...DIFFICULTIES]);
+const KNOWN_ROOTS = new Set<string>([...Object.values(GAMES).map((game) => game.path.slice(1)), ...DIFFICULTIES, ...LOCALES]);
+
+/**
+ * True for a path that is a page, and so lives under a locale. Files do not:
+ * anything with an extension (sw.js, manifest.webmanifest, icons, Open Graph
+ * images) and Next.js internals are served from the root as they are.
+ */
+export function isPagePath(pathname: string): boolean {
+  if (pathname.startsWith("/_next/") || pathname.startsWith("/api/") || pathname === "/api") return false;
+  // An old Zip link is /<difficulty>/<seed>, and its seed may hold a dot.
+  if ((DIFFICULTIES as readonly string[]).includes(pathname.split("/")[1] ?? "")) return true;
+  const last = pathname.slice(pathname.lastIndexOf("/") + 1);
+  return !/\.[A-Za-z0-9]+$/.test(last);
+}
 
 /**
  * Where a request to a shortcut domain should go, or null when the host is not
@@ -26,6 +40,11 @@ const KNOWN_ROOTS = new Set<string>([...Object.values(GAMES).map((game) => game.
  *   zip.brunosilva.io/play?seed=7      -> play.brunosilva.io/zip/play?seed=7
  *   zip.brunosilva.io/hard/42          -> play.brunosilva.io/hard/42   (old Zip link, redirected again there)
  *   zip.brunosilva.io/patches          -> play.brunosilva.io/patches   (already a full path)
+ *   zip.brunosilva.io/pt-br/zip        -> play.brunosilva.io/pt-br/zip (already has a locale)
+ *
+ * The target never carries a locale of its own: this redirect is permanent and
+ * cached, and the locale depends on the visitor. The proxy adds it in a second
+ * step on the canonical address.
  */
 export function resolveHostRedirect(host: string | null | undefined, pathname: string, search = ""): string | null {
   if (!host) return null;

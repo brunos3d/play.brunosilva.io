@@ -13,5 +13,6 @@ export const WEND_DAILY_CONFIG: daily.DailyConfig = {
   generatorVersion: WEND_GENERATOR_VERSION,
 };
 
-export const getWendDailyInfo = (date: DateKey, config = WEND_DAILY_CONFIG): daily.DailyInfo => daily.getDailyInfo(wendSeeds, config, date);
+/** One daily puzzle per game language: the same date, number and tier, with that language's words. */
+export const getWendDailyInfo = (date: DateKey, language?: string | null, config = WEND_DAILY_CONFIG): daily.DailyInfo => daily.getDailyInfo(wendSeeds, config, date, language);
 export const wendDailyDateFromSpec = (spec: PuzzleSpec, config = WEND_DAILY_CONFIG): DateKey | null => daily.dailyDateFromSpec(wendSeeds, config, spec);

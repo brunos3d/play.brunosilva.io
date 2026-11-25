@@ -68,16 +68,26 @@ describe("settings", () => {
   });
 
   it("turns sound on by default", () => {
-    expect(loadSettings()).toEqual({ sound: true, haptics: true, tutorials: {} });
+    expect(loadSettings()).toEqual({ sound: true, haptics: true, theme: "system", gameLanguage: null, tutorials: {} });
     expect(DEFAULT_SETTINGS.sound).toBe(true);
   });
 
   it("remembers tutorials per game and ignores junk", () => {
-    saveSettings({ sound: false, haptics: true, tutorials: { zip: true } });
-    expect(loadSettings()).toEqual({ sound: false, haptics: true, tutorials: { zip: true } });
+    saveSettings({ ...DEFAULT_SETTINGS, sound: false, tutorials: { zip: true } });
+    expect(loadSettings()).toEqual({ ...DEFAULT_SETTINGS, sound: false, tutorials: { zip: true } });
     store.set("minigames:settings:v1", JSON.stringify({ sound: "loud", tutorials: { patches: "yes", zip: true } }));
-    expect(loadSettings()).toEqual({ sound: true, haptics: true, tutorials: { zip: true } });
+    expect(loadSettings()).toEqual({ ...DEFAULT_SETTINGS, tutorials: { zip: true } });
     store.set("minigames:settings:v1", "{broken");
     expect(loadSettings()).toEqual(DEFAULT_SETTINGS);
+  });
+
+  it("keeps the theme and the game language, and falls back on values it does not know", () => {
+    saveSettings({ ...DEFAULT_SETTINGS, theme: "dark", gameLanguage: "pt-br" });
+    expect(loadSettings()).toMatchObject({ theme: "dark", gameLanguage: "pt-br" });
+    // Settings saved before these two existed, and values from a version that had more of them.
+    store.set("minigames:settings:v1", JSON.stringify({ sound: false, haptics: false, tutorials: {} }));
+    expect(loadSettings()).toMatchObject({ sound: false, theme: "system", gameLanguage: null });
+    store.set("minigames:settings:v1", JSON.stringify({ theme: "sepia", gameLanguage: "fr" }));
+    expect(loadSettings()).toMatchObject({ theme: "system", gameLanguage: null });
   });
 });

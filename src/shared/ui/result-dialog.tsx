@@ -1,12 +1,15 @@
 "use client";
 
-import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { type ReactNode, useEffect, useState } from "react";
-import { GAME_LIST, type GameMeta, difficultyLabel } from "@/games/registry";
+import { GAME_LIST, type GameMeta, dailyVariant } from "@/games/registry";
+import { Link } from "@/i18n/navigation";
 import { formatTime } from "@/shared/engine/clock";
 import type { Difficulty } from "@/shared/engine/difficulty";
 import { msUntilPacificMidnight, pacificDateKey } from "@/shared/engine/pacific-time";
 import type { StreakSummary } from "@/shared/engine/streak";
+import { useGameLanguage } from "@/shared/hooks/use-game-language";
+import { useGameText } from "@/shared/hooks/use-game-text";
 import { buildShareText } from "@/shared/platform/share-text";
 import { type ShareOutcome, share } from "@/shared/platform/sharing";
 import { loadDailyResult } from "@/shared/storage/progress";
@@ -52,7 +55,8 @@ type Props = {
   actions?: ReactNode;
 };
 
-const SHARE_LABEL: Record<ShareOutcome, string> = { shared: "Shared", copied: "Copied to clipboard", cancelled: "Share result", failed: "Could not share" };
+/** Message key of what the share button says after a share. */
+const SHARE_LABEL: Record<ShareOutcome, string> = { shared: "shared", copied: "copied", cancelled: "share", failed: "shareFailed" };
 const SHARE_LABEL_RESET_MS = 2_500;
 /** How many other games the result screen suggests. The rest are one tap away, on the hub. */
 const SUGGESTIONS = 2;
@@ -64,18 +68,20 @@ const SUGGESTIONS = 2;
  */
 function useSuggestedGames(current: GameMeta, open: boolean): GameMeta[] | null {
   const [suggested, setSuggested] = useState<GameMeta[] | null>(null);
+  const { language } = useGameLanguage();
   useEffect(() => {
     if (!open) return;
     let cancelled = false;
     const today = pacificDateKey(new Date());
     const others = GAME_LIST.filter((entry) => entry.id !== current.id);
-    void Promise.all(others.map((entry) => loadDailyResult(entry.id, today).catch(() => undefined))).then((results) => {
+    // A game with one daily per language is open while the one in the player's game language is.
+    void Promise.all(others.map((entry) => loadDailyResult(entry.id, today, dailyVariant(entry, language)).catch(() => undefined))).then((results) => {
       if (!cancelled) setSuggested(others.filter((_, index) => !results[index]).slice(0, SUGGESTIONS));
     });
     return () => {
       cancelled = true;
     };
-  }, [current.id, open]);
+  }, [current.id, language, open]);
   return suggested;
 }
 
@@ -86,6 +92,7 @@ function formatCountdown(ms: number): string {
 }
 
 function NextPuzzleCountdown() {
+  const t = useTranslations("common.result");
   const [remaining, setRemaining] = useState<number | null>(null);
   useEffect(() => {
     const update = () => setRemaining(msUntilPacificMidnight(new Date()));
@@ -98,20 +105,24 @@ function NextPuzzleCountdown() {
   }, []);
   return (
     <p className="text-center text-sm text-[var(--ink-soft)]" data-testid="game-next-countdown">
-      Next puzzle in <span className="font-semibold tabular-nums text-[var(--ink)]">{remaining === null ? "--:--:--" : formatCountdown(remaining)}</span>
+      {t.rich("nextIn", { time: () => <span className="font-semibold tabular-nums text-[var(--ink)]">{remaining === null ? "--:--:--" : formatCountdown(remaining)}</span> })}
     </p>
   );
 }
 
+/** Message key of the result's title. */
 function headline(result: ResultData): string {
-  if (result.failed) return "Out of guesses";
-  if (result.revealed) return "Solution revealed";
-  if (result.hintsUsed === 0 && result.mistakes === 0) return "Flawless";
-  if (result.hintsUsed === 0) return "Solved without hints";
-  return "Solved";
+  if (result.failed) return "failed";
+  if (result.revealed) return "revealed";
+  if (result.hintsUsed === 0 && result.mistakes === 0) return "flawless";
+  if (result.hintsUsed === 0) return "noHints";
+  return "solved";
 }
 
 export function ResultDialog({ game, open, result, onClose, onNext, onRetry, shareDetail, actions }: Props) {
+  const t = useTranslations("common.result");
+  const share_ = useTranslations("common.share");
+  const text = useGameText();
   const [shareLabel, setShareLabel] = useState<string | null>(null);
   const suggested = useSuggestedGames(game, open);
 
@@ -123,22 +134,32 @@ export function ResultDialog({ game, open, result, onClose, onNext, onRetry, sha
 
   if (!result) {
     return (
-      <Dialog open={false} onClose={onClose} title="Result">
+      <Dialog open={false} onClose={onClose} title={t("title")}>
         {null}
       </Dialog>
     );
   }
 
   const isDaily = result.dailyNumber !== undefined;
+  const name = text.name(game.id);
   const handleShare = async () => {
-    const text = buildShareText({ ...result, size: game.hasSizes ? result.size : undefined, gameName: game.name, difficultyLabel: difficultyLabel(game, result.difficulty), mistakesLabel: game.mistakesLabel, streak: result.streak?.current, detail: shareDetail?.() });
-    setShareLabel(SHARE_LABEL[await share({ title: game.name, text, url: result.shareUrl })]);
+    const shared = buildShareText({
+      ...result,
+      size: game.hasSizes ? result.size : undefined,
+      gameName: name,
+      difficultyLabel: text.tier(game, result.difficulty),
+      mistakesLabel: text.mistakes(game.id),
+      streak: result.streak?.current,
+      detail: shareDetail?.(),
+      labels: { hints: share_("hints"), streak: share_("streak") },
+    });
+    setShareLabel(t(SHARE_LABEL[await share({ title: name, text: shared, url: result.shareUrl })]));
   };
 
   return (
-    <Dialog open={open} onClose={onClose} title={headline(result)} testId="game-result">
+    <Dialog open={open} onClose={onClose} title={t(headline(result))} testId="game-result">
       <p className="text-sm text-[var(--ink-soft)] -mt-2 mb-4">
-        {isDaily ? `${game.name} #${result.dailyNumber}` : "Practice puzzle"} · <span className="capitalize">{difficultyLabel(game, result.difficulty)}</span>
+        {isDaily ? t("daily", { game: name, number: result.dailyNumber ?? 0 }) : t("practice")} · <span className="capitalize">{text.tier(game, result.difficulty)}</span>
         {game.hasSizes && ` · ${result.size}×${result.size}`}
       </p>
 
@@ -148,32 +169,32 @@ export function ResultDialog({ game, open, result, onClose, onNext, onRetry, sha
         </div>
         <div className="mt-2 text-sm font-semibold text-[var(--ink-soft)] flex items-center justify-center gap-1 min-h-5">
           {result.revealed ? (
-            <>This one does not count toward your streak or best time.</>
+            <>{t("noCredit")}</>
           ) : result.replay ? (
-            <>A replay does not set a best time.</>
+            <>{t("replay")}</>
           ) : result.best?.isNew ? (
             <>
-              <CheckIcon className="w-4 h-4 text-[var(--valid)]" /> New personal best
+              <CheckIcon className="w-4 h-4 text-[var(--valid)]" /> {t("newBest")}
             </>
           ) : result.best ? (
-            <>Personal best {formatTime(result.best.elapsedMs)}</>
+            <>{t("best", { time: formatTime(result.best.elapsedMs) })}</>
           ) : null}
         </div>
       </div>
 
       <dl className="grid grid-cols-3 gap-2 mb-3">
-        <div className="mg-stat"><dt>Hints</dt><dd>{result.hintsUsed}</dd></div>
-        <div className="mg-stat"><dt>{game.mistakesLabel}</dt><dd>{result.mistakes}</dd></div>
-        <div className="mg-stat"><dt>Moves</dt><dd>{result.moves}</dd></div>
+        <div className="mg-stat"><dt>{t("hints")}</dt><dd>{result.hintsUsed}</dd></div>
+        <div className="mg-stat"><dt>{text.mistakes(game.id)}</dt><dd>{result.mistakes}</dd></div>
+        <div className="mg-stat"><dt>{t("moves")}</dt><dd>{result.moves}</dd></div>
       </dl>
 
       {result.streak && (
         <div className="flex items-center justify-between rounded-xl px-4 py-3 mb-4 bg-[var(--linen)]">
           <div className="flex items-center gap-2 font-semibold">
             <FlameIcon className="w-5 h-5 text-[var(--accent)]" />
-            <span data-testid="game-streak">{result.streak.current}</span> day streak
+            <span>{t.rich("streak", { count: result.streak.current, n: (chunks) => <span data-testid="game-streak">{chunks}</span> })}</span>
           </div>
-          <div className="text-sm text-[var(--ink-soft)]">Longest {result.streak.longest}</div>
+          <div className="text-sm text-[var(--ink-soft)]">{t("longest", { count: result.streak.longest })}</div>
         </div>
       )}
 
@@ -181,38 +202,38 @@ export function ResultDialog({ game, open, result, onClose, onNext, onRetry, sha
         {/* A lost game is shared too: its grid says how close it came. A revealed one has nothing to show. */}
         {(!result.revealed || result.failed) && (
           <button type="button" className="mg-button" data-variant="primary" onClick={handleShare}>
-            <ShareIcon /> <span aria-live="polite">{shareLabel ?? "Share result"}</span>
+            <ShareIcon /> <span aria-live="polite">{shareLabel ?? t("share")}</span>
           </button>
         )}
         {actions ??
           (isDaily ? (
             <Link href={`${game.path}/practice`} prefetch={false} className="mg-button">
-              <ShuffleIcon /> Keep playing in Practice
+              <ShuffleIcon /> {t("keepPracticing")}
             </Link>
           ) : (
             onNext && (
               <button type="button" className="mg-button" data-variant={result.revealed ? "primary" : undefined} onClick={onNext}>
-                <ShuffleIcon /> Next puzzle
+                <ShuffleIcon /> {t("next")}
               </button>
             )
           ))}
         {onRetry && (
           <button type="button" className="mg-button" onClick={onRetry} data-testid="game-result-retry">
-            <ResetIcon /> Try again
+            <ResetIcon /> {t("tryAgain")}
           </button>
         )}
         {!actions &&
           suggested?.map((other) => (
             <Link key={other.id} href={other.path} prefetch={false} className="mg-button justify-between" data-testid="game-result-suggestion">
               <span className="flex items-center gap-2.5">
-                <GameIcon game={other.id} className="w-7 h-7 rounded-[7px]" /> Play today&apos;s {other.name}
+                <GameIcon game={other.id} className="w-7 h-7 rounded-[7px]" /> {t("playToday", { game: text.name(other.id) })}
               </span>
               <ArrowRightIcon />
             </Link>
           ))}
         {suggested && (
           <Link href="/" prefetch={false} className="mg-button justify-between" data-testid="game-result-all">
-            {!actions && suggested.length === 0 ? "All games" : "See the other games"} <ArrowRightIcon />
+            {t(!actions && suggested.length === 0 ? "allGames" : "otherGames")} <ArrowRightIcon />
           </Link>
         )}
         {isDaily && <NextPuzzleCountdown />}

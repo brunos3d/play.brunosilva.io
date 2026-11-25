@@ -45,6 +45,12 @@ export type DailyInfo = {
   difficulty: Difficulty;
   spec: PuzzleSpec;
   seed: string;
+  /**
+   * Set when the game has one daily puzzle per language and this is not the
+   * legacy one: the language code. Results of a variant are stored apart, so
+   * the day's puzzle in one language does not close the day in another.
+   */
+  variant?: string;
 };
 
 export function dailyDifficulty(codec: SeedCodec, config: DailyConfig, date: DateKey): Difficulty {
@@ -57,16 +63,20 @@ export function dailyNumber(config: DailyConfig, date: DateKey): number {
   return daysBetween(config.epoch, date) + 1;
 }
 
-/** The daily seed is an ordinary seed whose token is the Pacific date. */
-export function getDailyInfo(codec: SeedCodec, config: DailyConfig, date: DateKey): DailyInfo {
+/**
+ * The daily seed is an ordinary seed whose token is the Pacific date. A game
+ * with languages has one daily puzzle per language: same date, same number,
+ * same difficulty, different words.
+ */
+export function getDailyInfo(codec: SeedCodec, config: DailyConfig, date: DateKey, lang?: string | null): DailyInfo {
   if (!isDateKey(date)) throw new RangeError(`Invalid daily date: ${date}`);
   const difficulty = dailyDifficulty(codec, config, date);
-  const spec: PuzzleSpec = { token: date, version: dailyGeneratorVersion(config, date), difficulty };
-  return { date, number: dailyNumber(config, date), difficulty, spec, seed: codec.format(spec) };
+  const spec = codec.withLanguage({ token: date, version: dailyGeneratorVersion(config, date), difficulty }, lang);
+  return { date, number: dailyNumber(config, date), difficulty, spec, seed: codec.format(spec), ...(spec.lang ? { variant: spec.lang } : {}) };
 }
 
 /** Recognizes a daily seed and returns its date. Forged difficulty or size does not match. */
 export function dailyDateFromSpec(codec: SeedCodec, config: DailyConfig, spec: PuzzleSpec): DateKey | null {
   if (!isDateKey(spec.token) || spec.size !== undefined) return null;
-  return getDailyInfo(codec, config, spec.token).seed === codec.format(spec) ? spec.token : null;
+  return getDailyInfo(codec, config, spec.token, spec.lang).seed === codec.format(spec) ? spec.token : null;
 }

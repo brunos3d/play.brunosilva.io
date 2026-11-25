@@ -6,6 +6,7 @@
  */
 
 :root {
+  color-scheme: light;
   --linen: #f6f1e7;
   --linen-deep: #ece4d4;
   --surface: #fffdf8;
@@ -48,27 +49,33 @@
     env(safe-area-inset-bottom) env(safe-area-inset-left);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --linen: #1d1a17;
-    --linen-deep: #26221e;
-    --surface: #2b2622;
-    --ink: #f1eadd;
-    --ink-soft: #b8ad9d;
-    --ink-faint: #7d7468;
-    --thread: #453e36;
-    --board: #171412;
-    --tile: #2e2924;
-    --accent: #e0765e;
-    --accent-ink: #1d1a17;
-    --valid: #6fcf9f;
-    --invalid: #ff8a7a;
-    --hint: #f0b95a;
-    /* Clue ink stays dark because placed patches are pastel in both themes. A stronger tint keeps it readable on the dark board. */
-    --clue-tint: 82%;
-    --clue-edge: 40%;
-    --shadow: 0 1px 0 rgb(0 0 0 / 0.3), 0 10px 28px -12px rgb(0 0 0 / 0.7);
-  }
+/*
+ * The dark theme. `data-theme` is always set on <html>: an inline script resolves
+ * the player's setting, or the device's colour scheme, before the first paint
+ * (theme-script.tsx), and ThemeSync keeps it current. There is no
+ * `prefers-color-scheme` rule in the stylesheets, so a theme picked by hand
+ * and the device's own never disagree.
+ */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --linen: #1d1a17;
+  --linen-deep: #26221e;
+  --surface: #2b2622;
+  --ink: #f1eadd;
+  --ink-soft: #b8ad9d;
+  --ink-faint: #7d7468;
+  --thread: #453e36;
+  --board: #171412;
+  --tile: #2e2924;
+  --accent: #e0765e;
+  --accent-ink: #1d1a17;
+  --valid: #6fcf9f;
+  --invalid: #ff8a7a;
+  --hint: #f0b95a;
+  /* Clue ink stays dark because placed patches are pastel in both themes. A stronger tint keeps it readable on the dark board. */
+  --clue-tint: 82%;
+  --clue-edge: 40%;
+  --shadow: 0 1px 0 rgb(0 0 0 / 0.3), 0 10px 28px -12px rgb(0 0 0 / 0.7);
 }
 
 .mg-root input,
@@ -306,6 +313,71 @@
   touch-action: manipulation;
 }
 .mg-home-link:hover { background: var(--linen-deep); }
+.mg-home-mark { width: 36px; height: 36px; }
+.mg-home-name { font-size: 28px; }
+
+/*
+ * The header carries four icon buttons next to the game's name. On a narrow
+ * phone they give up some width, and the name some size, so "Sumbreak #167"
+ * and the buttons still share one line at 360 px. The buttons keep their
+ * height, which is what a thumb needs.
+ */
+@media (max-width: 430px) {
+  .mg-header-actions .mg-icon-button { width: 38px; }
+  .mg-home-link { gap: 8px; padding-right: 6px; }
+  .mg-home-mark { width: 32px; height: 32px; }
+  .mg-home-name { font-size: 24px; }
+}
+@media (max-width: 380px) {
+  .mg-header-actions .mg-icon-button { width: 35px; }
+  .mg-home-name { font-size: 22px; }
+}
+
+/* ---------- Language switcher ---------- */
+
+.mg-flag {
+  width: 22px;
+  height: auto;
+  flex: none;
+  border-radius: 3px;
+  box-shadow: 0 0 0 1px rgb(0 0 0 / 0.18);
+}
+/* The icon button sizes every svg inside it for line icons. A flag keeps its own proportions. */
+.mg-icon-button .mg-flag { width: 22px; height: auto; }
+
+.mg-locale { position: relative; }
+
+.mg-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 30;
+  min-width: 212px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px;
+  border-radius: 14px;
+  background: var(--surface);
+  box-shadow: 0 0 0 1.5px var(--thread), 0 18px 40px -16px rgb(0 0 0 / 0.45);
+  animation: fade-in 120ms ease both;
+}
+.mg-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 0 12px;
+  border-radius: 10px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ink);
+  white-space: nowrap;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.mg-menu-item:hover,
+.mg-menu-item:focus-visible { background: var(--linen-deep); }
 
 .mg-chip {
   display: inline-flex;
@@ -430,6 +502,13 @@
   color: var(--ink);
   background: var(--surface);
   box-shadow: 0 1px 3px rgb(0 0 0 / 0.12);
+}
+/* A language option: flag and name side by side. */
+.mg-segment .mg-segment-flag {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
 }
 
 .mg-loading-cell::before { animation: loading-cell 1100ms ease-in-out infinite; animation-delay: var(--delay, 0ms); }

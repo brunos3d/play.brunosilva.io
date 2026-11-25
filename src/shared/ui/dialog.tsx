@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { type ReactNode, useEffect, useRef } from "react";
 import { CloseIcon } from "@/shared/ui/icons";
 
@@ -15,6 +16,7 @@ type DialogProps = {
 
 /** Native <dialog>: focus trap, Escape handling and inert background come from the browser. */
 export function Dialog({ open, onClose, title, modalOnly = false, testId, children }: DialogProps) {
+  const t = useTranslations("common.dialog");
   const ref = useRef<HTMLDialogElement>(null);
 
   useEffect(() => {
@@ -48,7 +50,7 @@ export function Dialog({ open, onClose, title, modalOnly = false, testId, childr
           <div className="flex items-start justify-between gap-3 mb-4">
             <h2 className="mg-display text-2xl font-semibold leading-tight">{title}</h2>
             {!modalOnly && (
-              <button type="button" className="mg-icon-button -mr-2 -mt-2" aria-label="Close" onClick={onClose}>
+              <button type="button" className="mg-icon-button -mr-2 -mt-2" aria-label={t("close")} onClick={onClose}>
                 <CloseIcon />
               </button>
             )}

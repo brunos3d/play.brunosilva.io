@@ -1,0 +1,51 @@
+{
+  "zip": {
+    "name": "Zip",
+    "tagline": "One path, every cell",
+    "description": "Draw a single line through the numbers in order and fill the whole grid.",
+    "mistakes": "Backtracks",
+    "practiceBlurb": "Unlimited boards from the same generator as the daily, from 5x5 to 8x8. Practice never touches your streak."
+  },
+  "patches": {
+    "name": "Patches",
+    "tagline": "One clue, one rectangle",
+    "description": "Cover the grid with rectangles so that each one holds exactly one clue.",
+    "mistakes": "Redraws",
+    "practiceBlurb": "Unlimited puzzles from the same generator as the daily. Practice never touches your streak."
+  },
+  "chess": {
+    "name": "Chess",
+    "tagline": "Find the best move",
+    "description": "Solve a tactic from a generated game: give mate, win material or save the position, with a coach at your side.",
+    "mistakes": "Mistakes",
+    "practiceBlurb": "Unlimited puzzles from the same generator as the daily: one move on easy, up to a mate in three on expert. Each one comes from a game played out from the starting position. Practice never touches your streak."
+  },
+  "queens": {
+    "name": "Queens",
+    "tagline": "One queen per row, column and colour",
+    "description": "Place a queen in every row, column and coloured region so that no two queens touch.",
+    "mistakes": "Takebacks",
+    "practiceBlurb": "Unlimited boards from the same generator as the daily, from 5x5 to 10x10. Practice never touches your streak."
+  },
+  "sumbreak": {
+    "name": "Sumbreak",
+    "tagline": "Merge down to one tile",
+    "description": "Merge equal neighbours into their sum, in the right order, until a single tile is left.",
+    "mistakes": "Missteps",
+    "practiceBlurb": "Unlimited boards from the same generator as the daily, from 3x3 to 5x5. Practice never touches your streak."
+  },
+  "wend": {
+    "name": "Wend",
+    "tagline": "Hidden words, every letter",
+    "description": "Trace the hidden words through neighbouring letters until every letter is used.",
+    "mistakes": "Erased",
+    "practiceBlurb": "Unlimited themed boards from the same generator as the daily, from 5x5 to 8x8. Practice never touches your streak."
+  },
+  "termo": {
+    "name": "Termo",
+    "tagline": "Five letters, six guesses",
+    "description": "Guess the hidden word. Every guess shows which letters are right, misplaced or absent.",
+    "mistakes": "Misses",
+    "practiceBlurb": "Unlimited words from the same lists as the daily. Every word has five letters. Practice never touches your streak."
+  }
+}

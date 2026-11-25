@@ -18,15 +18,13 @@
   --termo-key: var(--surface);
 }
 
-@media (prefers-color-scheme: dark) {
-  .termo-stage,
-  .termo-below {
-    --termo-right: #3f946d;
-    --termo-place: #dba63a;
-    --termo-place-ink: #1d1a17;
-    --termo-wrong: #3b352f;
-    --termo-wrong-ink: #b8ad9d;
-  }
+:root[data-theme="dark"] .termo-stage,
+:root[data-theme="dark"] .termo-below {
+  --termo-right: #3f946d;
+  --termo-place: #dba63a;
+  --termo-place-ink: #1d1a17;
+  --termo-wrong: #3b352f;
+  --termo-wrong-ink: #b8ad9d;
 }
 
 /* The shared stage narrows on short screens to keep a square board in view. Termo sizes its own tiles, so it takes the full width. */
