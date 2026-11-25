@@ -172,6 +172,9 @@ export function HubOnline() {
   const { ranking, error } = useRanking("week", "all");
   if (unavailable || error === "unavailable") return null;
   const top = ranking?.entries.slice(0, 3) ?? [];
+  // The player's own row goes under the top three when they are not in it, so the home screen always answers "where am I?".
+  const mine = ranking?.entries.find((entry) => entry.id === me?.id) ?? ranking?.you ?? null;
+  const own = mine && !top.some((entry) => entry.id === mine.id) ? mine : null;
 
   return (
     <section className="mg-card" data-testid="hub-online">
@@ -187,6 +190,7 @@ export function HubOnline() {
           {top.map((entry) => (
             <RankingRow key={entry.id} entry={entry} you={entry.id === me?.id} byTime={false} />
           ))}
+          {own && <RankingRow entry={own} you byTime={false} />}
         </ol>
       )}
       <div className="grid grid-cols-2 gap-2">
