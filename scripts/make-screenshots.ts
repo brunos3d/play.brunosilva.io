@@ -25,9 +25,10 @@ const OUT = resolve(process.cwd(), ".github/screenshots");
 const PHONE = { width: 390, height: 720 };
 
 async function newPage(browser: Browser, colorScheme: "light" | "dark", height = PHONE.height): Promise<Page> {
-  const context = await browser.newContext({ baseURL: BASE_URL, viewport: { width: PHONE.width, height }, deviceScaleFactor: 2, colorScheme });
+  const context = await browser.newContext({ baseURL: BASE_URL, viewport: { width: PHONE.width, height }, deviceScaleFactor: 2, colorScheme, locale: "en-US" });
   await context.addInitScript(([key]) => {
-    localStorage.setItem(key, JSON.stringify({ sound: false, haptics: false, tutorials: { zip: true, patches: true, chess: true, queens: true, sumbreak: true, wend: true, termo: true } }));
+    // English throughout, like the README: the interface by the browser's language, the games by this setting.
+    localStorage.setItem(key, JSON.stringify({ sound: false, haptics: false, theme: "system", gameLanguage: "en", tutorials: { zip: true, patches: true, chess: true, queens: true, sumbreak: true, wend: true, termo: true } }));
   }, [SETTINGS_KEY]);
   return context.newPage();
 }
@@ -57,7 +58,7 @@ async function shootGames(browser: Browser, colorScheme: "light" | "dark", suffi
   const chess = chessPuzzle("readme-9", "medium");
   await openChess(page, chess.url);
   await tapMove(page, chess.puzzle, chess.resolved.line[0]);
-  await coach(page).getByText("O adversário respondeu").first().waitFor();
+  await coach(page).getByText("Your opponent replied").first().waitFor();
   await settle(page);
   await page.screenshot({ path: resolve(OUT, `chess${suffix}.png`) });
 
@@ -74,7 +75,7 @@ async function shootGames(browser: Browser, colorScheme: "light" | "dark", suffi
   await page.screenshot({ path: resolve(OUT, `sumbreak${suffix}.png`) });
 
   // Three words found and a fourth half traced.
-  const wend = wendPuzzle("readme", "hard");
+  const wend = wendPuzzle("readme", "hard", undefined, "en");
   await openWend(page, wend.url);
   for (const word of wend.puzzle.words.slice(0, 3)) await dragPath(page, wend.puzzle.size, word.path);
   await foundTrails(page).nth(2).waitFor();
@@ -83,7 +84,7 @@ async function shootGames(browser: Browser, colorScheme: "light" | "dark", suffi
   await page.screenshot({ path: resolve(OUT, `wend${suffix}.png`) });
 
   // Two words at once, three guesses in.
-  const termo = termoPuzzle("readme", "hard");
+  const termo = termoPuzzle("readme", "hard", "en");
   await openTermo(page, termo.url);
   for (const [index, word] of wrongWords(termo.puzzle, 3).entries()) {
     await guess(page, word);

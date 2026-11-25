@@ -125,6 +125,9 @@ test("after one online visit the hub and every game load and play offline", asyn
     throw new Error("service worker did not finish precaching");
   });
 
+  // The words of Termo and Wend are fetched on demand, one language at a time. The hub fetches the player's game language in the background, so they are there offline too.
+  await expect(page.locator("html")).toHaveAttribute("data-offline-words", "pt-br", { timeout: 20_000 });
+
   await context.setOffline(true);
   await page.reload();
   await expect(page.getByTestId("hub-card-zip")).toBeVisible();
@@ -155,12 +158,12 @@ test("after one online visit the hub and every game load and play offline", asyn
   await dragMerge(page, 3, sumbreak.puzzle.solution[0]);
   await expect(sumbreakTiles(page)).toHaveCount(8);
 
-  // The word bank travels with the page, so a themed board is built offline too.
+  // The word bank of the player's game language was fetched from the hub, so a themed board is built offline too.
   await openWend(page, wend.url);
   await dragPath(page, wend.puzzle.size, wend.puzzle.words[0].path);
   await expect(foundTrails(page)).toHaveCount(1);
 
-  // Termo's word lists are in the cached bundle: a guess is checked against them with no network.
+  // So was Termo's word list: a guess is checked against it with no network.
   await openTermo(page, termo.url);
   await termoGuess(page, wrongWords(termo.puzzle, 1)[0]);
   await expect(termoRow(page, 0)).toHaveAttribute("data-kind", "played");

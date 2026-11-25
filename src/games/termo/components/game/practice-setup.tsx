@@ -10,7 +10,7 @@ import { buildPlayPath } from "@/shared/platform/share-text";
 import { GameFooter } from "@/shared/ui/game-footer";
 import { GameHeader } from "@/shared/ui/game-header";
 import { ShuffleIcon } from "@/shared/ui/icons";
-import { GameLanguagePicker } from "@/shared/ui/practice-setup";
+import { ChallengeLink, GameLanguagePicker } from "@/shared/ui/practice-setup";
 import { randomSeedToken } from "@/shared/ui/random-seed";
 import { TERMO_MODES } from "../../engine/config";
 import { termoSeeds } from "../../engine/seed";
@@ -83,6 +83,8 @@ export function TermoPracticeSetup() {
         <button type="submit" className="mg-button" data-variant="primary" data-testid="game-start">
           <ShuffleIcon /> {common(seed.trim() === "" ? "random" : "playSeed")}
         </button>
+
+        <ChallengeLink game={GAME.id} />
       </form>
 
       <GameFooter current={GAME.id} />

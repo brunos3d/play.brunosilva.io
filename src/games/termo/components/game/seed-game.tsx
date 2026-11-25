@@ -38,7 +38,8 @@ export function TermoSeedGame() {
 
   // The player picked another game language in the settings while this puzzle is open. The puzzle keeps the language of its seed, so the page moves on: to the same day's puzzle in that language, or to a new practice puzzle of the same mode.
   useGameLanguageChange((language) => {
-    if (!spec || termoLanguage(spec) === language) return;
+    // A round of a challenge room keeps the room's seed, the same for every player.
+    if (!spec || params.has("room") || termoLanguage(spec) === language) return;
     if (ofTheDay) router.push(buildPlayPath(GAME.path, termoSeeds, termoDailyVariantSpec(ofTheDay.date, ofTheDay.variant, language)));
     else random(language);
   });
