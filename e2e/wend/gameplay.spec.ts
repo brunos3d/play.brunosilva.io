@@ -11,6 +11,7 @@ const wrong = [first.path[1], first.path[0]];
 /** A letter outside the first word that does not touch the second letter of the second word, so a tap on it starts a trail of its own. */
 const lonely = puzzle.letters.findIndex((letter, cell) => letter !== "" && !first.path.includes(cell) && !second.path.slice(0, 2).includes(cell) && !neighboursOf(SIZE)[second.path[1]].includes(cell));
 
+// The interface is English (a bare path is redirected to /en) and the words are Portuguese: `skipTutorials` pins the game language. languages.spec.ts covers the other combinations.
 test.beforeEach(async ({ page }) => {
   await skipTutorials(page);
 });
@@ -24,9 +25,9 @@ test("the fixture's wrong trail really is wrong", () => {
 test("tracing a word finds it, the list fills in, and the last word solves the board", async ({ page }) => {
   const problems = watchConsole(page);
   await openWend(page, url);
-  await expect(status(page)).toContainText(`Encontre ${puzzle.words.length} palavras escondidas`);
-  await expect(theme(page)).toContainText(puzzle.theme);
-  await expect(count(page)).toHaveText(`0 de ${puzzle.words.length}`);
+  await expect(status(page)).toHaveText(`Find ${puzzle.words.length} hidden words, of 4, 5, 6 and 7 letters. Each letter is used only once.`);
+  await expect(theme(page)).toHaveText(`Theme: ${puzzle.theme}`);
+  await expect(count(page)).toHaveText(`0 of ${puzzle.words.length}`);
 
   await dragPath(page, SIZE, first.path);
   await expect(foundTrails(page)).toHaveCount(1);
@@ -39,8 +40,8 @@ test("tracing a word finds it, the list fills in, and the last word solves the b
   const tops = await Promise.all(puzzle.words.map(async (_, index) => (await row(page, index).boundingBox())!.y));
   expect(tops).toEqual([...tops].sort((a, b) => a - b));
   expect(new Set(tops).size).toBe(puzzle.words.length);
-  await expect(status(page)).toContainText(`${first.display}!`);
-  await expect(count(page)).toHaveText(`1 de ${puzzle.words.length}`);
+  await expect(status(page)).toHaveText(`${first.display}! ${puzzle.words.length - 1} words to go.`);
+  await expect(count(page)).toHaveText(`1 of ${puzzle.words.length}`);
 
   await solveByDragging(page, puzzle, [0]);
   await expect(board(page)).toHaveAttribute("data-solved", "true");
@@ -61,7 +62,7 @@ test("a trail that is not a word stays as a draft, and a tap on its first letter
 
   await tapCell(page, SIZE, wrong[0]);
   await expect(trails(page)).toHaveCount(0);
-  await expect(status(page)).toContainText("Traço apagado");
+  await expect(status(page)).toContainText("Trail erased.");
 
   await solveByDragging(page, puzzle);
   await expect(result(page)).toBeVisible();
@@ -84,17 +85,17 @@ test("a hint erases a wrong draft and reveals letters one at a time, in the word
   await openWend(page, url);
   await dragPath(page, SIZE, wrong);
   await page.getByRole("button", { name: /Hint/ }).click();
-  await expect(status(page)).toContainText("Erro corrigido. Primeira letra de uma palavra revelada.");
+  await expect(status(page)).toContainText("Error fixed. First letter of a word revealed.");
   await expect(trails(page)).toHaveCount(1);
   await expect(row(page, 0)).toHaveText(first.display[0]);
   await expect(page.getByRole("button", { name: "Hint. 1 used." })).toBeVisible();
 
   await page.getByRole("button", { name: /Hint/ }).click();
-  await expect(status(page)).toContainText("Próxima letra revelada.");
+  await expect(status(page)).toContainText("Next letter revealed.");
   await expect(row(page, 0)).toHaveText(first.display.slice(0, 2));
   for (let letter = 2; letter < first.text.length; letter++) await page.getByRole("button", { name: /Hint/ }).click();
   await expect(foundTrails(page)).toHaveCount(1);
-  await expect(status(page)).toContainText(first.display);
+  await expect(status(page)).toContainText(`Last letter revealed: ${first.display}.`);
 });
 
 test("undo takes back one gesture, reset erases the drafts, and found words stay", async ({ page }) => {
@@ -109,7 +110,7 @@ test("undo takes back one gesture, reset erases the drafts, and found words stay
   await page.getByRole("button", { name: "Reset" }).click();
   await expect(trails(page)).toHaveCount(1);
   await expect(foundTrails(page)).toHaveCount(1);
-  await expect(status(page)).toContainText("o relógio continua correndo");
+  await expect(status(page)).toContainText("Found words stay, and the clock keeps running.");
   await expect(page.getByRole("button", { name: "Reset" })).toBeDisabled();
 });
 
@@ -191,7 +192,7 @@ test("progress survives a reload, with the clock still running", async ({ page }
 test("a harder board keeps its theme secret until the first word is found", async ({ page }) => {
   const hard = wendPuzzle("e2e-wend-hard", "hard");
   await openWend(page, hard.url);
-  await expect(theme(page)).toContainText("encontre uma palavra para ver");
+  await expect(theme(page)).toHaveText("Theme: find a word to see it");
   await expect(theme(page)).not.toContainText(hard.puzzle.theme);
   await dragPath(page, hard.puzzle.size, hard.puzzle.words[0].path);
   await expect(foundTrails(page)).toHaveCount(1);
@@ -216,12 +217,16 @@ test("the same seed builds the same board in another browser, and practice sizes
   expect(await page.locator('link[rel="icon"][type="image/svg+xml"]').first().getAttribute("href")).toContain("/icons/wend.svg");
 });
 
-test("the tutorial teaches on its own board, in Portuguese, and can be skipped", async ({ page }) => {
+test("the tutorial teaches on its own board, in the language of the puzzle under it, and can be skipped", async ({ page }) => {
   await page.addInitScript(() => localStorage.setItem("minigames:settings:v1", JSON.stringify({ sound: false, haptics: false, tutorials: {} })));
   await page.goto(url);
   const tutorial = page.getByTestId("game-tutorial");
   await expect(tutorial).toBeVisible();
-  await expect(tutorial).toContainText("Ligue as letras");
+  await expect(tutorial.getByRole("heading", { name: "How to play Wend" })).toBeVisible();
+  // English sentences about a Portuguese board: the seed is Portuguese, and the steps name the words they find on it.
+  await expect(tutorial).toContainText("1. Connect the letters");
+  await expect(tutorial).toContainText("The theme is fruit: start on the U and trace UVA along the top row.");
+  await expect(tutorial.getByTestId("wend-theme")).toHaveText("Theme: Frutas");
   // The clock waits for the tutorial.
   await expect(timer(page)).toHaveText("00:00");
 
@@ -233,9 +238,10 @@ test("the tutorial teaches on its own board, in Portuguese, and can be skipped",
   await page.mouse.move(at(1).x, at(1).y, { steps: 3 });
   await page.mouse.move(at(2).x, at(2).y, { steps: 3 });
   await page.mouse.up();
-  await expect(tutorial).toContainText("As palavras fazem curvas");
+  await expect(tutorial).toContainText("2. Words turn corners");
+  await expect(tutorial).toContainText("One fruit of 4 letters is left, and it starts on the F.");
 
-  await tutorial.getByRole("button", { name: "Pular" }).click();
+  await tutorial.getByRole("button", { name: "Skip" }).click();
   await expect(tutorial).toBeHidden();
   await expect(board(page)).toHaveAttribute("data-locked", "false");
 });

@@ -1,1 +1,64 @@
-{}
+{
+  "board": {
+    "label": "Tabuleiro do Wend, {size} por {size}. As setas movem o cursor, Enter marca a letra e Backspace tira a última letra do traço.",
+    "tutorialLabel": "Tabuleiro do tutorial, {size} por {size}",
+    "cell": "Linha {row}, coluna {column}.",
+    "wall": "Parede.",
+    "letter": "Letra {letter}.",
+    "found": "Parte da palavra {word}, já encontrada.",
+    "onTrail": "Letra {index} de um traço de {count}."
+  },
+  "panel": {
+    "tracing": "Traço em andamento: {letters}",
+    "tracingNone": "Nenhum traço em andamento",
+    "tracingIdle": "Arraste pelas letras para formar uma palavra",
+    "theme": "Tema: <b>{theme}</b>",
+    "themeHidden": "encontre uma palavra para ver",
+    "count": "{found} de {total}",
+    "countLabel": "{found} de {total} palavras encontradas",
+    "list": "Palavras escondidas",
+    "rowFound": "{word}, encontrada",
+    "rowOpen": "Palavra de {count} letras",
+    "rowHinted": "Palavra de {count} letras, começa com {start}"
+  },
+  "idle": {
+    "start": "Encontre {count} palavras escondidas, de {lengths} letras. Cada letra é usada uma só vez.",
+    "left": "{count, plural, =1 {Falta 1 palavra. Ela usa todas as letras que sobraram.} other {Faltam # palavras. Cada letra é usada uma só vez.}}"
+  },
+  "lengths": {
+    "separator": ", ",
+    "joined": "{rest} e {last}"
+  },
+  "status": {
+    "found": "{word}! {count, plural, =1 {Falta 1 palavra.} other {Faltam # palavras.}}",
+    "foundLast": "{word}! Era a última palavra.",
+    "erased": "Traço apagado.",
+    "elsewhere": "{word} está no tabuleiro, mas passa por outras casas.",
+    "undone": "Último traço desfeito.",
+    "reset": "Traços soltos apagados. As palavras encontradas ficam, e o relógio continua correndo.",
+    "revealing": "Revelando a solução.",
+    "revealed": "Solução revelada.",
+    "solved": "Resolvido. Todas as palavras encontradas."
+  },
+  "hint": {
+    "fixed": "{count, plural, =1 {Erro corrigido.} other {Erros corrigidos.}} {revealed}",
+    "first": "Primeira letra de uma palavra revelada.",
+    "next": "Próxima letra revelada.",
+    "last": "Última letra revelada: {word}."
+  },
+  "tutorial": {
+    "title": "Como jogar Wend",
+    "steps": {
+      "trace": {
+        "title": "Ligue as letras",
+        "body": "Arraste o dedo pelas letras vizinhas para formar uma palavra. O tema é frutas: comece pelo {letter} e trace {word} na linha de cima."
+      },
+      "turn": {
+        "title": "As palavras fazem curvas",
+        "body": "Uma palavra anda para os lados, para cima e para baixo, nunca na diagonal, e desvia das paredes. Falta uma fruta de {count} letras, que começa no {letter}."
+      }
+    },
+    "doneTitle": "É só isso",
+    "doneBody": "Cada letra pertence a uma única palavra, e todas as palavras têm o mesmo tema. Um traço cinza é só um rascunho: ele ganha cor quando a palavra está certa. Toque na primeira letra de um traço para apagá-lo. O relógio começa quando o tabuleiro aparece."
+  }
+}

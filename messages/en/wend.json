@@ -1,1 +1,64 @@
-{}
+{
+  "board": {
+    "label": "Wend board, {size} by {size}. Arrow keys move the cursor, Enter marks the letter and Backspace takes the last letter off the trail.",
+    "tutorialLabel": "Tutorial board, {size} by {size}",
+    "cell": "Row {row}, column {column}.",
+    "wall": "Wall.",
+    "letter": "Letter {letter}.",
+    "found": "Part of the word {word}, already found.",
+    "onTrail": "Letter {index} of a trail of {count}."
+  },
+  "panel": {
+    "tracing": "Trail in progress: {letters}",
+    "tracingNone": "No trail in progress",
+    "tracingIdle": "Drag through the letters to form a word",
+    "theme": "Theme: <b>{theme}</b>",
+    "themeHidden": "find a word to see it",
+    "count": "{found} of {total}",
+    "countLabel": "{found} of {total} words found",
+    "list": "Hidden words",
+    "rowFound": "{word}, found",
+    "rowOpen": "Word of {count} letters",
+    "rowHinted": "Word of {count} letters, starts with {start}"
+  },
+  "idle": {
+    "start": "Find {count} hidden words, of {lengths} letters. Each letter is used only once.",
+    "left": "{count, plural, =1 {1 word to go. It uses every letter that is left.} other {# words to go. Each letter is used only once.}}"
+  },
+  "lengths": {
+    "separator": ", ",
+    "joined": "{rest} and {last}"
+  },
+  "status": {
+    "found": "{word}! {count, plural, =1 {1 word to go.} other {# words to go.}}",
+    "foundLast": "{word}! That was the last word.",
+    "erased": "Trail erased.",
+    "elsewhere": "{word} is on the board, but it runs through other cells.",
+    "undone": "Last trail undone.",
+    "reset": "Loose trails erased. Found words stay, and the clock keeps running.",
+    "revealing": "Revealing the solution.",
+    "revealed": "Solution revealed.",
+    "solved": "Solved. Every word found."
+  },
+  "hint": {
+    "fixed": "{count, plural, =1 {Error fixed.} other {Errors fixed.}} {revealed}",
+    "first": "First letter of a word revealed.",
+    "next": "Next letter revealed.",
+    "last": "Last letter revealed: {word}."
+  },
+  "tutorial": {
+    "title": "How to play Wend",
+    "steps": {
+      "trace": {
+        "title": "Connect the letters",
+        "body": "Drag your finger through neighbouring letters to form a word. The theme is fruit: start on the {letter} and trace {word} along the top row."
+      },
+      "turn": {
+        "title": "Words turn corners",
+        "body": "A word moves sideways, up and down, never diagonally, and goes around the walls. One fruit of {count} letters is left, and it starts on the {letter}."
+      }
+    },
+    "doneTitle": "That is the whole game",
+    "doneBody": "Each letter belongs to exactly one word, and all the words share a theme. A grey trail is only a draft: it takes a colour when the word is right. Tap the first letter of a trail to erase it. The clock starts when the board appears."
+  }
+}

@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useGameClock } from "@/shared/hooks/use-game-clock";
 import { type SoundName, playSound } from "@/shared/platform/audio";
@@ -27,6 +28,7 @@ import {
   trailLetters,
   undoWend,
 } from "../engine/game/state";
+import { elsewhereText, endText, foundText, hintText } from "../engine/text";
 import type { WendShape } from "../engine/types";
 import { fromWendSnapshot, toWendSnapshot } from "../storage/progress";
 
@@ -41,15 +43,15 @@ type Options = { puzzle: PlayableWend; settings: Settings; persist?: boolean };
 
 const summarize = (state: WendState, elapsedMs: number): FinishSummary => ({ elapsedMs, hintsUsed: state.hintsUsed, mistakes: state.mistakes, moves: state.moves, revealed: state.revealed });
 
-const left = (count: number): string => (count === 1 ? "Falta 1 palavra." : `Faltam ${count} palavras.`);
-
 /**
  * Glue between the pure Wend engine and React: the clock, storage, sound and
- * the pauses of hints and reveals. All text it produces is in Portuguese, the
- * language of the words. Mount it with `key={puzzle.id}` so a new puzzle starts
- * from a clean slate.
+ * the pauses of hints and reveals. The sentences it produces follow the
+ * interface locale, whatever language the words on the board are in: they come
+ * from the "wend" messages through engine/text.ts. Mount it with
+ * `key={puzzle.id}` so a new puzzle starts from a clean slate.
  */
 export function useWendGame({ puzzle, settings, persist = true }: Options) {
+  const t = useTranslations("wend");
   const [game, setGame] = useState<WendState>(() => createWendGame(puzzle.id));
   const [ready, setReady] = useState(!persist);
   const [busy, setBusy] = useState(false);
@@ -117,10 +119,10 @@ export function useWendGame({ puzzle, settings, persist = true }: Options) {
       setHintCell(null);
       setEndedNow(true);
       setSummary(summarize(state, elapsedMs));
-      setStatus({ kind: "success", text: state.revealed ? "Solução revelada." : "Resolvido. Todas as palavras encontradas." });
+      setStatus({ kind: "success", text: endText(t, state.revealed) });
       feedback("complete", "complete");
     },
-    [feedback, finishClock, save, setBusyNow],
+    [feedback, finishClock, save, setBusyNow, t],
   );
 
   const begin = useCallback(() => {
@@ -132,10 +134,10 @@ export function useWendGame({ puzzle, settings, persist = true }: Options) {
     (state: WendState, word: number) => {
       setFoundSignal((signal) => signal + 1);
       const remaining = puzzle.words.length - foundWords(state).length;
-      setStatus({ kind: "success", text: `${puzzle.words[word].display}! ${left(remaining)}` });
+      setStatus({ kind: "success", text: foundText(t, puzzle.words[word].display, remaining) });
       feedback("checkpoint", "checkpoint", 1 + foundWords(state).length / (puzzle.words.length * 2));
     },
-    [feedback, puzzle.words],
+    [feedback, puzzle.words, t],
   );
 
   /** The finger goes down on a cell. */
@@ -184,15 +186,16 @@ export function useWendGame({ puzzle, settings, persist = true }: Options) {
       return;
     }
     if (result.erased) {
-      setStatus({ kind: "info", text: "Traço apagado." });
+      setStatus({ kind: "info", text: t("status.erased") });
       feedback("remove", "remove");
     } else if (result.elsewhere) {
+      // `elsewhere` is only set for the trail the gesture edited, which is the active one.
       const trail = result.state.trails.find((entry) => entry.id === result.state.active);
-      setStatus({ kind: "info", text: `${trail ? trailLetters(puzzle, trail.cells) : "Essa palavra"} está no tabuleiro, mas passa por outras casas.` });
+      setStatus(trail ? { kind: "info", text: elsewhereText(t, trailLetters(puzzle, trail.cells)) } : IDLE_STATUS);
     } else {
       setStatus(IDLE_STATUS);
     }
-  }, [announceFound, end, feedback, puzzle, save, show]);
+  }, [announceFound, end, feedback, puzzle, save, show, t]);
 
   /** Keyboard: the same as a tap on a cell. */
   const tap = useCallback(
@@ -217,7 +220,7 @@ export function useWendGame({ puzzle, settings, persist = true }: Options) {
   const runReveal = useCallback(() => {
     setBusyNow(true);
     setHintCell(null);
-    setStatus({ kind: "info", text: "Revelando a solução." });
+    setStatus({ kind: "info", text: t("status.revealing") });
     const step = () => {
       const next = revealWord(puzzle, gameRef.current);
       if (next === gameRef.current || next.status === "solved") {
@@ -232,7 +235,7 @@ export function useWendGame({ puzzle, settings, persist = true }: Options) {
       later(REVEAL_STEP_MS, step);
     };
     later(REVEAL_STEP_MS, step);
-  }, [end, feedback, later, puzzle, setBusyNow, show]);
+  }, [end, feedback, later, puzzle, setBusyNow, show, t]);
 
   // Restore saved progress.
   useEffect(() => {
@@ -264,9 +267,9 @@ export function useWendGame({ puzzle, settings, persist = true }: Options) {
     setHintCell(null);
     show(next);
     save();
-    setStatus({ kind: "info", text: "Último traço desfeito." });
+    setStatus({ kind: "info", text: t("status.undone") });
     feedback("back", "remove");
-  }, [feedback, save, show]);
+  }, [feedback, save, show, t]);
 
   const reset = useCallback(() => {
     if (busyRef.current || strokeRef.current) return;
@@ -275,9 +278,9 @@ export function useWendGame({ puzzle, settings, persist = true }: Options) {
     setHintCell(null);
     show(next);
     save();
-    setStatus({ kind: "info", text: "Traços soltos apagados. As palavras encontradas ficam, e o relógio continua correndo." });
+    setStatus({ kind: "info", text: t("status.reset") });
     feedback("remove", "remove");
-  }, [feedback, save, show]);
+  }, [feedback, save, show, t]);
 
   /** A hint acts: it erases the trails that lead nowhere and reveals one letter. */
   const requestHint = useCallback(() => {
@@ -289,17 +292,15 @@ export function useWendGame({ puzzle, settings, persist = true }: Options) {
     setHintCell(hint.cell);
     window.clearTimeout(hintTimer.current);
     hintTimer.current = window.setTimeout(() => setHintCell(null), HINT_MS);
-    const fixed = hint.cleared === 0 ? "" : hint.cleared === 1 ? "Erro corrigido. " : "Erros corrigidos. ";
+    setStatus({ kind: "hint", text: hintText(t, hint, puzzle.words[hint.word].display) });
     if (hint.found) {
       setFoundSignal((signal) => signal + 1);
-      setStatus({ kind: "hint", text: `${fixed}Última letra revelada: ${puzzle.words[hint.word].display}.` });
       feedback("checkpoint", "checkpoint");
       if (hint.solved) end(hint.state);
       return;
     }
-    setStatus({ kind: "hint", text: `${fixed}${hint.first ? "Primeira letra de uma palavra revelada." : "Próxima letra revelada."}` });
     feedback("hint", "hint");
-  }, [end, feedback, puzzle, save, show]);
+  }, [end, feedback, puzzle, save, show, t]);
 
   const reveal = useCallback(() => {
     if (busyRef.current || strokeRef.current || isWendLocked(gameRef.current)) return;

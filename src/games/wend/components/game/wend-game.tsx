@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import { useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
 import { GAMES } from "@/games/registry";
 import type { DailyInfo } from "@/shared/engine/daily";
@@ -13,6 +14,7 @@ import { PuzzleAttempts } from "@/shared/ui/puzzle-attempts";
 import { foundWords } from "../../engine/game/state";
 import { loadWendPuzzle } from "../../engine/generator";
 import { type PuzzleSpec, wendSeeds } from "../../engine/seed";
+import { idleText } from "../../engine/text";
 import type { WendPuzzle } from "../../engine/types";
 import { useWendGame } from "../../hooks/use-wend-game";
 import { wordColors } from "../board/palette";
@@ -51,22 +53,14 @@ export function WendGame({ spec, daily, onNext }: GameProps) {
 
 type ViewProps = { spec: PuzzleSpec; puzzle: WendPuzzle; generationMs: number; daily?: DailyInfo; onNext?: () => void };
 
-const lengthsText = (lengths: readonly number[]): string => (lengths.length === 1 ? String(lengths[0]) : `${lengths.slice(0, -1).join(", ")} e ${lengths[lengths.length - 1]}`);
-
 function GameView({ spec, puzzle, generationMs, daily, onNext }: ViewProps) {
+  const t = useTranslations("wend");
   const { settings } = useSettings();
   const [showSolution, setShowSolution] = useState(false);
   const game = useWendGame({ puzzle, settings });
   const colors = useMemo(() => wordColors(puzzle.id, puzzle.words.length), [puzzle.id, puzzle.words.length]);
 
-  const total = puzzle.words.length;
-  const remaining = total - foundWords(game.game).length;
-  const idleText =
-    remaining === total
-      ? `Encontre ${total} palavras escondidas, de ${lengthsText(puzzle.words.map((word) => word.text.length))} letras. Cada letra é usada uma só vez.`
-      : remaining === 1
-        ? "Falta 1 palavra. Ela usa todas as letras que sobraram."
-        : `Faltam ${remaining} palavras. Cada letra é usada uma só vez.`;
+  const remaining = puzzle.words.length - foundWords(game.game).length;
 
   return (
     <GameFrame
@@ -77,7 +71,11 @@ function GameView({ spec, puzzle, generationMs, daily, onNext }: ViewProps) {
       seed={puzzle.seed}
       shareUrl={() => (daily ? `${window.location.origin}${GAME.path}` : buildPlayUrl(window.location.origin, GAME.path, wendSeeds, spec))}
       session={game}
-      idleText={idleText}
+      idleText={idleText(
+        t,
+        puzzle.words.map((word) => word.text.length),
+        remaining,
+      )}
       onNext={onNext}
       board={
         <div className="wend-stage">
@@ -91,7 +89,7 @@ function GameView({ spec, puzzle, generationMs, daily, onNext }: ViewProps) {
             hintCell={game.hintCell}
             foundSignal={game.foundSignal}
             debugSolution={showSolution}
-            label={`Tabuleiro do Wend, ${puzzle.size} por ${puzzle.size}. As setas movem o cursor, Enter marca a letra e Backspace tira a última letra do traço.`}
+            label={t("board.label", { size: puzzle.size })}
             onPress={game.press}
             onDrag={game.drag}
             onRelease={game.release}
@@ -101,7 +99,7 @@ function GameView({ spec, puzzle, generationMs, daily, onNext }: ViewProps) {
           <WendWordList shape={puzzle} state={game.game} colors={colors} theme={puzzle.theme} themeShown={puzzle.themeShown} />
         </div>
       }
-      tutorial={(props) => <WendTutorialDialog {...props} />}
+      tutorial={(props) => <WendTutorialDialog {...props} language={puzzle.language} />}
       debug={DebugPanel ? <DebugPanel puzzle={puzzle} generationMs={generationMs} showSolution={showSolution} onToggleSolution={setShowSolution} /> : undefined}
     />
   );

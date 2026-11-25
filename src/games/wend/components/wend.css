@@ -106,7 +106,8 @@
   font-size: 15px;
   background: color-mix(in oklab, var(--ink) 16%, var(--surface));
 }
-.wend-tracing-idle { font-size: 13px; color: var(--ink-faint); }
+/* The hint wraps on the tutorial's narrow board, in either language. */
+.wend-tracing-idle { font-size: 13px; color: var(--ink-faint); text-align: center; }
 
 .wend-list-head {
   display: flex;

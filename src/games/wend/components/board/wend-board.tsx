@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { type CSSProperties, type KeyboardEvent, type PointerEvent, useCallback, useRef, useState } from "react";
 import type { Trail } from "../../engine/game/state";
 import type { WendShape } from "../../engine/types";
@@ -38,6 +39,7 @@ const MOVES: Record<string, [number, number]> = { ArrowUp: [-1, 0], ArrowDown: [
  * every trail carries a ring, so the reading direction is visible.
  */
 export function WendBoard({ shape, trails, active, colors, locked, solved, hintCell, foundSignal, debugSolution, label, testId = "wend-board", onPress, onDrag, onRelease, onTap, onBack }: BoardProps) {
+  const t = useTranslations("wend.board");
   const gridRef = useRef<HTMLDivElement>(null);
   // Source of truth for the handlers. React batches pointermove updates, so state would lag behind fast input.
   const draggingRef = useRef(false);
@@ -141,12 +143,13 @@ export function WendBoard({ shape, trails, active, colors, locked, solved, hintC
               const cell = row * size + column;
               const letter = letters[cell];
               const trail = trailOf.get(cell);
-              const parts = [`Linha ${row + 1}, coluna ${column + 1}.`];
-              if (letter === "") parts.push("Parede.");
+              // What a screen reader says for the cell, in the interface language. Only the letter and the word come from the board.
+              const parts = [t("cell", { row: row + 1, column: column + 1 })];
+              if (letter === "") parts.push(t("wall"));
               else {
-                parts.push(`Letra ${letter}.`);
-                if (trail?.word !== null && trail?.word !== undefined) parts.push(`Parte da palavra ${shape.words[trail.word].display}, já encontrada.`);
-                else if (trail) parts.push(`Letra ${trail.cells.indexOf(cell) + 1} de um traço de ${trail.cells.length}.`);
+                parts.push(t("letter", { letter }));
+                if (trail?.word !== null && trail?.word !== undefined) parts.push(t("found", { word: shape.words[trail.word].display }));
+                else if (trail) parts.push(t("onTrail", { index: trail.cells.indexOf(cell) + 1, count: trail.cells.length }));
               }
               return (
                 <div

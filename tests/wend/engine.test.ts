@@ -25,7 +25,7 @@ import {
   wendSeeds,
   wendThemes,
 } from "@/games/wend/engine";
-import { WEND_TUTORIAL_PUZZLE } from "@/games/wend/components/tutorial/tutorial-puzzle";
+import { WEND_TUTORIALS, WEND_TUTORIAL_PUZZLE } from "@/games/wend/components/tutorial/tutorial-puzzle";
 import { DIFFICULTIES } from "@/shared/engine/difficulty";
 import { addDays } from "@/shared/engine/pacific-time";
 
@@ -266,6 +266,22 @@ describe("English puzzles", () => {
         expect(validateWendPuzzle(puzzle).ok, puzzle.seed).toBe(true);
       }
     }
+  });
+
+  it("has a tutorial board of its own, with the shape of the Portuguese one and a single solution", () => {
+    const [portuguese, english] = [WEND_TUTORIALS["pt-br"].puzzle, WEND_TUTORIALS.en.puzzle];
+    expect(portuguese).toBe(WEND_TUTORIAL_PUZZLE);
+    expect(english.words.map((word) => word.display)).toEqual(["FIG", "PEAR"]);
+    expect(portuguese.words.map((word) => word.display)).toEqual(["UVA", "FIGO"]);
+    for (const puzzle of [portuguese, english]) {
+      expect(validateWendPuzzle(puzzle).problems, puzzle.id).toEqual([]);
+      expect(solveWend(puzzle.size, puzzle.letters, puzzle.words.map((word) => word.text)).count).toBe(1);
+      expect(puzzle.words.map((word) => word.text.length)).toEqual([3, 4]);
+    }
+    // Same walls, same paths: the steps of the tutorial describe both boards.
+    expect(english.letters.map((letter) => letter === "")).toEqual(portuguese.letters.map((letter) => letter === ""));
+    expect(english.words.map((word) => word.path)).toEqual(portuguese.words.map((word) => word.path));
+    expect(english.id).not.toBe(portuguese.id);
   });
 });
 
