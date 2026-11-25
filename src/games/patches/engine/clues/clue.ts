@@ -33,21 +33,3 @@ export function clueInformation(clue: Clue): 0 | 1 | 2 {
   const level = (clue.area !== undefined ? 1 : 0) + (hasShapeRule(clue) ? 1 : 0);
   return level as 0 | 1 | 2;
 }
-
-const SHAPE_PHRASES: Record<ShapeConstraint, string> = {
-  square: "a square",
-  tall: "a tall rectangle",
-  wide: "a wide rectangle",
-  freeform: "any rectangle",
-  unconstrained: "any rectangle",
-};
-
-/** Plain-language description, used for ARIA labels and hint text. */
-export function describeClue(clue: Clue): string {
-  const shape = SHAPE_PHRASES[clue.shape ?? "unconstrained"];
-  if (clue.area !== undefined) {
-    const cells = clue.area === 1 ? "1 cell" : `${clue.area} cells`;
-    return hasShapeRule(clue) ? `${shape} of ${cells}` : `${cells}, ${shape}`;
-  }
-  return hasShapeRule(clue) ? `${shape} of unknown size` : "unknown size, any rectangle";
-}

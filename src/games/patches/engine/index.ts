@@ -16,6 +16,7 @@ export * from "./difficulty/evaluate";
 export * from "./generator/partition";
 export * from "./generator/generate";
 export * from "./hints/hint";
+export * from "./text";
 export * from "@/shared/engine/prng";
 export * from "./seed/spec";
 export * from "@/shared/engine/pacific-time";

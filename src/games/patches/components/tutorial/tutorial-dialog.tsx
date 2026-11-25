@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
 import type { GameState } from "../../engine/game/state";
 import { usePatchesGame } from "../../hooks/use-patches-game";
@@ -10,48 +11,27 @@ import { Dialog } from "@/shared/ui/dialog";
 import { HintIcon, UndoIcon } from "@/shared/ui/icons";
 import { TUTORIAL_PUZZLE } from "./tutorial-puzzle";
 
-type Step = { title: string; body: string; done: (game: GameState, pending: ReadonlySet<string>) => boolean };
+/** The steps in order. Titles and bodies are in the "patches" messages, under tutorial.steps.<id>. */
+type Step = { id: "draw" | "shapes" | "remove" | "undo" | "noNumber" | "fill"; done: (game: GameState, pending: ReadonlySet<string>) => boolean };
 
 /** The clue has a finished patch. An unfinished one does not complete a step. */
 const has = (game: GameState, clueId: string, pending: ReadonlySet<string>): boolean => game.regions.some((region) => region.clueId === clueId && !pending.has(region.id));
 const present = (game: GameState, clueId: string): boolean => game.regions.some((region) => region.clueId === clueId);
 
 const STEPS: Step[] = [
-  {
-    title: "Draw a patch",
-    body: "Every patch is a rectangle with exactly one clue inside. The 4 in a square outline means a square of 4 cells. Press the 4 and drag outward to draw it.",
-    done: (game, pending) => has(game, "a", pending),
-  },
-  {
-    title: "Shapes",
-    body: "A tall outline means taller than wide. This clue wants 6 cells, 2 wide and 3 high. Press the 6 and drag. You can stop halfway: an unfinished patch stays, and another drag from it adds the rest.",
-    done: (game, pending) => has(game, "c", pending),
-  },
-  {
-    title: "Remove a patch",
-    body: "Changed your mind? Tap a patch to remove it. Tap the tall patch you just drew.",
-    done: (game) => !present(game, "c"),
-  },
-  {
-    title: "Undo",
-    body: "Undo reverts your last move, including a removal. Press Undo to bring the patch back.",
-    done: (game, pending) => has(game, "c", pending),
-  },
-  {
-    title: "No number",
-    body: "The wide outline has no number, so the size is up to you. Patches cannot overlap or swallow a second clue. Only one wide rectangle fits here.",
-    done: (game, pending) => has(game, "b", pending),
-  },
-  {
-    title: "Fill the board",
-    body: "A dashed outline accepts any rectangle. Every cell must be covered, so the space that is left gives the answer. If you get stuck in a real puzzle, Hint places the next patch for you.",
-    done: (game) => game.status === "solved",
-  },
+  { id: "draw", done: (game, pending) => has(game, "a", pending) },
+  { id: "shapes", done: (game, pending) => has(game, "c", pending) },
+  { id: "remove", done: (game) => !present(game, "c") },
+  { id: "undo", done: (game, pending) => has(game, "c", pending) },
+  { id: "noNumber", done: (game, pending) => has(game, "b", pending) },
+  { id: "fill", done: (game) => game.status === "solved" },
 ];
 
 type Props = { open: boolean; settings: Settings; onClose: () => void };
 
 function TutorialBody({ settings, onClose }: Omit<Props, "open">) {
+  const t = useTranslations("patches");
+  const common = useTranslations("common.tutorial");
   const game = usePatchesGame({ puzzle: TUTORIAL_PUZZLE, settings, persist: false });
   const colors = useMemo(() => assignPatchColors(TUTORIAL_PUZZLE.clues, TUTORIAL_PUZZLE.seed), []);
 
@@ -61,19 +41,21 @@ function TutorialBody({ settings, onClose }: Omit<Props, "open">) {
 
   const finished = stepIndex >= STEPS.length;
   const step = STEPS[Math.min(stepIndex, STEPS.length - 1)];
+  // The line under the board stays quiet for ordinary moves. It speaks for a refusal, a hint and the nudge to start on a clue.
+  const speaks = game.status.kind === "invalid" || game.status.kind === "hint" || game.status.text === t("status.misstart");
 
   return (
     <div className="flex flex-col gap-3">
       <div className="flex gap-1.5" aria-hidden="true">
         {STEPS.map((entry, index) => (
-          <span key={entry.title} className="h-1.5 flex-1 rounded-full" style={{ background: index < stepIndex ? "var(--valid)" : index === stepIndex ? "var(--ink)" : "var(--thread)" }} />
+          <span key={entry.id} className="h-1.5 flex-1 rounded-full" style={{ background: index < stepIndex ? "var(--valid)" : index === stepIndex ? "var(--ink)" : "var(--thread)" }} />
         ))}
       </div>
 
       <div aria-live="polite" className="min-h-[104px]">
-        <h3 className="font-bold mb-1">{finished ? "That is the whole game" : `${stepIndex + 1}. ${step.title}`}</h3>
+        <h3 className="font-bold mb-1">{finished ? t("tutorial.doneTitle") : common("step", { number: stepIndex + 1, title: t(`tutorial.steps.${step.id}.title`) })}</h3>
         <p className="text-sm leading-relaxed text-[var(--ink-soft)]">
-          {finished ? "One clue per patch, no overlaps, no empty cells. The clock starts when you first see a board and only stops when it is solved." : step.body}
+          {finished ? t("tutorial.doneBody") : t(`tutorial.steps.${step.id}.body`)}
         </p>
       </div>
 
@@ -88,7 +70,7 @@ function TutorialBody({ settings, onClose }: Omit<Props, "open">) {
           shakeSignal={game.shakeSignal}
           pendingIds={game.pendingIds}
           tweenIds={game.tweenIds}
-          label="Tutorial board, 4 by 4"
+          label={t("board.tutorialLabel", { size: TUTORIAL_PUZZLE.width })}
           previewStatus={game.previewStatus}
           onPlace={game.place}
           onRemove={game.removeAt}
@@ -97,23 +79,23 @@ function TutorialBody({ settings, onClose }: Omit<Props, "open">) {
       </div>
 
       <p className="text-center text-sm min-h-[40px] text-[var(--ink-soft)]" data-kind={game.status.kind}>
-        {game.status.kind === "invalid" || game.status.kind === "hint" || game.status.text.startsWith("Start on a clue") ? game.status.text : ""}
+        {speaks ? game.status.text : ""}
       </p>
 
       {finished ? (
         <button type="button" className="mg-button" data-variant="primary" onClick={onClose}>
-          Start playing
+          {common("start")}
         </button>
       ) : (
-        <div className="grid grid-cols-3 gap-2">
+        <div className="patches-tutorial-actions">
           <button type="button" className="mg-button" onClick={game.undo} disabled={!game.canUndo}>
-            <UndoIcon /> Undo
+            <UndoIcon /> {common("undo")}
           </button>
           <button type="button" className="mg-button" onClick={game.requestHint}>
-            <HintIcon /> Hint
+            <HintIcon /> {common("hint")}
           </button>
           <button type="button" className="mg-button" onClick={onClose}>
-            Skip
+            {common("skip")}
           </button>
         </div>
       )}
@@ -122,8 +104,9 @@ function TutorialBody({ settings, onClose }: Omit<Props, "open">) {
 }
 
 export function TutorialDialog({ open, settings, onClose }: Props) {
+  const t = useTranslations("patches.tutorial");
   return (
-    <Dialog open={open} onClose={onClose} title="How to play Patches" testId="game-tutorial">
+    <Dialog open={open} onClose={onClose} title={t("title")} testId="game-tutorial">
       <TutorialBody settings={settings} onClose={onClose} />
     </Dialog>
   );

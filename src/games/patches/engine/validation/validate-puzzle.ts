@@ -5,6 +5,7 @@ import { validateState } from "./validate-state";
 
 export type PuzzleValidation = {
   ok: boolean;
+  /** For developers: the command-line tools and the test output print these. A player never sees them, so they stay in English. */
   problems: string[];
   solutionCount: number;
 };

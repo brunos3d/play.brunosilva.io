@@ -14,7 +14,8 @@ export type RegionErrorCode =
   | "wrong-shape"
   | "overlap";
 
-export type RegionError = { code: RegionErrorCode; message: string };
+/** Why a region breaks the rules, as data: a code and the values its sentence needs. ../text.ts turns it into the sentence the player reads. */
+export type RegionError = { code: RegionErrorCode; values?: Record<string, string | number> };
 
 export type RegionValidation = {
   ok: boolean;
@@ -40,18 +41,18 @@ export function validateRegion(
   region: Pick<Region, "id" | "clueId" | "cells">,
 ): RegionValidation {
   const errors: RegionError[] = [];
-  const add = (code: RegionErrorCode, message: string) => errors.push({ code, message });
+  const add = (code: RegionErrorCode, values?: RegionError["values"]) => errors.push(values ? { code, values } : { code });
 
   if (region.cells.length === 0) {
-    add("empty", "The patch has no cells.");
+    add("empty");
     return { ok: false, errors, clue: null };
   }
   if (region.cells.some((cell) => !inBounds(puzzle.width, puzzle.height, cell))) {
-    add("out-of-bounds", "The patch leaves the board.");
+    add("out-of-bounds");
     return { ok: false, errors, clue: null };
   }
   if (!isFilledRectangle(region.cells)) {
-    add("not-rectangle", "A patch must be a filled rectangle.");
+    add("not-rectangle");
   }
 
   const derived = buildRegion(region.id, region.clueId, region.cells);
@@ -59,19 +60,19 @@ export function validateRegion(
   let clue: Clue | null = null;
 
   if (inside.length === 0) {
-    add("no-clue", "A patch must contain a clue.");
+    add("no-clue");
   } else if (inside.length > 1) {
-    add("multiple-clues", `A patch can hold only one clue. This one holds ${inside.length}.`);
+    add("multiple-clues", { count: inside.length });
   } else {
     clue = inside[0];
     if (region.clueId !== clue.id) {
-      add("clue-mismatch", "The patch is linked to a clue it does not contain.");
+      add("clue-mismatch");
     }
     if (clue.area !== undefined && clue.area !== derived.area) {
-      add("wrong-area", `This clue needs ${clue.area} cells. The patch has ${derived.area}.`);
+      add("wrong-area", { needed: clue.area, area: derived.area });
     }
     if (derived.shape !== "irregular" && !shapeAccepts(clue.shape, derived.width, derived.height)) {
-      add("wrong-shape", `This clue needs ${shapeWord(clue)}. The patch is ${derived.width} by ${derived.height}.`);
+      add("wrong-shape", { shape: clue.shape ?? "unconstrained", width: derived.width, height: derived.height });
     }
   }
 
@@ -79,14 +80,7 @@ export function validateRegion(
   const collides = placed.some(
     (other) => other.id !== region.id && other.cells.some((cell) => own.has(cellKey(cell))),
   );
-  if (collides) add("overlap", "The patch overlaps another patch.");
+  if (collides) add("overlap");
 
   return { ok: errors.length === 0, errors, clue };
-}
-
-function shapeWord(clue: Clue): string {
-  if (clue.shape === "square") return "a square";
-  if (clue.shape === "tall") return "a tall rectangle";
-  if (clue.shape === "wide") return "a wide rectangle";
-  return "a rectangle";
 }

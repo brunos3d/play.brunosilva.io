@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { createGame, generatePuzzle, getHint, placeRegion, rectEquals, regionFromRect, regionRect, validateState } from "@/games/patches/engine";
+import { createGame, generatePuzzle, getHint, hintText, placeRegion, rectEquals, regionFromRect, regionRect, validateState } from "@/games/patches/engine";
+import { translator } from "../i18n";
 import { REAL_188, REAL_188_SOLUTION } from "./fixtures";
+
+/** The English sentences, as a player with the interface in English reads them. */
+const t = translator("patches");
 
 describe("hints", () => {
   it("points at a patch from the real solution and explains why", () => {
@@ -10,7 +14,9 @@ describe("hints", () => {
     const index = REAL_188.clues.findIndex((clue) => clue.id === hint.clueId);
     expect(hint.rect).toEqual(REAL_188_SOLUTION[index]);
     expect(hint.cells).toHaveLength(hint.rect.width * hint.rect.height);
-    expect(hint.message.length).toBeGreaterThan(20);
+    expect(hint.clue).toEqual(REAL_188.clues[index]);
+    expect(hintText(t, hint).length).toBeGreaterThan(20);
+    expect(hintText(translator("patches", "pt-br"), hint)).toContain(`retalho de ${hint.rect.width} por ${hint.rect.height}`);
   });
 
   it("flags a legal but wrong patch before suggesting anything", () => {
@@ -18,7 +24,10 @@ describe("hints", () => {
     const wrong = regionFromRect("region-b", "b", { row: 1, column: 0, width: 2, height: 1 });
     const hint = getHint(REAL_188, [wrong]);
     expect(hint.kind).toBe("wrong-region");
-    if (hint.kind === "wrong-region") expect(hint.regionId).toBe("region-b");
+    if (hint.kind !== "wrong-region") return;
+    expect(hint.regionId).toBe("region-b");
+    expect(hint.reason).toBe("unsolvable");
+    expect(hintText(t, hint)).toBe("This patch follows its clue, but the rest of the board cannot be completed around it. Tap it to remove it.");
   });
 
   it("finds the wrong patch among correct ones", () => {

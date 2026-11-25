@@ -20,6 +20,11 @@ test("the first visit opens the interactive tutorial, and it can be completed", 
     await page.mouse.up();
   };
 
+  // A drag from a cell without a clue draws nothing, and the tutorial says where to start.
+  await expect(tutorial).toContainText("1. Draw a patch");
+  await drag([0, 2], [0, 1]);
+  await expect(tutorial).toContainText("Start on a clue: press a cell with a number or a shape, then drag outward.");
+
   await drag([0, 0], [1, 1]);
   await expect(tutorial).toContainText("2. Shapes");
   // The 6 sits in the middle row of its 2x3 patch: up and left first, then down.

@@ -1,1 +1,87 @@
-{}
+{
+  "board": {
+    "label": "Patches board, {width} by {height}, {clues} clues. Arrow keys move. Enter on a clue or on a patch starts a stroke, arrows grow it, Enter places it. Enter twice on a patch, or Delete, removes it.",
+    "tutorialLabel": "Tutorial board, {size} by {size}",
+    "cell": "Row {row}, column {column}.",
+    "clue": "Clue: {clue}.",
+    "inside": "Inside a {width} by {height} patch.",
+    "empty": "Empty.",
+    "unfinished": "This patch is unfinished.",
+    "drawing": "Drawing. Press Enter to place, Escape to cancel."
+  },
+  "clue": {
+    "sized": "{shape, select, square {a square} tall {a tall rectangle} other {a wide rectangle}} of {area, plural, one {# cell} other {# cells}}",
+    "sizedAny": "{area, plural, one {# cell} other {# cells}}, any rectangle",
+    "unsized": "{shape, select, square {a square} tall {a tall rectangle} other {a wide rectangle}} of unknown size",
+    "unsizedAny": "unknown size, any rectangle"
+  },
+  "idle": {
+    "start": "Press a clue and drag outward to draw its patch.",
+    "progress": "{placed} of {total} patches done{unfinished, plural, =0 {} other {, # unfinished}}."
+  },
+  "status": {
+    "solved": "Solved. Every cell is covered.",
+    "revealed": "Solution revealed.",
+    "revealing": "Revealing the solution.",
+    "undone": "Last move undone.",
+    "reset": "Board cleared. The clock keeps running.",
+    "removed": "Patch removed.",
+    "placed": "Placed a {width} by {height} patch.",
+    "finished": "Patch finished: {width} by {height}.",
+    "pendingCounted": "{area} of {total} cells. Drag again from the clue or from the patch to add the rest.",
+    "pendingOpen": "{area, plural, one {# cell} other {# cells}} so far. Drag again from the clue or from the patch to add the rest.",
+    "refusedOnPatch": "{reason} Tap the patch to take it off and start over.",
+    "misstart": "Start on a clue: press a cell with a number or a shape, then drag outward."
+  },
+  "error": {
+    "empty": "The patch has no cells.",
+    "out-of-bounds": "The patch leaves the board.",
+    "not-rectangle": "A patch must be a filled rectangle.",
+    "no-clue": "A patch must contain a clue.",
+    "multiple-clues": "A patch can hold only one clue. This one holds {count}.",
+    "clue-mismatch": "The patch is linked to a clue it does not contain.",
+    "wrong-area": "This clue needs {needed, plural, one {# cell} other {# cells}}. The patch has {area}.",
+    "wrong-shape": "This clue needs {shape, select, square {a square} tall {a tall rectangle} wide {a wide rectangle} other {a rectangle}}. The patch is {width} by {height}.",
+    "overlap": "The patch overlaps another patch."
+  },
+  "hint": {
+    "astray": "This unfinished patch reaches cells that belong to another clue, so it cannot grow into the right one. It comes off.",
+    "unsolvable": "This patch follows its clue, but the rest of the board cannot be completed around it. Tap it to remove it.",
+    "complete": "The board is complete.",
+    "clueSingle": "Only one rectangle fits this clue ({clue}) in the space that is left. Draw the {width} by {height} patch.",
+    "clueSingleEliminated": "This clue ({clue}) has one option left. Every other rectangle would leave a cell that no clue can reach. Draw the {width} by {height} patch.",
+    "cellSingle": "The cell in row {row}, column {column} can only be reached from this clue ({clue}), and only by this {width} by {height} patch.",
+    "search": "No single-step deduction is available, so this one comes from the solver: the clue ({clue}) takes a {width} by {height} patch here."
+  },
+  "tutorial": {
+    "title": "How to play Patches",
+    "steps": {
+      "draw": {
+        "title": "Draw a patch",
+        "body": "Every patch is a rectangle with exactly one clue inside. The 4 in a square outline means a square of 4 cells. Press the 4 and drag outward to draw it."
+      },
+      "shapes": {
+        "title": "Shapes",
+        "body": "A tall outline means taller than wide. This clue wants 6 cells, 2 wide and 3 high. Press the 6 and drag. You can stop halfway: an unfinished patch stays, and another drag from it adds the rest."
+      },
+      "remove": {
+        "title": "Remove a patch",
+        "body": "Changed your mind? Tap a patch to remove it. Tap the tall patch you just drew."
+      },
+      "undo": {
+        "title": "Undo",
+        "body": "Undo reverts your last move, including a removal. Press Undo to bring the patch back."
+      },
+      "noNumber": {
+        "title": "No number",
+        "body": "The wide outline has no number, so the size is up to you. Patches cannot overlap or swallow a second clue. Only one wide rectangle fits here."
+      },
+      "fill": {
+        "title": "Fill the board",
+        "body": "A dashed outline accepts any rectangle. Every cell must be covered, so the space that is left gives the answer. If you get stuck in a real puzzle, Hint places the next patch for you."
+      }
+    },
+    "doneTitle": "That is the whole game",
+    "doneBody": "One clue per patch, no overlaps, no empty cells. The clock starts when you first see a board and only stops when it is solved."
+  }
+}

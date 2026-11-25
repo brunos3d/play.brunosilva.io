@@ -49,11 +49,11 @@ A `Puzzle` is plain JSON. Width and height are separate fields, so non-square bo
 
 ## Validation
 
-`validateRegion(puzzle, placed, region)` returns `{ ok, errors, clue }` with these codes: `empty`, `out-of-bounds`, `not-rectangle`, `no-clue`, `multiple-clues`, `clue-mismatch`, `wrong-area`, `wrong-shape`, `overlap`. Each error has a sentence the UI shows as is.
+`validateRegion(puzzle, placed, region)` returns `{ ok, errors, clue }` with these codes: `empty`, `out-of-bounds`, `not-rectangle`, `no-clue`, `multiple-clues`, `clue-mismatch`, `wrong-area`, `wrong-shape`, `overlap`. An error is data: the code and the values its sentence needs, such as `{ code: "wrong-area", values: { needed: 6, area: 4 } }`. The sentence comes from `engine/text.ts` (see Text below).
 
 `validateState(puzzle, regions)` reports `complete`, `consistent`, `uncoveredCells`, `overlappingCells`, `unusedClueIds`, `duplicatedClueIds` and per-region errors. `complete` requires full coverage, no overlap, every region legal, and every clue used once. It is the only completion check in the project. A test places two 4x2 patches that fill a 4x4 board and confirms the board is not complete.
 
-`validatePuzzle(puzzle)` audits a generated puzzle without trusting the generator: it checks the clues, runs the stored solution through `validateState`, recounts solutions with the solver, and compares the solver's answer with the stored one.
+`validatePuzzle(puzzle)` audits a generated puzzle without trusting the generator: it checks the clues, runs the stored solution through `validateState`, recounts solutions with the solver, and compares the solver's answer with the stored one. Its `problems` are English sentences for developers. Only the command-line tools and the tests print them.
 
 ## Game state
 
@@ -111,11 +111,27 @@ The clock is shared by every game and lives in `src/shared/engine/clock.ts`. See
 
 The UI acts on a hint: it removes a wrong patch, or places the proven one.
 
-- `wrong-region`: a placed patch that no solution contains, or an unfinished patch that reaches cells outside its solution rectangle. Unfinished patches that are still inside it are left alone and are not handed to the solver as fixed. Checked first, because a deduction built on a wrong patch would mislead. Each patch is tested alone against the solver, then the board is rebuilt in play order to find the first patch that makes it unsolvable.
-- `place-region`: the next patch the logic solver can prove, with its rectangle, the technique (`clue-single`, `cell-single` or `search`), an optional focus cell and a one-sentence reason.
+- `wrong-region`: a placed patch that no solution contains (`reason: "unsolvable"`), or an unfinished patch that reaches cells outside its solution rectangle (`reason: "astray"`). Unfinished patches that are still inside it are left alone and are not handed to the solver as fixed. Checked first, because a deduction built on a wrong patch would mislead. Each patch is tested alone against the solver, then the board is rebuilt in play order to find the first patch that makes it unsolvable.
+- `place-region`: the next patch the logic solver can prove, with its rectangle, the clue it belongs to, the technique (`clue-single`, `cell-single` or `search`), whether lookahead had to rule out the clue's other rectangles first (`neededElimination`) and an optional focus cell.
 - `complete`.
 
+A hint holds no sentence. `hintText(t, hint)` builds the explanation from these fields.
+
 Hints never pick at random. A test follows hints alone on 48 generated puzzles across all tiers and checks that each hint matches the unique solution and that the board ends solved.
+
+## Text
+
+The engine returns codes and numbers, never sentences, so it reads the same in every language of the site (see `docs/I18N.md`). `engine/text.ts` turns the data into sentences with a translator for the `patches` namespace, whose messages are in `messages/<locale>/patches.json`:
+
+| Function | Sentence | Messages |
+|---|---|---|
+| `clueText(t, clue)` | a clue in plain language, for cell labels and hints: "a wide rectangle of 6 cells" | `clue.*` |
+| `regionErrorText(t, error)` | why a rectangle was refused | `error.<code>` |
+| `hintText(t, hint)` | what a hint did and why | `hint.*` |
+
+In the app `t` is `useTranslations("patches")`. In a test or a command-line tool it is `translator("patches")` or `translator("patches", "pt-br")` from `tests/i18n.ts`. Plurals and the shape words are ICU plurals and selects in the messages, not string building in code.
+
+The status lines of a move (`status.*`), the idle line (`idle.*`), the labels a screen reader hears on the board (`board.*`) and the tutorial (`tutorial.*`) are read by the hook and the components directly.
 
 ## Public API
 
@@ -126,6 +142,7 @@ solvePuzzle(puzzle, { maxSolutions?, fixed?, maxNodes? }): SolveResult
 solveWithLogic(puzzle, { fixed?, maxSteps?, allowSearch? }): LogicResult
 validatePuzzle(puzzle) / validateRegion(puzzle, placed, region) / validateState(puzzle, regions)
 getHint(puzzle, regions): Hint
+clueText(t, clue) / regionErrorText(t, error) / hintText(t, hint): string
 evaluateDifficulty(puzzle): DifficultyReport
 getDailyPuzzle(dateOrInstant, config?): { info, puzzle }
 ```

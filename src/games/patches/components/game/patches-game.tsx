@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import { useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
 import { GAMES } from "@/games/registry";
 import type { DailyInfo } from "@/shared/engine/daily";
@@ -45,6 +46,7 @@ export function PatchesGame({ spec, daily, onNext }: GameProps) {
 type ViewProps = { spec: PuzzleSpec; puzzle: Puzzle; generationMs: number; daily?: DailyInfo; onNext?: () => void };
 
 function GameView({ spec, puzzle, generationMs, daily, onNext }: ViewProps) {
+  const t = useTranslations("patches");
   const { settings } = useSettings();
   const [showSolution, setShowSolution] = useState(false);
   const game = usePatchesGame({ puzzle, settings });
@@ -63,7 +65,7 @@ function GameView({ spec, puzzle, generationMs, daily, onNext }: ViewProps) {
       seed={puzzle.seed}
       shareUrl={() => (daily ? `${window.location.origin}${GAME.path}` : buildPlayUrl(window.location.origin, GAME.path, patchesSeeds, spec))}
       session={game}
-      idleText={placed + unfinished === 0 ? "Press a clue and drag outward to draw its patch." : `${placed} of ${puzzle.clues.length} patches done${unfinished > 0 ? `, ${unfinished} unfinished` : ""}.`}
+      idleText={placed + unfinished === 0 ? t("idle.start") : t("idle.progress", { placed, total: puzzle.clues.length, unfinished })}
       onNext={onNext}
       board={
         <Board
@@ -77,7 +79,7 @@ function GameView({ spec, puzzle, generationMs, daily, onNext }: ViewProps) {
           pendingIds={game.pendingIds}
           tweenIds={game.tweenIds}
           debugSolution={showSolution ? puzzle.solution : null}
-          label={`Patches board, ${puzzle.width} by ${puzzle.height}, ${puzzle.clues.length} clues. Arrow keys move. Enter on a clue or on a patch starts a stroke, arrows grow it, Enter places it. Enter twice on a patch, or Delete, removes it.`}
+          label={t("board.label", { width: puzzle.width, height: puzzle.height, clues: puzzle.clues.length })}
           previewStatus={game.previewStatus}
           onPlace={game.place}
           onRemove={game.removeAt}

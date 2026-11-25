@@ -2,9 +2,13 @@
  * npm run patches:solve -- --seed 12345 [--difficulty hard] [--size 8] [--steps]
  * Re-solves the puzzle from its clues alone and compares with the stored solution.
  */
-import { buildCandidates, describeClue, generateFromSpec, rectEquals, regionRect, resolveSpec, solve, solveWithLogic } from "@/games/patches/engine";
+import { buildCandidates, clueText, generateFromSpec, rectEquals, regionRect, resolveSpec, solve, solveWithLogic } from "@/games/patches/engine";
+import { translator } from "../../tests/i18n";
 import { parseArgs } from "../shared/cli";
 import { renderClues, renderRects } from "./render";
+
+/** The tool prints clues the way the English interface describes them. */
+const t = translator("patches");
 
 const args = parseArgs(process.argv.slice(2));
 const puzzle = generateFromSpec(
@@ -42,7 +46,7 @@ if (args.steps) {
     const clue = puzzle.clues[step.clueIndex];
     console.log(
       `  round ${step.wave}  ${step.technique.padEnd(11)} ${step.neededElimination ? "+lookahead " : "           "}` +
-        `r${clue.row + 1}c${clue.column + 1} (${describeClue(clue)}) -> ${rect.width}x${rect.height} at r${rect.row + 1}c${rect.column + 1}`,
+        `r${clue.row + 1}c${clue.column + 1} (${clueText(t, clue)}) -> ${rect.width}x${rect.height} at r${rect.row + 1}c${rect.column + 1}`,
     );
   }
 }

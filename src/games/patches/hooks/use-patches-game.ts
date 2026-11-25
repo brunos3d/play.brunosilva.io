@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useGameClock } from "@/shared/hooks/use-game-clock";
 import { playSound } from "@/shared/platform/audio";
@@ -10,6 +11,7 @@ import type { Settings } from "@/shared/storage/settings";
 import { IDLE_STATUS, type StatusMessage } from "@/shared/ui/status-line";
 import { type GameState, canUndo, createGame, isLocked, pendingRegionIds, placeRegion, previewRect, recordHint, removeRegionAt, resetGame, revealStep, undo as undoAction } from "../engine/game/state";
 import { type Hint, getHint } from "../engine/hints/hint";
+import { hintText, regionErrorText } from "../engine/text";
 import type { CellCoordinate, PuzzleShape, Rect, Region } from "../engine/types";
 import { fromSnapshot, toSnapshot } from "../storage/progress";
 
@@ -41,10 +43,13 @@ const summarize = (state: GameState, elapsedMs: number): FinishSummary => ({
 
 /**
  * Glue between the pure engine and React. The engine decides every rule. This
- * hook adds what needs a browser: the clock, storage, sound and vibration.
+ * hook adds what needs a browser: the clock, storage, sound, vibration and the
+ * words. The engine reports what happened as data, and the sentences come from
+ * the "patches" messages of the page's locale.
  * Mount it with `key={puzzle.id}` so a new puzzle starts from a clean slate.
  */
 export function usePatchesGame({ puzzle, settings, persist = true }: Options) {
+  const t = useTranslations("patches");
   const [game, setGame] = useState<GameState>(() => createGame(puzzle.id));
   const [ready, setReady] = useState(!persist);
   const [hint, setHint] = useState<Hint | null>(null);
@@ -91,10 +96,10 @@ export function usePatchesGame({ puzzle, settings, persist = true }: Options) {
       save();
       setEndedNow(true);
       setSummary(summarize(state, elapsedMs));
-      setStatus({ kind: "success", text: state.revealed ? "Solution revealed." : "Solved. Every cell is covered." });
+      setStatus({ kind: "success", text: t(state.revealed ? "status.revealed" : "status.solved") });
       feedback("complete");
     },
-    [feedback, finishClock, save],
+    [feedback, finishClock, save, t],
   );
 
   /** The player is looking at the board: the clock starts, once, and the start instant is saved right away. */
@@ -108,7 +113,7 @@ export function usePatchesGame({ puzzle, settings, persist = true }: Options) {
     const solution = puzzle.solution;
     busyRef.current = true;
     setHint(null);
-    setStatus({ kind: "info", text: "Revealing the solution." });
+    setStatus({ kind: "info", text: t("status.revealing") });
     const tick = () => {
       const step = revealStep(solution, gameRef.current);
       if (step.change?.type === "place") {
@@ -125,7 +130,7 @@ export function usePatchesGame({ puzzle, settings, persist = true }: Options) {
       }
     };
     tick();
-  }, [commit, end, feedback, puzzle.solution]);
+  }, [commit, end, feedback, puzzle.solution, t]);
 
   // Restore saved progress.
   useEffect(() => {
@@ -159,7 +164,8 @@ export function usePatchesGame({ puzzle, settings, persist = true }: Options) {
         if (result.errors.length === 0) return;
         // A refused stroke on top of an existing patch leaves that patch as it was.
         const own = gameRef.current.regions.some((region) => result.errors.length > 0 && rectTouchesRegion(rect, region));
-        setStatus({ kind: "invalid", text: own ? `${result.errors[0].message} Tap the patch to take it off and start over.` : result.errors[0].message });
+        const reason = regionErrorText(t, result.errors[0]);
+        setStatus({ kind: "invalid", text: own ? t("status.refusedOnPatch", { reason }) : reason });
         setShakeSignal((signal) => signal + 1);
         feedback("invalid");
         return;
@@ -176,16 +182,15 @@ export function usePatchesGame({ puzzle, settings, persist = true }: Options) {
         end(result.state);
       } else if (result.pending) {
         const clue = puzzle.clues.find((entry) => entry.id === result.region.clueId);
-        const count = clue?.area === undefined ? `${result.region.area} cells so far` : `${result.region.area} of ${clue.area} cells`;
-        setStatus({ kind: "info", text: `${count}. Drag again from the clue or from the patch to add the rest.` });
+        const { area } = result.region;
+        setStatus({ kind: "info", text: clue?.area === undefined ? t("status.pendingOpen", { area }) : t("status.pendingCounted", { area, total: clue.area }) });
         feedback("place");
       } else {
-        const verb = result.replaced ? "Patch finished:" : "Placed a";
-        setStatus({ kind: "info", text: `${verb} ${result.region.width} by ${result.region.height}${result.replaced ? "." : " patch."}` });
+        setStatus({ kind: "info", text: t(result.replaced ? "status.finished" : "status.placed", { width: result.region.width, height: result.region.height }) });
         feedback("place");
       }
     },
-    [commit, end, feedback, puzzle],
+    [commit, end, feedback, puzzle, t],
   );
 
   const removeAt = useCallback(
@@ -195,10 +200,10 @@ export function usePatchesGame({ puzzle, settings, persist = true }: Options) {
       if (next === gameRef.current) return;
       setHint(null);
       commit(next);
-      setStatus({ kind: "info", text: "Patch removed." });
+      setStatus({ kind: "info", text: t("status.removed") });
       feedback("remove");
     },
-    [commit, feedback],
+    [commit, feedback, t],
   );
 
   const undo = useCallback(() => {
@@ -207,9 +212,9 @@ export function usePatchesGame({ puzzle, settings, persist = true }: Options) {
     if (next === gameRef.current) return;
     setHint(null);
     commit(next);
-    setStatus({ kind: "info", text: "Last move undone." });
+    setStatus({ kind: "info", text: t("status.undone") });
     feedback("remove");
-  }, [commit, feedback]);
+  }, [commit, feedback, t]);
 
   const reset = useCallback(() => {
     if (busyRef.current) return;
@@ -217,9 +222,9 @@ export function usePatchesGame({ puzzle, settings, persist = true }: Options) {
     if (next === gameRef.current || gameRef.current.regions.length === 0) return;
     setHint(null);
     commit(next);
-    setStatus({ kind: "info", text: "Board cleared. The clock keeps running." });
+    setStatus({ kind: "info", text: t("status.reset") });
     feedback("remove");
-  }, [commit, feedback]);
+  }, [commit, feedback, t]);
 
   /**
    * A hint acts. If a placed patch cannot be part of the solution, the hint
@@ -231,7 +236,7 @@ export function usePatchesGame({ puzzle, settings, persist = true }: Options) {
     const next = getHint(puzzle, gameRef.current.regions);
     if (next.kind === "complete") return;
     commit(recordHint(gameRef.current));
-    setStatus({ kind: "hint", text: next.message });
+    setStatus({ kind: "hint", text: hintText(t, next) });
     feedback("hint");
 
     if (next.kind === "wrong-region") {
@@ -252,7 +257,7 @@ export function usePatchesGame({ puzzle, settings, persist = true }: Options) {
     setTweenIds((ids) => new Set(ids).add(result.region.id));
     commit(result.state);
     if (result.solved) end(result.state);
-  }, [commit, end, feedback, puzzle]);
+  }, [commit, end, feedback, puzzle, t]);
 
   const reveal = useCallback(() => {
     if (busyRef.current || isLocked(gameRef.current)) return;
@@ -262,8 +267,8 @@ export function usePatchesGame({ puzzle, settings, persist = true }: Options) {
   /** The player pressed an empty cell and dragged. Drawing only starts on a clue. */
   const misstart = useCallback(() => {
     if (isLocked(gameRef.current)) return;
-    setStatus({ kind: "info", text: "Start on a clue: press a cell with a number or a shape, then drag outward." });
-  }, []);
+    setStatus({ kind: "info", text: t("status.misstart") });
+  }, [t]);
 
   const previewStatus = useCallback((rect: Rect) => previewRect(puzzle, gameRef.current, rect).status, [puzzle]);
   const pendingIds = useMemo(() => pendingRegionIds(puzzle, game), [puzzle, game]);

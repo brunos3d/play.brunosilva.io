@@ -228,6 +228,18 @@
   border-radius: 6px;
 }
 
+/*
+ * The three buttons under the tutorial board. The columns are equal while every
+ * label fits. A longer one ("Desfazer" on a 360 px screen) takes the room it
+ * needs from the other two instead of touching the edge of its button.
+ */
+.patches-tutorial-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(max-content, 1fr));
+  gap: 8px;
+}
+.patches-tutorial-actions .mg-button { padding: 0 10px; }
+
 @keyframes patch-in { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
 @keyframes patch-out { to { opacity: 0; transform: scale(0.92); } }
 @keyframes patch-celebrate { 0% { transform: scale(1); } 40% { transform: scale(0.9); } 70% { transform: scale(1.04); } 100% { transform: scale(1); } }

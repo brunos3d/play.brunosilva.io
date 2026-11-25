@@ -1,30 +1,40 @@
 import { rectCells, rectEquals } from "../board/geometry";
-import { describeClue } from "../clues/clue";
 import { regionRect } from "../regions/region";
 import { buildCandidates, findCandidate } from "../solver/candidates";
 import { type Technique, solveWithLogic } from "../solver/logic";
 import { type FixedPlacement, solve } from "../solver/search";
-import type { CellCoordinate, PuzzleShape, Rect, Region } from "../types";
+import type { CellCoordinate, Clue, PuzzleShape, Rect, Region } from "../types";
 
+/**
+ * Why a placed patch has to go.
+ * - astray: an unfinished patch that reaches cells of another clue's patch, so it can never grow into the right one.
+ * - unsolvable: a legal patch that leaves the rest of the board without a solution.
+ */
+export type WrongRegionReason = "astray" | "unsolvable";
+
+/** What a hint does, as data. ../text.ts turns it into the sentence the player reads. */
 export type Hint =
   | {
       kind: "wrong-region";
       regionId: string;
       clueId: string;
       cells: CellCoordinate[];
-      message: string;
+      reason: WrongRegionReason;
     }
   | {
       kind: "place-region";
       clueId: string;
+      /** The clue the patch belongs to. The sentence that explains the hint describes it. */
+      clue: Clue;
       rect: Rect;
       cells: CellCoordinate[];
       technique: Technique;
+      /** For clue-single: lookahead had to rule out the clue's other rectangles before this one was the only one left. */
+      neededElimination: boolean;
       /** Cell that only this patch can reach, for the cell-single technique. */
       focusCell?: CellCoordinate;
-      message: string;
     }
-  | { kind: "complete"; message: string };
+  | { kind: "complete" };
 
 function toFixed(puzzle: PuzzleShape, regions: readonly Region[]): FixedPlacement[] {
   const indexById = new Map(puzzle.clues.map((clue, index) => [clue.id, index]));
@@ -49,19 +59,6 @@ function findWrongRegion(puzzle: PuzzleShape, regions: readonly Region[], candid
     if (solve(puzzle, { candidates, fixed: fixed.slice(0, count), maxSolutions: 1 }).solutionCount === 0) return regions[count - 1];
   }
   return regions[regions.length - 1] ?? null;
-}
-
-function explain(technique: Technique, clueText: string, rect: Rect, neededElimination: boolean, focus?: CellCoordinate): string {
-  const size = `${rect.width} by ${rect.height}`;
-  if (technique === "clue-single") {
-    return neededElimination
-      ? `This clue (${clueText}) has one option left. Every other rectangle would leave a cell that no clue can reach. Draw the ${size} patch.`
-      : `Only one rectangle fits this clue (${clueText}) in the space that is left. Draw the ${size} patch.`;
-  }
-  if (technique === "cell-single" && focus) {
-    return `The cell in row ${focus.row + 1}, column ${focus.column + 1} can only be reached from this clue (${clueText}), and only by this ${size} patch.`;
-  }
-  return `No single-step deduction is available, so this one comes from the solver: the clue (${clueText}) takes a ${size} patch here.`;
 }
 
 /**
@@ -90,7 +87,7 @@ export function getHint(puzzle: PuzzleShape, placed: readonly Region[]): Hint {
         regionId: astray.id,
         clueId: astray.clueId,
         cells: astray.cells.map((cell) => ({ ...cell })),
-        message: "This unfinished patch reaches cells that belong to another clue, so it cannot grow into the right one. It comes off.",
+        reason: "astray",
       };
     }
   }
@@ -102,16 +99,16 @@ export function getHint(puzzle: PuzzleShape, placed: readonly Region[]): Hint {
       regionId: wrong.id,
       clueId: wrong.clueId,
       cells: wrong.cells.map((cell) => ({ ...cell })),
-      message: "This patch follows its clue, but the rest of the board cannot be completed around it. Tap it to remove it.",
+      reason: "unsolvable",
     };
   }
 
   // Every clue has a patch and the solver accepts them all, so nothing is left to do.
-  if (regions.length === puzzle.clues.length) return { kind: "complete", message: "The board is complete." };
+  if (regions.length === puzzle.clues.length) return { kind: "complete" };
 
   const logic = solveWithLogic(puzzle, { candidates, fixed: toFixed(puzzle, regions), maxSteps: 1 });
   const step = logic.steps[0];
-  if (!step) return { kind: "complete", message: "The board is complete." };
+  if (!step) return { kind: "complete" };
 
   const clue = puzzle.clues[step.clueIndex];
   const rect = candidates.candidates[step.candidateIndex].rect;
@@ -121,11 +118,12 @@ export function getHint(puzzle: PuzzleShape, placed: readonly Region[]): Hint {
   return {
     kind: "place-region",
     clueId: clue.id,
+    clue: { ...clue },
     rect: { ...rect },
     cells: rectCells(rect),
     technique: step.technique,
+    neededElimination: step.neededElimination,
     ...(focusCell ? { focusCell } : {}),
-    message: explain(step.technique, describeClue(clue), rect, step.neededElimination, focusCell),
   };
 }
 

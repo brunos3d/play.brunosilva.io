@@ -4,7 +4,7 @@ import {
   buildRegion,
   classifyShape,
   clueAccepts,
-  describeClue,
+  clueText,
   isFilledRectangle,
   rectCells,
   rectFromCorners,
@@ -14,6 +14,7 @@ import {
   validateRegion,
   validateState,
 } from "@/games/patches/engine";
+import { translator } from "../i18n";
 import { QUADRANT_RECTS, quadrants } from "./fixtures";
 
 describe("region geometry", () => {
@@ -82,10 +83,12 @@ describe("clue constraints", () => {
   });
 
   it("describes clues in plain language", () => {
-    expect(describeClue({ id: "x", row: 0, column: 0, area: 6, shape: "wide" })).toBe("a wide rectangle of 6 cells");
-    expect(describeClue({ id: "x", row: 0, column: 0, area: 4 })).toBe("4 cells, any rectangle");
-    expect(describeClue({ id: "x", row: 0, column: 0, shape: "tall" })).toBe("a tall rectangle of unknown size");
-    expect(describeClue({ id: "x", row: 0, column: 0, shape: "freeform" })).toBe("unknown size, any rectangle");
+    const t = translator("patches");
+    expect(clueText(t, { id: "x", row: 0, column: 0, area: 6, shape: "wide" })).toBe("a wide rectangle of 6 cells");
+    expect(clueText(t, { id: "x", row: 0, column: 0, area: 4 })).toBe("4 cells, any rectangle");
+    expect(clueText(t, { id: "x", row: 0, column: 0, shape: "tall" })).toBe("a tall rectangle of unknown size");
+    expect(clueText(t, { id: "x", row: 0, column: 0, shape: "freeform" })).toBe("unknown size, any rectangle");
+    expect(clueText(translator("patches", "pt-br"), { id: "x", row: 0, column: 0, area: 6, shape: "wide" })).toBe("um retângulo largo de 6 casas");
   });
 });
 

@@ -6,6 +6,7 @@ import {
   extendExtentWithin,
   extentRect,
   getHint,
+  hintText,
   isTakenByOthers,
   pendingRegionIds,
   placeRegion,
@@ -16,6 +17,7 @@ import {
   validateState,
 } from "@/games/patches/engine";
 import { fromSnapshot, toSnapshot } from "@/games/patches/storage/progress";
+import { translator } from "../i18n";
 
 /**
  * 5x5, solution:
@@ -143,7 +145,10 @@ describe("hints and unfinished patches", () => {
     // Two cells of the 10, going up into row 2, which belongs to B and C.
     const astray = put(fresh(), { row: 2, column: 2, width: 1, height: 3 }).state;
     expect(pendingRegionIds(puzzle, astray).size).toBe(1);
-    expect(getHint(puzzle, astray.regions)).toMatchObject({ kind: "wrong-region", regionId: "region-d" });
+    const hint = getHint(puzzle, astray.regions);
+    expect(hint).toMatchObject({ kind: "wrong-region", regionId: "region-d", reason: "astray" });
+    expect(hintText(translator("patches"), hint)).toBe("This unfinished patch reaches cells that belong to another clue, so it cannot grow into the right one. It comes off.");
+    expect(hintText(translator("patches", "pt-br"), hint)).toBe("Este retalho incompleto alcança casas que são de outra pista, então não tem como crescer até virar o retalho certo. Ele sai do tabuleiro.");
   });
 });
 

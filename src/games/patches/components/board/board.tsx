@@ -1,11 +1,12 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { type CSSProperties, type KeyboardEvent, type PointerEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { type DragExtent, extendExtentWithin, extentRect, startExtent } from "../../engine/board/drag";
 import { cellKey, unionRect } from "../../engine/board/geometry";
-import { describeClue } from "../../engine/clues/clue";
 import type { Hint } from "../../engine/hints/hint";
 import { regionRect } from "../../engine/regions/region";
+import { clueText } from "../../engine/text";
 import type { CellCoordinate, PuzzleShape, Rect, Region } from "../../engine/types";
 import { isTakenByOthers } from "../../engine/validation/extendable";
 import { ClueBadge } from "./clue-badge";
@@ -87,6 +88,7 @@ export function Board({
   onMisstart,
   onInteract,
 }: BoardProps) {
+  const t = useTranslations("patches");
   const boardRef = useRef<HTMLDivElement>(null);
   const gridRef = useRef<HTMLDivElement>(null);
   const cellRefs = useRef(new Map<string, HTMLDivElement>());
@@ -137,6 +139,25 @@ export function Board({
     return map;
   }, [regions]);
   const regionByClue = useMemo(() => new Map(regions.map((region) => [region.clueId, region])), [regions]);
+
+  // What a screen reader says for each cell. The sentences only change with the board, so they are
+  // built once per change and not on every pointer move of a drag.
+  const cellLabels = useMemo(() => {
+    const labels = new Map<string, string>();
+    for (let row = 0; row < puzzle.height; row++) {
+      for (let column = 0; column < puzzle.width; column++) {
+        const key = cellKey({ row, column });
+        const clue = clueByCell.get(key);
+        const region = regionByCell.get(key);
+        const parts = [t("board.cell", { row: row + 1, column: column + 1 })];
+        if (clue) parts.push(t("board.clue", { clue: clueText(t, clue) }));
+        parts.push(region ? t("board.inside", { width: region.width, height: region.height }) : t("board.empty"));
+        if (region && pendingIds?.has(region.id)) parts.push(t("board.unfinished"));
+        labels.set(key, parts.join(" "));
+      }
+    }
+    return labels;
+  }, [clueByCell, pendingIds, puzzle.height, puzzle.width, regionByCell, t]);
 
   useEffect(() => {
     if (shakeSignal === 0) return;
@@ -352,13 +373,8 @@ export function Board({
             {Array.from({ length: puzzle.width }, (_, column) => {
               const key = cellKey({ row, column });
               const clue = clueByCell.get(key);
-              const region = regionByCell.get(key);
               const isCursor = cursor.row === row && cursor.column === column;
-              const parts = [`Row ${row + 1}, column ${column + 1}.`];
-              if (clue) parts.push(`Clue: ${describeClue(clue)}.`);
-              parts.push(region ? `Inside a ${region.width} by ${region.height} patch.` : "Empty.");
-              if (region && pendingIds?.has(region.id)) parts.push("This patch is unfinished.");
-              if (keyboardExtent && isCursor) parts.push("Drawing. Press Enter to place, Escape to cancel.");
+              const cellLabel = cellLabels.get(key) ?? "";
               return (
                 <div
                   key={key}
@@ -369,7 +385,7 @@ export function Board({
                   role="gridcell"
                   className="mg-cell"
                   tabIndex={isCursor ? 0 : -1}
-                  aria-label={parts.join(" ")}
+                  aria-label={keyboardExtent && isCursor ? `${cellLabel} ${t("board.drawing")}` : cellLabel}
                   aria-rowindex={row + 1}
                   aria-colindex={column + 1}
                   data-clue={clue ? "true" : undefined}

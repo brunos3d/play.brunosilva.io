@@ -1,1 +1,87 @@
-{}
+{
+  "board": {
+    "label": "Tabuleiro do Patches, {width} por {height}, {clues} pistas. As setas movem o cursor. Enter em uma pista ou em um retalho começa um traço, as setas aumentam o traço e Enter o coloca. Enter duas vezes em um retalho, ou Delete, remove o retalho.",
+    "tutorialLabel": "Tabuleiro do tutorial, {size} por {size}",
+    "cell": "Linha {row}, coluna {column}.",
+    "clue": "Pista: {clue}.",
+    "inside": "Dentro de um retalho de {width} por {height}.",
+    "empty": "Vazia.",
+    "unfinished": "Este retalho está incompleto.",
+    "drawing": "Desenhando. Pressione Enter para colocar, Escape para cancelar."
+  },
+  "clue": {
+    "sized": "{shape, select, square {um quadrado} tall {um retângulo alto} other {um retângulo largo}} de {area, plural, one {# casa} other {# casas}}",
+    "sizedAny": "{area, plural, one {# casa} other {# casas}}, qualquer retângulo",
+    "unsized": "{shape, select, square {um quadrado} tall {um retângulo alto} other {um retângulo largo}} sem número",
+    "unsizedAny": "sem número, qualquer retângulo"
+  },
+  "idle": {
+    "start": "Pressione uma pista e arraste a partir dela para desenhar o retalho.",
+    "progress": "{placed} de {total} retalhos prontos{unfinished, plural, =0 {} one {, # incompleto} other {, # incompletos}}."
+  },
+  "status": {
+    "solved": "Resolvido. Todas as casas estão cobertas.",
+    "revealed": "Solução revelada.",
+    "revealing": "Revelando a solução.",
+    "undone": "Última jogada desfeita.",
+    "reset": "Tabuleiro limpo. O relógio continua correndo.",
+    "removed": "Retalho removido.",
+    "placed": "Retalho de {width} por {height} colocado.",
+    "finished": "Retalho completo: {width} por {height}.",
+    "pendingCounted": "{area} de {total} casas. Arraste de novo a partir da pista ou do retalho para completar.",
+    "pendingOpen": "{area, plural, one {# casa} other {# casas}} até agora. Arraste de novo a partir da pista ou do retalho para completar.",
+    "refusedOnPatch": "{reason} Toque no retalho para tirá-lo e começar de novo.",
+    "misstart": "Comece em uma pista: pressione uma casa com um número ou uma forma e arraste para fora."
+  },
+  "error": {
+    "empty": "O retalho não tem casas.",
+    "out-of-bounds": "O retalho sai do tabuleiro.",
+    "not-rectangle": "Um retalho precisa ser um retângulo preenchido.",
+    "no-clue": "Um retalho precisa ter uma pista.",
+    "multiple-clues": "Um retalho só pode ter uma pista. Este tem {count}.",
+    "clue-mismatch": "O retalho está ligado a uma pista que não está dentro dele.",
+    "wrong-area": "Esta pista pede {needed, plural, one {# casa} other {# casas}}. O retalho tem {area}.",
+    "wrong-shape": "Esta pista pede {shape, select, square {um quadrado} tall {um retângulo alto} wide {um retângulo largo} other {um retângulo}}. O retalho tem {width} por {height}.",
+    "overlap": "O retalho se sobrepõe a outro retalho."
+  },
+  "hint": {
+    "astray": "Este retalho incompleto alcança casas que são de outra pista, então não tem como crescer até virar o retalho certo. Ele sai do tabuleiro.",
+    "unsolvable": "Este retalho segue a pista dele, mas não dá para completar o resto do tabuleiro em volta. Toque nele para remover.",
+    "complete": "O tabuleiro está completo.",
+    "clueSingle": "Só um retângulo serve para esta pista ({clue}) no espaço que sobrou. Desenhe o retalho de {width} por {height}.",
+    "clueSingleEliminated": "Esta pista ({clue}) só tem uma opção. As outras deixariam uma casa que nenhuma pista alcança. Desenhe o retalho de {width} por {height}.",
+    "cellSingle": "A casa da linha {row}, coluna {column} só é alcançada por esta pista ({clue}), e só com este retalho de {width} por {height}.",
+    "search": "Não há dedução de um passo só, então esta vem direto da solução: a pista ({clue}) recebe aqui um retalho de {width} por {height}."
+  },
+  "tutorial": {
+    "title": "Como jogar Patches",
+    "steps": {
+      "draw": {
+        "title": "Desenhe um retalho",
+        "body": "Cada retalho é um retângulo com exatamente uma pista dentro. O 4 no contorno quadrado pede um quadrado de 4 casas. Pressione o 4 e arraste para desenhar."
+      },
+      "shapes": {
+        "title": "Formas",
+        "body": "Contorno alto: mais alto que largo. Aqui são 6 casas, 2 de largura e 3 de altura. Pressione o 6 e arraste. Se parar no meio, o retalho incompleto fica, e é só arrastar de novo a partir dele."
+      },
+      "remove": {
+        "title": "Remova um retalho",
+        "body": "Mudou de ideia? Toque em um retalho para remover. Toque no retalho alto que você desenhou."
+      },
+      "undo": {
+        "title": "Desfazer",
+        "body": "Desfazer volta a sua última jogada, inclusive uma remoção. Pressione Desfazer para trazer o retalho de volta."
+      },
+      "noNumber": {
+        "title": "Sem número",
+        "body": "O contorno largo não tem número: o tamanho fica por sua conta. Retalhos não se sobrepõem nem engolem outra pista. Aqui só cabe um retângulo largo."
+      },
+      "fill": {
+        "title": "Preencha o tabuleiro",
+        "body": "O contorno tracejado aceita qualquer retângulo. Toda casa precisa ser coberta, então o espaço que sobra dá a resposta. Se você travar em um desafio de verdade, a Dica coloca o próximo retalho."
+      }
+    },
+    "doneTitle": "O jogo é só isso",
+    "doneBody": "Uma pista por retalho, sem sobreposição nem casa vazia. O relógio começa quando você vê o tabuleiro pela primeira vez e só para quando ele é resolvido."
+  }
+}
