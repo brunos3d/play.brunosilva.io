@@ -1,0 +1,4 @@
+# Words the English game refuses even as a guess. scripts/termo/build-words-en.ts reads this file.
+# Only slurs with no other meaning go here. Rude words in general stay valid guesses: a list that refuses a real word is more annoying than a wide one.
+
+nigga negro kikes spics spick gooks gooky darky dagos faggy homos lezzy dykey jewed sambo honky

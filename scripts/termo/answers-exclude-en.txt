@@ -1,0 +1,29 @@
+# Words the English answer list leaves out. They stay valid guesses.
+# scripts/termo/build-words-en.ts reads this file.
+# Review new candidates with: npm run termo:words:en -- --data <dir> --report
+
+# Offensive, sexual or unpleasant as the word of the day
+bitch whore pussy penis semen sperm horny booty prick queer slave lynch enema urine fetus vomit leper moron sissy pansy chink booby
+kinky spank grope buxom nappy spunk harem abort paddy
+
+# Names of people, places and peoples that also exist as a common word
+peter harry maria sally roman china bible
+
+# Prefixes, clippings and spoken contractions
+multi inter ultra psych gonna wanna kinda dunno gimme lemme sorta
+
+# Plurals that do not end in a plain S, and words that only exist in the plural
+radii fungi genii cacti elves pence dregs mumps datum
+
+# Comparatives of a word that is already an answer
+older wider finer newer safer wiser freer drier paler purer truer rarer nicer surer riper ruder tamer sager gayer huger bluer
+
+# Forms of a verb the automatic rules do not catch
+smote feted
+
+# Nouns made from a verb that nobody would think of
+taker payer eater saver idler riser mover sizer edger
+
+# Jargon, variant spellings and words most people would not know
+dimer fiche leach revue butte franc mamma goody tarry modal octal halon karat filet tepee ravel hippy loony trump shunt polyp skein calve
+mange burro natty bandy clime fount dross dally smite cacao

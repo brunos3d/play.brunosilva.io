@@ -32,6 +32,7 @@
     "wend:validate": "tsx scripts/wend/validate.ts",
     "wend:benchmark": "tsx scripts/wend/benchmark.ts",
     "termo:words": "tsx scripts/termo/build-words.ts",
+    "termo:words:en": "tsx scripts/termo/build-words-en.ts",
     "termo:generate": "tsx scripts/termo/generate.ts",
     "termo:validate": "tsx scripts/termo/validate.ts",
     "termo:benchmark": "tsx scripts/termo/benchmark.ts",

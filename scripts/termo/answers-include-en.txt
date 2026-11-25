@@ -1,0 +1,19 @@
+# Words the English answer list takes in although the automatic rules of
+# scripts/termo/build-words-en.ts leave them out. Every word here must be an
+# accepted guess.
+
+# Everyday words the inflection rules take for a plural or a verb form
+being thing tweed icing
+
+# Spelled the same in every dialect, but filed under one dialect in SCOWL
+among leapt
+
+# Familiar words from SCOWL sizes 40 to 70. Those sizes are mostly rarer words, so each one is picked by hand
+pixel karma setup modem macro mommy nanny login salsa condo scuba medic sushi vegan combo hippo mocha ninja latte inbox detox yummy
+funky comfy meaty tarot haiku lasso samba jazzy kebab gizmo futon skier loner biker rehab decor silky magma femur helix fjord feral
+binge stash gecko lemur guava scone wacky curvy truss posse nexus titan tuber sonar steed atoll grail coupe cumin sepia bevel grout
+ingot hydra mogul credo trope gusto deuce toner dowel druid bylaw crimp dicey piggy pylon vixen gumbo spiky lefty taffy promo lotto
+glyph shard amigo bloat henna tangy stilt decal splay minty heist legit doggy catty joust hubby chump gutsy leggy woozy wimpy unzip
+conga pooch bleep soupy shale folio derby belle piper epoxy shank triad rover stoic adieu inset islet aphid posit knave spiny conch
+nadir scion fryer shyly swath wryly awash joist bogey coven rerun imbue tryst vapid raspy testy bongo coyly edify dingo opine elate
+shush macaw clunk maven segue cushy glitz emoji bicep
