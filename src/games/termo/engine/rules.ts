@@ -1,5 +1,5 @@
 import type { LetterMark } from "./types";
-import { WORD_LENGTH, isKnownWord } from "./words";
+import { type TermoLanguage, WORD_LENGTH, isKnownWord } from "./words";
 
 /**
  * Marks each letter of a guess against an answer. Both are plain five-letter
@@ -30,10 +30,10 @@ export function scoreGuess(answer: string, guess: string): LetterMark[] {
 export type GuessErrorCode = "incomplete" | "unknown";
 export type GuessError = { code: GuessErrorCode; message: string };
 
-/** Checks a row before it is played. `letters` holds one entry per position, empty where nothing was typed. */
-export function checkGuess(letters: readonly string[]): GuessError | null {
+/** Checks a row before it is played. `letters` holds one entry per position, empty where nothing was typed. The word must be in the list of `language`. */
+export function checkGuess(letters: readonly string[], language: TermoLanguage): GuessError | null {
   if (letters.length !== WORD_LENGTH || letters.some((letter) => !/^[a-z]$/.test(letter))) return { code: "incomplete", message: `A palavra precisa ter ${WORD_LENGTH} letras.` };
-  if (!isKnownWord(letters.join(""))) return { code: "unknown", message: "Essa palavra não está na lista." };
+  if (!isKnownWord(letters.join(""), language)) return { code: "unknown", message: "Essa palavra não está na lista." };
   return null;
 }
 

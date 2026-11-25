@@ -14,7 +14,7 @@ export default function TermoDebugPanel({ puzzle, generationMs, showSolution, on
   const [check] = useState(() => {
     const started = performance.now();
     const result = validateTermoPuzzle(puzzle);
-    return { ms: performance.now() - started, text: result.ok ? "ok" : result.problems.join(" "), words: knownWordCount() };
+    return { ms: performance.now() - started, text: result.ok ? "ok" : result.problems.join(" "), words: knownWordCount(puzzle.language) };
   });
 
   const rows: [string, string | number][] = [
@@ -22,8 +22,9 @@ export default function TermoDebugPanel({ puzzle, generationMs, showSolution, on
     ["puzzle id", puzzle.id],
     ["generator version", puzzle.version],
     ["mode", `${TERMO_MODE_NAMES[puzzle.difficulty]} (tier ${puzzle.difficulty}): ${puzzle.answers.length} word(s), ${puzzle.maxGuesses} guesses`],
+    ["language", puzzle.language],
     ["pool", `${puzzle.metadata.poolSize} answers, ${check.words} accepted guesses`],
-    ["answers", showSolution ? puzzle.answers.map((word, index) => `${displayWord(word)} (#${puzzle.metadata.ranks[index] + 1})`).join(", ") : "hidden"],
+    ["answers", showSolution ? puzzle.answers.map((word, index) => `${displayWord(word, puzzle.language)} (#${puzzle.metadata.ranks[index] + 1})`).join(", ") : "hidden"],
     ["validator", `${check.text}, ${check.ms.toFixed(2)} ms`],
     ["generation", `${generationMs.toFixed(1)} ms`],
   ];

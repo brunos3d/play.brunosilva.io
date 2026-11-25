@@ -1,5 +1,6 @@
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 import {
+  type TermoLanguage,
   type TermoShape,
   type TermoState,
   boardRows,
@@ -10,6 +11,7 @@ import {
   hintLetters,
   isTermoLocked,
   knownPositions,
+  loadTermoWords,
   moveCursor,
   nextHint,
   recordTermoHint,
@@ -20,12 +22,21 @@ import {
   termoScore,
   typeLetter,
 } from "@/games/termo/engine";
-import { fromTermoSnapshot, toTermoSnapshot } from "@/games/termo/storage/progress";
+import { fromTermoSnapshot, toTermoSnapshot as snapshotOf } from "@/games/termo/storage/progress";
 
-const ONE: TermoShape = { answers: ["carta"], maxGuesses: 6 };
-const TWO: TermoShape = { answers: ["carta", "livro"], maxGuesses: 7 };
+const ONE: TermoShape = { answers: ["carta"], maxGuesses: 6, language: "pt-br" };
+const TWO: TermoShape = { answers: ["carta", "livro"], maxGuesses: 7, language: "pt-br" };
+/** An English puzzle. Its guesses must be English words. */
+const ENGLISH: TermoShape = { answers: ["house"], maxGuesses: 6, language: "en" };
 const RUNNING = { startedAt: 1_000, finishedMs: null };
 const DONE = { startedAt: 1_000, finishedMs: 42_000 };
+
+beforeAll(async () => {
+  await Promise.all([loadTermoWords("pt-br"), loadTermoWords("en")]);
+});
+
+/** A snapshot of a Portuguese game, unless told otherwise. */
+const toTermoSnapshot = (state: TermoState, seed: string, clock: { startedAt: number | null; finishedMs: number | null }, language: TermoLanguage = "pt-br") => snapshotOf(state, { seed, language }, clock);
 
 const type = (state: TermoState, word: string): TermoState => [...word].reduce(typeLetter, state);
 /** Types each word and plays it. Throws if a guess is refused, so a typo in a test is loud. */
@@ -33,7 +44,7 @@ function play(shape: TermoShape, words: readonly string[], from: TermoState = cr
   let state = from;
   for (const word of words) {
     const result = submitGuess(shape, type(state, word));
-    if (!result.ok) throw new Error(`"${word}" was refused: ${result.error?.message}`);
+    if (!result.ok) throw new Error(`"${word}" was refused: ${result.error?.code}`);
     state = result.state;
   }
   return state;
@@ -155,6 +166,20 @@ describe("playing guesses", () => {
     expect(state.status).toBe("lost");
     expect(solvedBoards(TWO, state.guesses)).toEqual([false, true]);
   });
+
+  it("takes the words of the puzzle's language only", () => {
+    // "plant" is English and "festa" is Portuguese. Each is refused by the other language's puzzle, and the row stays.
+    const portugueseWord = type(createTermoGame("p"), "festa");
+    expect(submitGuess(ENGLISH, portugueseWord)).toMatchObject({ ok: false, state: portugueseWord, error: { code: "unknown" } });
+    const englishWord = type(createTermoGame("p"), "plant");
+    expect(submitGuess(ONE, englishWord)).toMatchObject({ ok: false, state: englishWord, error: { code: "unknown" } });
+
+    let state = play(ENGLISH, ["plant"]);
+    expect(state).toMatchObject({ guesses: ["plant"], status: "playing" });
+    state = play(ENGLISH, ["house"], state);
+    expect(state.status).toBe("solved");
+    expect(termoScore(ENGLISH, state)).toEqual({ moves: 2, mistakes: 1, hintsUsed: 0 });
+  });
 });
 
 describe("hints and reveal", () => {
@@ -232,6 +257,31 @@ describe("termo snapshot", () => {
     expect(roundTrip({ ...good, hints: [[0, 5]] })).toBeNull();
     expect(roundTrip({ ...good, hints: [[0, 1], [0, 1]] })).toBeNull();
     expect(roundTrip({ ...good, hints: "x" })).toBeNull();
+  });
+
+  it("still loads a board saved before the game had two languages, as a Portuguese one", () => {
+    // What the game wrote to disk before: no language field at all.
+    const { language, ...old } = toTermoSnapshot(play(ONE, ["campo"]), "TERMO:lucky:1:medium", RUNNING);
+    expect(language).toBe("pt-br");
+    expect(old).not.toHaveProperty("language");
+    expect(roundTrip(old)?.state.guesses).toEqual(["campo"]);
+    // It is not an English board, even for a puzzle that would otherwise take its guesses.
+    expect(fromTermoSnapshot("p", { ...ONE, language: "en" }, old)).toBeNull();
+  });
+
+  it("refuses a board of one language for a puzzle of the other", () => {
+    // "piano" and "radio" are words in both languages, so only the language field tells the two boards apart.
+    const portuguese: TermoShape = { answers: ["piano"], maxGuesses: 6, language: "pt-br" };
+    const english: TermoShape = { answers: ["piano"], maxGuesses: 6, language: "en" };
+    const inPortuguese = toTermoSnapshot(play(portuguese, ["radio"]), "TERMO:lucky:1:medium", RUNNING, "pt-br");
+    const inEnglish = toTermoSnapshot(play(english, ["radio"]), "TERMO:lucky:1:medium:en", RUNNING, "en");
+    expect(roundTrip(inPortuguese, portuguese)?.state.guesses).toEqual(["radio"]);
+    expect(roundTrip(inEnglish, english)?.state.guesses).toEqual(["radio"]);
+    expect(roundTrip(inPortuguese, english)).toBeNull();
+    expect(roundTrip(inEnglish, portuguese)).toBeNull();
+    // A guess that is not a word of the puzzle's language is refused as well.
+    expect(roundTrip({ ...inEnglish, guesses: ["festa"] }, english)).toBeNull();
+    expect(roundTrip({ ...inPortuguese, guesses: ["house"] }, portuguese)).toBeNull();
   });
 
   it("drops a damaged row being typed and keeps the guesses", () => {

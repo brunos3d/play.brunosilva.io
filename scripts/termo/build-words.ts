@@ -1,10 +1,11 @@
 /**
  * npm run termo:words -- --data <directory with fserb/pt-br> [--report] [--candidates 3000]
  *
- * Builds the three word modules under src/games/termo/engine/words/ from the
- * fserb/pt-br data set (https://github.com/fserb/pt-br, MIT). The directory
- * must hold `lexico`, `icf` and `conjugações` (or `conjugacoes`), and
- * `listas/negativas` (or `negativas`).
+ * Builds the three Portuguese word modules under
+ * src/games/termo/engine/words/pt-br/ from the fserb/pt-br data set
+ * (https://github.com/fserb/pt-br, MIT). The directory must hold `lexico`,
+ * `icf` and `conjugações` (or `conjugacoes`), and `listas/negativas` (or
+ * `negativas`). The English modules come from scripts/termo/build-words-en.ts.
  *
  * `--report` prints the answer candidates in rank order and writes nothing.
  * That is how scripts/termo/answers-exclude.txt is reviewed.
@@ -193,7 +194,7 @@ const HEADER = `/**
  */
 `;
 
-const outDir = join(here, "../../src/games/termo/engine/words");
+const outDir = join(here, "../../src/games/termo/engine/words/pt-br");
 mkdirSync(outDir, { recursive: true });
 const write = (file: string, body: string) => writeFileSync(join(outDir, file), `${HEADER}\n${body}`);
 

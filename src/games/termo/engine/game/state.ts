@@ -102,7 +102,7 @@ export type GuessResult =
 /** Plays the row being typed on every board that is still open. An incomplete or unknown word is refused and the row stays. */
 export function submitGuess(shape: TermoShape, state: TermoState): GuessResult {
   if (isTermoLocked(state)) return { ok: false, state, error: null };
-  const error = checkGuess(state.draft);
+  const error = checkGuess(state.draft, shape.language);
   if (error) return { ok: false, state, error };
   const word = state.draft.join("");
   const before = solvedBoards(shape, state.guesses);

@@ -22,7 +22,7 @@ test("a typed guess is marked letter by letter, and the right word wins", async 
 
   await guess(page, miss);
   expect(await rowMarks(page, 0)).toEqual(scoreGuess(answer, miss));
-  expect(await rowText(page, 0)).toBe(displayWord(miss).toUpperCase());
+  expect(await rowText(page, 0)).toBe(displayWord(miss, "pt-br").toUpperCase());
   await expect(row(page, 0)).toHaveAttribute("data-kind", "played");
   await expect(row(page, 1)).toHaveAttribute("data-kind", "current");
   await expect(status(page)).toContainText("Tentativa 2 de 6");
@@ -30,7 +30,7 @@ test("a typed guess is marked letter by letter, and the right word wins", async 
   await guess(page, answer);
   expect(await rowMarks(page, 1)).toEqual(["right", "right", "right", "right", "right"]);
   // The row shows the word as it is written, accents included.
-  expect(await rowText(page, 1)).toBe(displayWord(answer).toUpperCase());
+  expect(await rowText(page, 1)).toBe(displayWord(answer, "pt-br").toUpperCase());
   await expect(status(page)).toContainText("Você acertou em 2 tentativas");
   await expect(board(page)).toHaveAttribute("data-locked", "true");
   await expect(result(page)).toBeVisible();
@@ -130,8 +130,8 @@ test("a hint gives one letter in its place and is counted", async ({ page }) => 
 test("running out of guesses ends the game and shows the word", async ({ page }) => {
   await openTermo(page, url);
   for (const word of wrongWords(puzzle, 6)) await guess(page, word);
-  await expect(status(page)).toContainText(`A palavra era ${displayWord(answer).toUpperCase()}`);
-  await expect(board(page).getByTestId("termo-answer")).toHaveText(displayWord(answer).toUpperCase());
+  await expect(status(page)).toContainText(`A palavra era ${displayWord(answer, "pt-br").toUpperCase()}`);
+  await expect(board(page).getByTestId("termo-answer")).toHaveText(displayWord(answer, "pt-br").toUpperCase());
   await expect(board(page)).toHaveAttribute("data-locked", "true");
   await expect(result(page)).toBeVisible();
   await expect(result(page)).toContainText("Out of guesses");
@@ -144,7 +144,7 @@ test("reveal shows the word and ends the game", async ({ page }) => {
   await openTermo(page, url);
   await guess(page, miss);
   await confirmReveal(page);
-  await expect(status(page)).toContainText(`Solução revelada. A palavra era ${displayWord(answer).toUpperCase()}`);
+  await expect(status(page)).toContainText(`Solução revelada. A palavra era ${displayWord(answer, "pt-br").toUpperCase()}`);
   await expect(result(page)).toBeVisible();
   await expect(result(page)).toContainText("Solution revealed");
   await expect(key(page, "enter")).toBeDisabled();
@@ -181,7 +181,7 @@ test("leaving a game that has started asks first", async ({ page }) => {
   await page.getByTestId("game-home").click();
   await expect(page.getByTestId("game-leave")).toBeVisible();
   await page.getByTestId("game-leave").getByRole("button", { name: "Leave" }).click();
-  await expect(page).toHaveURL(/\/$/);
+  await expect(page).toHaveURL(/\/en$/);
 });
 
 test("hard hides two words: one guess plays on both, and a found word stops taking guesses", async ({ page }) => {
@@ -200,7 +200,7 @@ test("hard hides two words: one guess plays on both, and a found word stops taki
 
   await guess(page, first);
   await expect(grid(page, 0)).toHaveAttribute("data-solved", "true");
-  await expect(status(page)).toContainText(`${displayWord(first).toUpperCase()} encontrada. Falta 1 palavra.`);
+  await expect(status(page)).toContainText(`${displayWord(first, "pt-br").toUpperCase()} encontrada. Falta 1 palavra.`);
   await expect(row(page, 2, 0)).toHaveAttribute("data-kind", "empty");
   await expect(row(page, 2, 1)).toHaveAttribute("data-kind", "current");
 
@@ -293,7 +293,7 @@ test("the daily is always one board, and once it is over it offers the day's Due
   // The result screen itself leads on to the day's Dueto and Quarteto. They stand in for the list of other games.
   await expect(result(page).getByTestId("termo-result-next").getByRole("link")).toHaveText(["Play the daily Dueto", "Play the daily Quarteto", "Practice"]);
   await expect(result(page).getByTestId("game-result-suggestion")).toHaveCount(0);
-  await expect(result(page).getByRole("link", { name: "See the other games" })).toHaveAttribute("href", "/");
+  await expect(result(page).getByRole("link", { name: "See the other games" })).toHaveAttribute("href", "/en");
   await result(page).getByRole("button", { name: "Close" }).click();
   await expect(keyboard(page)).toHaveCount(0);
   const next = page.getByTestId("termo-next");

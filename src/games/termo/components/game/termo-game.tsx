@@ -13,7 +13,7 @@ import { PuzzleAttempts } from "@/shared/ui/puzzle-attempts";
 import { type StatusMessage, StatusLine } from "@/shared/ui/status-line";
 import { termoDailyVariantFromSpec } from "../../engine/daily";
 import { boardRows, hintLetters, solvedBoards } from "../../engine/game/state";
-import { generateTermoFromSpec } from "../../engine/generator";
+import { loadTermoPuzzle } from "../../engine/generator";
 import { letterStates } from "../../engine/rules";
 import { type PuzzleSpec, TERMO_WORD_LENGTH, termoSeeds } from "../../engine/seed";
 import { termoShareGrid } from "../../engine/share";
@@ -40,7 +40,8 @@ type GameProps = {
 };
 
 export function TermoGame({ spec, daily, onNext }: GameProps) {
-  const generated = useGeneratedPuzzle(termoSeeds.format(spec), () => generateTermoFromSpec(spec));
+  // The word list of the seed's language is fetched here, and only that one. The loading board stays up meanwhile.
+  const generated = useGeneratedPuzzle(termoSeeds.format(spec), () => loadTermoPuzzle(spec));
   if (!generated || "error" in generated) return <GameLoading game={GAME} daily={daily} error={generated && "error" in generated ? generated.error : undefined} />;
   return (
     <PuzzleAttempts game="termo" puzzle={generated.puzzle} enabled={onNext !== undefined}>
@@ -119,11 +120,12 @@ function GameView({ spec, puzzle, generationMs, daily, onNext }: ViewProps) {
       session={game}
       idleText={idleText}
       hiddenControls={["undo", "reset"]}
-      resultActions={ofTheDay ? <TermoNextModes date={ofTheDay.date} current={ofTheDay.mode} testId="termo-result-next" /> : undefined}
+      resultActions={ofTheDay ? <TermoNextModes date={ofTheDay.date} current={ofTheDay.mode} language={puzzle.language} testId="termo-result-next" /> : undefined}
       onNext={onNext}
       board={
         <TermoBoard
           boards={boards}
+          language={puzzle.language}
           cursor={state.cursor}
           freshRow={game.freshRow}
           shaking={game.shaking}
@@ -136,7 +138,7 @@ function GameView({ spec, puzzle, generationMs, daily, onNext }: ViewProps) {
         <div className="termo-below" data-boards={count}>
           <StatusLine status={status} />
           {game.summary && ofTheDay ? (
-            <TermoNextModes date={ofTheDay.date} current={ofTheDay.mode} />
+            <TermoNextModes date={ofTheDay.date} current={ofTheDay.mode} language={puzzle.language} />
           ) : (
             <TermoKeyboard states={keyStates} solved={solved} disabled={!active} onLetter={press} onErase={erase} onClear={clear} onEnter={submit} />
           )}

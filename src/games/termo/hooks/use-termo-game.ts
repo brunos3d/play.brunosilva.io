@@ -25,7 +25,7 @@ import {
   typeLetter,
 } from "../engine/game/state";
 import type { TermoShape } from "../engine/types";
-import { displayWord } from "../engine/words";
+import { type TermoLanguage, displayWord } from "../engine/words";
 import { fromTermoSnapshot, toTermoSnapshot } from "../storage/progress";
 
 export type PlayableTermo = TermoShape & { id: string; seed: string };
@@ -35,11 +35,11 @@ const SHAKE_MS = 420;
 
 type Options = { puzzle: PlayableTermo; settings: Settings; persist?: boolean };
 
-const shout = (word: string): string => displayWord(word).toUpperCase();
+const shout = (word: string, language: TermoLanguage): string => displayWord(word, language).toUpperCase();
 const ORDINALS = ["1ª", "2ª", "3ª", "4ª", "5ª"];
 
-function listWords(words: readonly string[]): string {
-  const shown = words.map(shout);
+function listWords(words: readonly string[], language: TermoLanguage): string {
+  const shown = words.map((word) => shout(word, language));
   return shown.length === 1 ? shown[0] : `${shown.slice(0, -1).join(", ")} e ${shown[shown.length - 1]}`;
 }
 
@@ -51,7 +51,7 @@ function endMessage(puzzle: TermoShape, state: TermoState): StatusMessage {
     if (many) return { kind: "success", text: `Você encontrou as ${puzzle.answers.length} palavras em ${count} tentativas.` };
     return { kind: "success", text: count === 1 ? "De primeira! Você acertou a palavra." : `Você acertou em ${count} tentativas.` };
   }
-  const answers = listWords(puzzle.answers);
+  const answers = listWords(puzzle.answers, puzzle.language);
   if (state.revealed) return { kind: "info", text: many ? `Solução revelada. As palavras eram ${answers}.` : `Solução revelada. A palavra era ${answers}.` };
   return { kind: "invalid", text: many ? `Acabaram as tentativas. As palavras eram ${answers}.` : `Acabaram as tentativas. A palavra era ${answers}.` };
 }
@@ -65,7 +65,7 @@ function summarize(puzzle: TermoShape, state: TermoState, elapsedMs: number): Fi
 /**
  * Glue between the pure Termo engine and React: the clock, storage, sound and
  * the messages. Mount it with `key={puzzle.id}` so a new puzzle starts from a
- * clean slate.
+ * clean slate. The word list of the puzzle's language must be loaded.
  */
 export function useTermoGame({ puzzle, settings, persist = true }: Options) {
   const [game, setGame] = useState<TermoState>(() => createTermoGame(puzzle.id));
@@ -90,8 +90,8 @@ export function useTermoGame({ puzzle, settings, persist = true }: Options) {
   const { clockRef, begin: beginClock, finish: finishClock, restore: restoreClock } = clock;
 
   const save = useCallback(() => {
-    if (persist) void saveBoard("termo", puzzle.id, toTermoSnapshot(gameRef.current, puzzle.seed, clockRef.current));
-  }, [clockRef, persist, puzzle.id, puzzle.seed]);
+    if (persist) void saveBoard("termo", puzzle.id, toTermoSnapshot(gameRef.current, puzzle, clockRef.current));
+  }, [clockRef, persist, puzzle]);
 
   const show = useCallback((next: TermoState) => {
     gameRef.current = next;
@@ -194,7 +194,7 @@ export function useTermoGame({ puzzle, settings, persist = true }: Options) {
     }
     if (result.found.length > 0) {
       const left = puzzle.answers.length - countSolved(puzzle, result.state.guesses);
-      setStatus({ kind: "success", text: `${shout(result.word)} encontrada. ${left === 1 ? "Falta 1 palavra." : `Faltam ${left} palavras.`}` });
+      setStatus({ kind: "success", text: `${shout(result.word, puzzle.language)} encontrada. ${left === 1 ? "Falta 1 palavra." : `Faltam ${left} palavras.`}` });
       feedback("checkpoint", "checkpoint");
     } else {
       setStatus(IDLE_STATUS);

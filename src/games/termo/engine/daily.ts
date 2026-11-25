@@ -39,16 +39,17 @@ export type TermoDailyVariant = (typeof TERMO_DAILY_VARIANTS)[number];
 
 const VARIANT_TIER: Record<TermoDailyVariant, Difficulty> = { dueto: "hard", quarteto: "expert" };
 
-export function termoDailyVariantSpec(date: DateKey, variant: TermoDailyVariant, config = TERMO_DAILY_CONFIG): PuzzleSpec {
+/** Like the daily, each has one puzzle per game language: the day's English Dueto goes with the day's English Termo. */
+export function termoDailyVariantSpec(date: DateKey, variant: TermoDailyVariant, language?: string | null, config = TERMO_DAILY_CONFIG): PuzzleSpec {
   if (!isDateKey(date)) throw new RangeError(`Invalid daily date: ${date}`);
-  return { token: `${date}-${variant}`, version: daily.dailyGeneratorVersion(config, date), difficulty: VARIANT_TIER[variant] };
+  return termoSeeds.withLanguage({ token: `${date}-${variant}`, version: daily.dailyGeneratorVersion(config, date), difficulty: VARIANT_TIER[variant] }, language);
 }
 
-/** Recognizes the seed of a day's Dueto or Quarteto. A forged tier, version or size does not match. */
+/** Recognizes the seed of a day's Dueto or Quarteto, in any language. A forged tier, version or size does not match. */
 export function termoDailyVariantFromSpec(spec: PuzzleSpec, config = TERMO_DAILY_CONFIG): { date: DateKey; variant: TermoDailyVariant } | null {
   const match = /^(\d{4}-\d{2}-\d{2})-([a-z]+)$/.exec(spec.token);
   if (!match || !isDateKey(match[1]) || spec.size !== undefined) return null;
   const variant = TERMO_DAILY_VARIANTS.find((name) => name === match[2]);
   if (!variant) return null;
-  return termoSeeds.format(termoDailyVariantSpec(match[1], variant, config)) === termoSeeds.format(spec) ? { date: match[1], variant } : null;
+  return termoSeeds.format(termoDailyVariantSpec(match[1], variant, spec.lang, config)) === termoSeeds.format(spec) ? { date: match[1], variant } : null;
 }

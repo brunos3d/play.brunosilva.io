@@ -1,15 +1,22 @@
 import { type Locator, type Page, expect } from "@playwright/test";
-import { type TermoPuzzle, generateTermoFromSpec, isKnownWord, termoSeeds } from "@/games/termo/engine";
+import { type TermoLanguage, type TermoPuzzle, generateTermoFromSpec, isKnownWord, termoSeeds } from "@/games/termo/engine";
+// The tests build puzzles in Node to know the hidden words. This import loads every language's list at once, which the app never does.
+import "../../scripts/termo/all-words";
 
-export function termoPuzzle(seed: string, difficulty: string): { puzzle: TermoPuzzle; url: string } {
-  const puzzle = generateTermoFromSpec(termoSeeds.resolve({ seed, difficulty }));
+/** A puzzle and the address that opens it. Portuguese words unless `language` says otherwise, like a seed that names no language. */
+export function termoPuzzle(seed: string, difficulty: string, language: TermoLanguage = "pt-br"): { puzzle: TermoPuzzle; url: string } {
+  const puzzle = generateTermoFromSpec(termoSeeds.resolve({ seed, difficulty, lang: language }));
   return { puzzle, url: `/termo/play?seed=${encodeURIComponent(puzzle.seed)}` };
 }
 
-/** Known words that are none of the puzzle's hidden words. Enough of them to lose any tier. */
+const WRONG_WORDS: Record<TermoLanguage, readonly string[]> = {
+  "pt-br": ["festa", "campo", "livro", "nuvem", "porta", "mundo", "sagaz", "vinho", "praia", "tigre", "dente", "bolsa"],
+  en: ["plant", "house", "money", "river", "bread", "cloud", "stone", "light", "sugar", "world", "chair", "green"],
+};
+
+/** Known words of the puzzle's language that are none of its hidden words. Enough of them to lose any tier. */
 export function wrongWords(puzzle: TermoPuzzle, count: number): string[] {
-  const pool = ["festa", "campo", "livro", "nuvem", "porta", "mundo", "sagaz", "vinho", "praia", "tigre", "dente", "bolsa"];
-  const words = pool.filter((word) => isKnownWord(word) && !puzzle.answers.includes(word)).slice(0, count);
+  const words = WRONG_WORDS[puzzle.language].filter((word) => isKnownWord(word, puzzle.language) && !puzzle.answers.includes(word)).slice(0, count);
   if (words.length < count) throw new Error("The fixture pool is too small for this puzzle.");
   return words;
 }

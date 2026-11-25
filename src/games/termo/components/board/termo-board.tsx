@@ -3,7 +3,7 @@
 import { type CSSProperties, useEffect, useRef } from "react";
 import type { TermoRow } from "../../engine/game/state";
 import type { LetterMark } from "../../engine/types";
-import { WORD_LENGTH, displayWord } from "../../engine/words";
+import { type TermoLanguage, WORD_LENGTH, displayWord } from "../../engine/words";
 
 export type TermoBoardView = {
   rows: readonly TermoRow[];
@@ -16,6 +16,8 @@ export type TermoBoardView = {
 
 type Props = {
   boards: readonly TermoBoardView[];
+  /** Language of the words, for writing a played word with its accents. */
+  language: TermoLanguage;
   /** Where the next letter goes in the row being typed. */
   cursor: number;
   /** Index of the guess that was just played. Its tiles turn over. */
@@ -29,9 +31,9 @@ type Props = {
 const MARK_TEXT: Record<LetterMark, string> = { right: "no lugar certo", place: "em outra posição", wrong: "fora da palavra" };
 
 /** Letters of a played row as they are written: "maca" shows as M A Ç Ã. */
-function shownLetters(row: TermoRow): string[] {
+function shownLetters(row: TermoRow, language: TermoLanguage): string[] {
   if (row.kind !== "played") return row.letters.map((letter) => letter.toUpperCase());
-  const spelled = [...displayWord(row.letters.join("")).toUpperCase()];
+  const spelled = [...displayWord(row.letters.join(""), language).toUpperCase()];
   return spelled.length === WORD_LENGTH ? spelled : row.letters.map((letter) => letter.toUpperCase());
 }
 
@@ -40,7 +42,7 @@ function shownLetters(row: TermoRow): string[] {
  * guess. The row being typed is the same on every open board, and its cells are
  * buttons that move the cursor.
  */
-export function TermoBoard({ boards, cursor, freshRow, shaking, locked, label, onCell }: Props) {
+export function TermoBoard({ boards, language, cursor, freshRow, shaking, locked, label, onCell }: Props) {
   const root = useRef<HTMLDivElement>(null);
   const played = boards.reduce((most, board) => Math.max(most, board.rows.filter((row) => row.kind === "played").length), 0);
 
@@ -57,7 +59,7 @@ export function TermoBoard({ boards, cursor, freshRow, shaking, locked, label, o
         {boards.map((board, boardIndex) => (
           <div key={boardIndex} className="termo-grid" data-board={boardIndex} data-solved={board.solved} data-testid="termo-grid" role="group" aria-label={boards.length > 1 ? `Palavra ${boardIndex + 1} de ${boards.length}${board.solved ? ", encontrada" : ""}` : "Tentativas"}>
             {board.rows.map((row, rowIndex) => {
-              const letters = shownLetters(row);
+              const letters = shownLetters(row, language);
               return (
                 <div key={rowIndex} className="termo-row" data-kind={row.kind} data-row={rowIndex} data-fresh={row.kind === "played" && rowIndex === freshRow} data-shake={row.kind === "current" && shaking} data-testid="termo-row" role="group" aria-label={`Tentativa ${rowIndex + 1}`}>
                   {letters.map((letter, column) => {
@@ -103,7 +105,7 @@ export function TermoBoard({ boards, cursor, freshRow, shaking, locked, label, o
             })}
             {board.answer && (
               <p className="termo-answer" data-testid="termo-answer">
-                {displayWord(board.answer).toUpperCase()}
+                {displayWord(board.answer, language).toUpperCase()}
               </p>
             )}
           </div>

@@ -1,4 +1,6 @@
+import type { GameLanguage } from "@/i18n/game-language";
 import { DIFFICULTIES, type Difficulty } from "@/shared/engine/difficulty";
+import type { LetterMark } from "./types";
 
 export { DIFFICULTIES };
 export type { Difficulty };
@@ -39,3 +41,24 @@ export const TERMO_MODES: readonly TermoMode[] = [
 
 /** Name shown for a tier wherever the platform would say "easy" or "expert". */
 export const TERMO_MODE_NAMES: Record<Difficulty, string> = { easy: "Termo", medium: "Termo", hard: "Dueto", expert: "Quarteto" };
+
+/**
+ * The tutorial shows three words, each with one letter marked. They are words
+ * of the game language, so each language has its own three, written in the
+ * plain form. The sentences next to them are interface text and live in the
+ * messages.
+ */
+export type TermoExample = { word: string; at: number; mark: LetterMark };
+
+export const TERMO_EXAMPLES: Record<GameLanguage, readonly TermoExample[]> = {
+  "pt-br": [
+    { word: "festa", at: 0, mark: "right" },
+    { word: "campo", at: 2, mark: "place" },
+    { word: "nuvem", at: 3, mark: "wrong" },
+  ],
+  en: [
+    { word: "plant", at: 0, mark: "right" },
+    { word: "house", at: 2, mark: "place" },
+    { word: "money", at: 3, mark: "wrong" },
+  ],
+};

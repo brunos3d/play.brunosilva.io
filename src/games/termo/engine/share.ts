@@ -14,7 +14,7 @@ const BLANK = "⬜⬜⬜⬜⬜";
  *   🟩⬛🟨⬛🟩
  *   🟩🟩🟩🟩🟩
  */
-export function termoShareGrid(shape: TermoShape, guesses: readonly string[]): string {
+export function termoShareGrid(shape: Pick<TermoShape, "answers" | "maxGuesses">, guesses: readonly string[]): string {
   const blocks = shape.answers.map((answer) => {
     const end = solvedAt(answer, guesses);
     const played = end === -1 ? guesses : guesses.slice(0, end + 1);
