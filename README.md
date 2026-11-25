@@ -187,7 +187,7 @@ docs/         architecture, languages, online features, seeds, and one folder pe
 
 A game imports `shared` and never another game. Each `engine/` folder is pure TypeScript with no React or DOM, so it also runs from the command line. `docs/ARCHITECTURE.md` explains the layers and lists the steps to add a game.
 
-The stack is Next.js 16, React 19, TypeScript and Tailwind CSS 4. The games themselves have no dependencies beyond React and Next.js. That includes chess: the move generator, the search and the board are written here. Three libraries serve the platform around them: [next-intl](https://next-intl.dev) for translations, the [Neon](https://neon.tech) serverless driver for the database, and [DiceBear](https://www.dicebear.com) for the players' avatars (the "Thumbs" style, CC0). Icons are hand-drawn SVG, sounds are synthesized with Web Audio, and the boards are DOM and SVG. The chess pieces are the Cburnett set from Wikimedia Commons, used under its BSD licence (notice in `docs/chess/CHESS.md`). Termo's word lists are built from [fserb/pt-br](https://github.com/fserb/pt-br), used under its MIT licence (notice in the generated files and in `docs/termo/TERMO.md`). Wend's themed word bank was written for this project.
+The stack is Next.js 16, React 19, TypeScript and Tailwind CSS 4. The games themselves have no dependencies beyond React and Next.js. That includes chess: the move generator, the search and the board are written here. Three libraries serve the platform around them: [next-intl](https://next-intl.dev) for translations, the [Neon](https://neon.tech) serverless driver for the database, and [DiceBear](https://www.dicebear.com) for the players' avatars (the "Thumbs" style, CC0). Icons are hand-drawn SVG, sounds are synthesized with Web Audio, and the boards are DOM and SVG. The chess pieces are the Cburnett set from Wikimedia Commons, used under its BSD licence (notice in `docs/chess/CHESS.md`). Termo's Portuguese word lists are built from [fserb/pt-br](https://github.com/fserb/pt-br), used under its MIT licence. Its English lists are built from SCOWL, the public-domain ENABLE list and Google Books Ngram counts (CC BY 3.0). The notices are in the generated files and in `docs/termo/TERMO.md`. Wend's themed word banks, one per language, were written for this project.
 
 ## Getting started
 
@@ -256,7 +256,8 @@ npm run wend:benchmark
 npm run termo:generate -- --seed 12345 --difficulty hard --solution
 npm run termo:validate
 npm run termo:benchmark
-npm run termo:words -- --data <folder with the fserb/pt-br files>   # rebuild the word lists
+npm run termo:words -- --data <folder with the fserb/pt-br files>   # rebuild the Portuguese word lists
+npm run termo:words:en -- --data <folder with the English sources> # rebuild the English word lists
 ```
 
 The e2e tests need Chromium once: `npx playwright install chromium`.
