@@ -8,9 +8,10 @@ import type { Locale } from "./config";
  * - common: what every game shares (header, controls, dialogs, result screen).
  * - games: names, taglines and descriptions of the games.
  * - metadata: page titles and descriptions.
+ * - online: what needs the server: challenge rooms, rankings and the player's profile.
  * - one namespace per game for its own text.
  */
-export const NAMESPACES = ["common", "games", "hub", "settings", "metadata", "zip", "patches", "chess", "queens", "sumbreak", "wend", "termo"] as const;
+export const NAMESPACES = ["common", "games", "hub", "settings", "metadata", "online", "zip", "patches", "chess", "queens", "sumbreak", "wend", "termo"] as const;
 
 export type Namespace = (typeof NAMESPACES)[number];
 export type Messages = Record<Namespace, Record<string, unknown>>;

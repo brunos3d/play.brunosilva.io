@@ -27,6 +27,7 @@ import { useDailyDate } from "@/shared/hooks/use-daily-date";
 import { useGameLanguage } from "@/shared/hooks/use-game-language";
 import { useGameText } from "@/shared/hooks/use-game-text";
 import { useSettings } from "@/shared/hooks/use-settings";
+import { HubOnline } from "@/shared/online/ranking-screen";
 import { REPOSITORY_URL } from "@/shared/platform/site";
 import { loadBoard, loadDailyResult, loadDailyResults, streakDates } from "@/shared/storage/progress";
 import { GameIcon, PlatformIcon } from "../game-icons";
@@ -200,6 +201,8 @@ export function Hub() {
       {GAME_LIST.map((game) => (
         <GameCard key={game.id} game={game} daily={today ? DAILY[game.id].info(today, language) : null} data={cards[game.id]} now={now ?? 0} />
       ))}
+
+      <HubOnline />
 
       <p className="text-sm text-[var(--ink-soft)] text-center" data-testid="hub-countdown">
         {t.rich("countdown", { time: () => <span className="font-semibold tabular-nums text-[var(--ink)]">{now === null ? "--:--:--" : formatCountdown(msUntilPacificMidnight(new Date(now)))}</span> })}

@@ -16,5 +16,19 @@
     "sumbreak": "Junte vizinhos iguais na soma dos dois, na ordem certa, até sobrar uma única peça. Um tabuleiro novo todos os dias e prática sem limite.",
     "wend": "Trace as palavras escondidas pelas letras vizinhas até usar todas as letras. Um tabuleiro temático novo todos os dias, em português ou inglês, e prática sem limite.",
     "termo": "Descubra a palavra escondida de cinco letras em seis tentativas, ou duas e quatro palavras ao mesmo tempo. Uma palavra nova todos os dias, em português ou inglês, e prática sem limite."
+  },
+  "online": {
+    "room": {
+      "title": "Sala de desafio",
+      "description": "Uma corrida pelos mesmos desafios, contra amigos, ao vivo."
+    },
+    "roomNew": {
+      "title": "Desafiar amigos",
+      "description": "Abra uma sala, escolha os desafios e envie o link. Todo mundo recebe os mesmos tabuleiros e corre para terminar."
+    },
+    "ranking": {
+      "title": "Ranking",
+      "description": "Quem resolveu os desafios diários de hoje mais rápido, e quem pontuou mais na semana."
+    }
   }
 }

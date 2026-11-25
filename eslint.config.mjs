@@ -10,6 +10,8 @@ const eslintConfig = defineConfig([
     // Default ignores of eslint-config-next:
     ".next/**",
     ".next-e2e*/**",
+    // Worktrees of parallel work, each with its own copy of the repository.
+    ".claude/**",
     "out/**",
     "build/**",
     "next-env.d.ts",

@@ -16,5 +16,19 @@
     "sumbreak": "Merge equal neighbours into their sum, in the right order, until a single tile is left. A new board every day, plus unlimited practice.",
     "wend": "Trace the hidden words through neighbouring letters until every letter is used. A new themed board every day, in English or Portuguese, plus unlimited practice.",
     "termo": "Guess the hidden five-letter word in six tries, or two and four words at once. A new word every day, in English or Portuguese, plus unlimited practice."
+  },
+  "online": {
+    "room": {
+      "title": "Challenge room",
+      "description": "A race through the same puzzles, against friends, live."
+    },
+    "roomNew": {
+      "title": "Challenge friends",
+      "description": "Open a room, pick the puzzles and send the link. Everyone gets the same boards and races to finish them."
+    },
+    "ranking": {
+      "title": "Ranking",
+      "description": "Who solved today's daily puzzles fastest, and who scored the most this week."
+    }
   }
 }

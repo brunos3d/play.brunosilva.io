@@ -45,3 +45,10 @@ export async function pageTitle(locale: string, page: "practice" | "play"): Prom
   const t = await getTranslations({ locale, namespace: "metadata" });
   return { title: t(page) };
 }
+
+/** Metadata of the pages that need the server: a room, the room setup, the ranking. */
+export async function onlineMetadata(locale: string, page: "room" | "roomNew" | "ranking", path: string): Promise<Metadata> {
+  if (!isLocale(locale)) return {};
+  const t = await getTranslations({ locale, namespace: "metadata" });
+  return { title: t(`online.${page}.title`), description: t(`online.${page}.description`), alternates: localizedAlternates(locale, path) };
+}

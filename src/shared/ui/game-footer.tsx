@@ -24,6 +24,10 @@ export function GameFooter({ current }: { current?: GameId }) {
         </span>
       ))}
       <span aria-hidden="true">·</span>
+      <Link href={current ? `/ranking?game=${current}` : "/ranking"} prefetch={false} className="underline underline-offset-2 hover:text-[var(--ink-soft)]">
+        {t("ranking")}
+      </Link>
+      <span aria-hidden="true">·</span>
       <a href={REPOSITORY_URL} target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:text-[var(--ink-soft)]">
         {t("github")}
       </a>

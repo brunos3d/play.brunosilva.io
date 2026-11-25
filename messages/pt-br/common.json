@@ -93,12 +93,14 @@
     "seedNoteSized": "A mesma seed, dificuldade e tamanho sempre geram o mesmo desafio.",
     "seedNote": "A mesma seed e dificuldade sempre geram o mesmo desafio.",
     "random": "Desafio aleatório",
-    "playSeed": "Jogar esta seed"
+    "playSeed": "Jogar esta seed",
+    "challenge": "Desafiar amigos"
   },
   "footer": {
     "allGames": "Todos os jogos",
     "play": "Jogar {game}",
-    "github": "GitHub"
+    "github": "GitHub",
+    "ranking": "Ranking"
   },
   "loading": {
     "badSeed": "Esta seed não pode ser jogada",

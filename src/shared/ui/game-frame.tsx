@@ -7,6 +7,9 @@ import { useRouter } from "@/i18n/navigation";
 import type { DailyInfo } from "@/shared/engine/daily";
 import type { Difficulty } from "@/shared/engine/difficulty";
 import { useHydrated, useSettings } from "@/shared/hooks/use-settings";
+import { RaceBar } from "@/shared/online/race-bar";
+import { useRace } from "@/shared/online/use-race";
+import { useScoreSubmission } from "@/shared/online/use-score";
 import { type FinishSummary, buildResult } from "@/shared/platform/results";
 import type { Settings } from "@/shared/storage/settings";
 import { ConfirmDialog } from "./confirm-dialog";
@@ -78,6 +81,7 @@ const RESULT_DELAY_MS = 1_000;
  */
 export function GameFrame({ game, daily, difficulty, size, seed, shareUrl, session, idleText, board, statusSlot, tutorial, debug, onNext, hiddenControls, shareDetail, resultActions }: FrameProps) {
   const t = useTranslations("common");
+  const online = useTranslations("online.race");
   const { settings, update, markTutorialSeen } = useSettings();
   const hydrated = useHydrated();
   const [helpOpen, setHelpOpen] = useState(false);
@@ -87,8 +91,14 @@ export function GameFrame({ game, daily, difficulty, size, seed, shareUrl, sessi
   const router = useRouter();
   const [result, setResult] = useState<ResultData | null>(null);
   const [resultOpen, setResultOpen] = useState(false);
-  // Practice only: the game's container offers to start this same puzzle over.
-  const retry = useRetry();
+  // A round of a challenge room: the puzzle is played as usual, and the room hears when it comes into view and when it ends.
+  const race = useRace();
+  const [raceDialogOpen, setRaceDialogOpen] = useState(false);
+  // Practice only: the game's container offers to start this same puzzle over. A round of a race is played once, and its next board is the room's to pick.
+  const retryOffer = useRetry();
+  const retry = race ? null : retryOffer;
+  const next = race ? undefined : onNext;
+  const submitScore = useScoreSubmission();
 
   const tutorialOpen = helpOpen || (hydrated && !settings.tutorials[game.id]);
   const closeTutorial = () => {
@@ -98,20 +108,30 @@ export function GameFrame({ game, daily, difficulty, size, seed, shareUrl, sessi
 
   // The clock starts the first time the board is actually in view: progress is loaded and no tutorial covers it.
   const { ready, begin } = session;
+  const viewRace = race?.view;
   useEffect(() => {
-    if (ready && hydrated && !tutorialOpen) begin();
-  }, [ready, hydrated, tutorialOpen, begin]);
+    if (!ready || !hydrated || tutorialOpen) return;
+    begin();
+    viewRace?.();
+  }, [ready, hydrated, tutorialOpen, begin, viewRace]);
 
   // Result flow. A board that ended just now records its result. A reopened one only reads it.
   const { summary, endedNow } = session;
   useEffect(() => {
-    if (!summary) return;
+    // A round of a race has no result screen of its own: the room keeps the times, and the next board follows at once.
+    if (!summary || race) return;
     let cancelled = false;
     let timeout = 0;
     void buildResult({ game: game.id, daily, difficulty, size, seed, summary, record: endedNow, shareUrl: shareUrl() }).then((data) => {
       if (cancelled) return;
       setResult(data);
       timeout = window.setTimeout(() => setResultOpen(true), endedNow ? RESULT_DELAY_MS : 0);
+      // A daily puzzle solved just now also goes to the ranking. The points show up on the result screen when the server answers.
+      if (daily && endedNow && !data.revealed) {
+        void submitScore({ game: game.id, variant: daily.variant, date: daily.date, number: daily.number, difficulty, size, elapsedMs: data.elapsedMs, hintsUsed: data.hintsUsed, mistakes: data.mistakes }).then((points) => {
+          if (!cancelled && points !== null) setResult((current) => (current ? { ...current, points } : current));
+        });
+      }
     });
     return () => {
       cancelled = true;
@@ -120,6 +140,21 @@ export function GameFrame({ game, daily, difficulty, size, seed, shareUrl, sessi
     // Runs once per ended board. Everything else it reads is fixed for the puzzle.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [summary]);
+
+  // Race flow. The round is reported once the room knows who is asking. A board that was already reported, reopened with the
+  // back button or after a reload, is not played twice: the player is sent on to where they belong.
+  const raceYou = race?.you;
+  const raceRound = race?.round;
+  const finishRound = race?.finishRound;
+  const moveOn = race?.moveOn;
+  const roundPlayed = raceYou !== undefined && raceYou !== null && raceRound !== undefined && raceYou.results.length > raceRound;
+  useEffect(() => {
+    if (!summary || !raceYou || !finishRound || !moveOn) return;
+    const timeout = window.setTimeout(() => (roundPlayed ? moveOn() : finishRound({ solved: !summary.revealed, hints: summary.hintsUsed })), RESULT_DELAY_MS);
+    return () => window.clearTimeout(timeout);
+    // Runs once per ended round: `roundPlayed` flips to true as a result of the report itself.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [summary, raceYou === null || raceYou === undefined, finishRound, moveOn]);
 
   // Leaving a board the player has started asks first: the clock keeps running while they are away.
   const inProgress = session.ready && !summary && (session.started ?? (session.canUndo || session.canReset));
@@ -130,7 +165,7 @@ export function GameFrame({ game, daily, difficulty, size, seed, shareUrl, sessi
     setLeaveOpen(true);
   };
 
-  const dialogOpen = tutorialOpen || settingsOpen || resultOpen || confirmOpen || leaveOpen;
+  const dialogOpen = tutorialOpen || settingsOpen || resultOpen || confirmOpen || leaveOpen || raceDialogOpen;
   const { undo, requestHint } = session;
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -153,24 +188,32 @@ export function GameFrame({ game, daily, difficulty, size, seed, shareUrl, sessi
   const status: StatusMessage = session.status.kind === "idle" ? { kind: "idle", text: summary ? "" : idleText } : session.status;
 
   return (
-    <main className="mg-shell">
-      <GameHeader
-        game={game}
-        mode={daily ? "daily" : "practice"}
-        numberLabel={daily ? `#${daily.number}` : undefined}
-        difficulty={difficulty}
-        size={size}
-        elapsedMs={session.elapsed}
-        onHelp={() => setHelpOpen(true)}
-        onSettings={() => setSettingsOpen(true)}
-        onHome={handleHome}
-      />
+    <main className="mg-shell" data-race={race ? "true" : undefined}>
+      <div className="mg-header w-full flex flex-col gap-2">
+        {race && <RaceBar race={race} onOpenChange={setRaceDialogOpen} />}
+        <GameHeader
+          game={game}
+          mode={daily ? "daily" : "practice"}
+          numberLabel={daily ? `#${daily.number}` : undefined}
+          difficulty={difficulty}
+          size={size}
+          elapsedMs={session.elapsed}
+          onHelp={() => setHelpOpen(true)}
+          onSettings={() => setSettingsOpen(true)}
+          onHome={handleHome}
+        />
+      </div>
 
       <div className="mg-stage">{board}</div>
 
       {statusSlot ?? <StatusLine status={status} />}
 
-      {summary && onNext && retry ? (
+      {summary && race ? (
+        // The round is over and the room is being told. The next board, or the table, opens by itself.
+        <p className="mg-status mg-controls" data-kind="success" role="status" data-testid="race-saving">
+          {online(roundPlayed && !endedNow ? "alreadyPlayed" : race.room && race.round + 1 >= race.room.rounds.length ? "raceSaved" : "roundSaved")}
+        </p>
+      ) : summary && next && retry ? (
         // A finished practice puzzle: look at the result, play the same board again, or move on to another one.
         <div className="mg-controls w-full grid grid-cols-3 gap-2">
           <button type="button" className="mg-button" data-layout="stacked" onClick={() => setResultOpen(true)} disabled={!result}>
@@ -179,17 +222,17 @@ export function GameFrame({ game, daily, difficulty, size, seed, shareUrl, sessi
           <button type="button" className="mg-button" data-layout="stacked" onClick={retry} data-testid="game-retry">
             <ResetIcon /> {t("controls.tryAgain")}
           </button>
-          <button type="button" className="mg-button" data-layout="stacked" data-variant="primary" onClick={onNext} data-testid="game-new">
+          <button type="button" className="mg-button" data-layout="stacked" data-variant="primary" onClick={next} data-testid="game-new">
             <ShuffleIcon /> {t("controls.newGame")}
           </button>
         </div>
       ) : summary ? (
-        <div className={`mg-controls w-full grid gap-2.5 ${onNext ? "grid-cols-2" : ""}`}>
-          <button type="button" className="mg-button" data-variant={onNext ? undefined : "primary"} onClick={() => setResultOpen(true)} disabled={!result}>
+        <div className={`mg-controls w-full grid gap-2.5 ${next ? "grid-cols-2" : ""}`}>
+          <button type="button" className="mg-button" data-variant={next ? undefined : "primary"} onClick={() => setResultOpen(true)} disabled={!result}>
             {t("controls.viewResult")}
           </button>
-          {onNext && (
-            <button type="button" className="mg-button" data-variant="primary" onClick={onNext} data-testid="game-new">
+          {next && (
+            <button type="button" className="mg-button" data-variant="primary" onClick={next} data-testid="game-new">
               <ShuffleIcon /> {t("controls.newGame")}
             </button>
           )}
@@ -204,7 +247,7 @@ export function GameFrame({ game, daily, difficulty, size, seed, shareUrl, sessi
           onHint={session.requestHint}
           onReveal={() => setConfirmOpen(true)}
           onReset={session.reset}
-          onNewGame={onNext}
+          onNewGame={next}
           hidden={hiddenControls}
         />
       )}
@@ -226,15 +269,15 @@ export function GameFrame({ game, daily, difficulty, size, seed, shareUrl, sessi
       />
       <ConfirmDialog
         open={confirmOpen}
-        title={t("reveal.title")}
-        confirmLabel={t("reveal.confirm")}
+        title={race ? online("revealTitle") : t("reveal.title")}
+        confirmLabel={race ? online("revealConfirm") : t("reveal.confirm")}
         onClose={() => setConfirmOpen(false)}
         onConfirm={() => {
           setConfirmOpen(false);
           session.reveal();
         }}
       >
-        {t(daily ? "reveal.daily" : "reveal.practice")}
+        {race ? online("revealBody") : t(daily ? "reveal.daily" : "reveal.practice")}
       </ConfirmDialog>
       <ConfirmDialog
         open={leaveOpen}
@@ -249,7 +292,7 @@ export function GameFrame({ game, daily, difficulty, size, seed, shareUrl, sessi
       >
         {t("leave.body")}
       </ConfirmDialog>
-      <ResultDialog game={game} open={resultOpen} result={result} onClose={() => setResultOpen(false)} onNext={onNext} onRetry={onNext && retry ? retry : undefined} shareDetail={shareDetail} actions={resultActions} />
+      <ResultDialog game={game} open={resultOpen} result={result} onClose={() => setResultOpen(false)} onNext={next} onRetry={next && retry ? retry : undefined} shareDetail={shareDetail} actions={resultActions} />
     </main>
   );
 }

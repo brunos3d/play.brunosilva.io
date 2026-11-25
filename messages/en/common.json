@@ -93,12 +93,14 @@
     "seedNoteSized": "The same seed, difficulty and size always build the same puzzle.",
     "seedNote": "The same seed and difficulty always build the same puzzle.",
     "random": "Random puzzle",
-    "playSeed": "Play this seed"
+    "playSeed": "Play this seed",
+    "challenge": "Challenge friends"
   },
   "footer": {
     "allGames": "All games",
     "play": "Play {game}",
-    "github": "GitHub"
+    "github": "GitHub",
+    "ranking": "Ranking"
   },
   "loading": {
     "badSeed": "This seed cannot be played",

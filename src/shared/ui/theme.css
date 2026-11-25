@@ -393,6 +393,150 @@
   background: var(--linen-deep);
   white-space: nowrap;
 }
+button.mg-chip[data-active] { color: var(--linen); background: var(--ink); }
+
+/*
+ * The buttons under a tutorial board: Undo, Hint, Skip. Three equal columns
+ * while the labels fit. A longer label, such as "Desfazer" on a 360 px
+ * screen, takes the room it needs from the others.
+ */
+.mg-tutorial-actions {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(max-content, 1fr);
+  gap: 8px;
+}
+.mg-tutorial-actions .mg-button { padding: 0 10px; }
+
+/* ---------- Challenge rooms ---------- */
+
+/* The strip above the header while a puzzle is a round of a race: the round, the race clock and the other players. */
+.mg-race {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 40px;
+  padding: 4px 6px 4px 12px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+  background: var(--linen-deep);
+}
+.mg-race svg { width: 16px; height: 16px; flex: none; color: var(--accent); }
+.mg-race-players { display: flex; align-items: center; margin-left: auto; }
+.mg-race-player { position: relative; margin-left: -6px; border-radius: 50%; box-shadow: 0 0 0 2px var(--linen-deep); }
+.mg-race-player[data-state="finished"] { box-shadow: 0 0 0 2px var(--valid); }
+.mg-race-player[data-state="gave-up"] { opacity: 0.45; }
+.mg-race-badge {
+  position: absolute;
+  right: -5px;
+  bottom: -4px;
+  min-width: 15px;
+  height: 15px;
+  padding: 0 3px;
+  border-radius: 99px;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 15px;
+  text-align: center;
+  color: var(--linen);
+  background: var(--ink);
+}
+.mg-race-player[data-state="finished"] .mg-race-badge { background: var(--valid); }
+.mg-race-quit {
+  min-height: 32px;
+  padding: 0 10px;
+  border-radius: 9px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-soft);
+  cursor: pointer;
+}
+.mg-race-quit:hover { color: var(--ink); background: var(--surface); }
+
+/* With the race strip the column is taller. The board gives up a little so a short screen still shows the controls. */
+.mg-shell[data-race="true"] .mg-stage { width: min(100%, max(240px, calc(100dvh - 400px))); }
+
+/* News that must not cover the board: it sits at the top, takes no clicks outside its own buttons, and goes away by itself. */
+.mg-toast {
+  position: fixed;
+  top: calc(10px + env(safe-area-inset-top));
+  left: 50%;
+  z-index: 40;
+  width: max-content;
+  max-width: min(440px, calc(100vw - 24px));
+  transform: translateX(-50%);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  padding: 10px 12px 10px 14px;
+  border-radius: 14px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--linen);
+  background: var(--ink);
+  box-shadow: 0 14px 34px -14px rgb(0 0 0 / 0.6);
+  animation: toast-in 240ms cubic-bezier(0.2, 0.9, 0.3, 1.1) both;
+}
+.mg-toast button {
+  min-height: 32px;
+  padding: 0 10px;
+  border-radius: 9px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--linen);
+  background: rgb(255 255 255 / 0.14);
+  cursor: pointer;
+}
+:root[data-theme="dark"] .mg-toast button { background: rgb(0 0 0 / 0.12); }
+
+/* A row of a player list or of a ranking. */
+.mg-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: var(--surface);
+  box-shadow: 0 0 0 1.5px var(--thread);
+}
+.mg-row[data-you="true"] { box-shadow: 0 0 0 2px var(--ink); }
+.mg-rank {
+  width: 26px;
+  flex: none;
+  text-align: center;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-soft);
+}
+.mg-tag {
+  display: inline-flex;
+  align-items: center;
+  height: 18px;
+  padding: 0 6px;
+  border-radius: 99px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  background: var(--linen-deep);
+}
+.mg-select {
+  width: 100%;
+  min-height: 44px;
+  padding: 0 10px;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ink);
+  background: var(--surface);
+  box-shadow: 0 0 0 1.5px var(--thread);
+  cursor: pointer;
+}
+.mg-range { width: 100%; accent-color: var(--accent); min-height: 32px; cursor: pointer; }
 
 /* ---------- Status line ---------- */
 
@@ -519,6 +663,7 @@
 @keyframes hint-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
 @keyframes dialog-in { from { opacity: 0; transform: translateY(14px) scale(0.97); } to { opacity: 1; transform: none; } }
 @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes toast-in { from { opacity: 0; transform: translate(-50%, -10px); } to { opacity: 1; transform: translate(-50%, 0); } }
 @keyframes loading-cell { 0%, 100% { opacity: 0.25; } 50% { opacity: 0.9; } }
 
 /* Reduced motion: keep state changes, drop movement. The hint stays visible without pulsing. */

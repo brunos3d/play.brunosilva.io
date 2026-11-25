@@ -1,5 +1,5 @@
 import { readFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
+import { join } from "node:path";
 import { createTranslator } from "use-intl/core";
 import { LOCALES, type Locale } from "@/i18n/config";
 import { NAMESPACES, type Namespace } from "@/i18n/messages";
@@ -7,7 +7,8 @@ import type { Translate } from "@/i18n/translate";
 
 /** The messages of one namespace, straight from messages/<locale>/<namespace>.json. */
 export function messagesOf(locale: Locale, namespace: Namespace): Record<string, unknown> {
-  return JSON.parse(readFileSync(fileURLToPath(new URL(`../messages/${locale}/${namespace}.json`, import.meta.url)), "utf8")) as Record<string, unknown>;
+  // From the working directory, which is the repository root for vitest, for Playwright and for the npm scripts. Playwright compiles specs to CommonJS, where import.meta is not available.
+  return JSON.parse(readFileSync(join(process.cwd(), "messages", locale, `${namespace}.json`), "utf8")) as Record<string, unknown>;
 }
 
 /**

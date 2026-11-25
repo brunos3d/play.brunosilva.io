@@ -14,8 +14,10 @@ export const GAME_HOSTS: Record<string, GameId> = {
   "patches.brunosilva.io": "patches",
 };
 
-/** First path segments that already mean something on the canonical address, so they are kept as they are. */
-const KNOWN_ROOTS = new Set<string>([...Object.values(GAMES).map((game) => game.path.slice(1)), ...DIFFICULTIES, ...LOCALES]);
+/** Pages that are not games: challenge rooms and the ranking. */
+const PLATFORM_ROOTS = ["rooms", "ranking"] as const;
+
+const KNOWN_ROOTS = new Set<string>([...Object.values(GAMES).map((game) => game.path.slice(1)), ...DIFFICULTIES, ...LOCALES, ...PLATFORM_ROOTS]);
 
 /**
  * True for a path that is a page, and so lives under a locale. Files do not:

@@ -15,7 +15,7 @@ import { type ShareOutcome, share } from "@/shared/platform/sharing";
 import { loadDailyResult } from "@/shared/storage/progress";
 import { Dialog } from "./dialog";
 import { GameIcon } from "./game-icons";
-import { ArrowRightIcon, CheckIcon, FlameIcon, ResetIcon, ShareIcon, ShuffleIcon } from "./icons";
+import { ArrowRightIcon, CheckIcon, FlameIcon, ResetIcon, ShareIcon, ShuffleIcon, TrophyIcon } from "./icons";
 
 export type ResultData = {
   dailyNumber?: number;
@@ -33,6 +33,8 @@ export type ResultData = {
   replay?: boolean;
   streak?: StreakSummary;
   best?: { elapsedMs: number; isNew: boolean };
+  /** Points this daily puzzle earned in the ranking. Set a moment after the result opens, when the server has answered. */
+  points?: number;
   /** Absolute URL that reopens this puzzle, or the daily page. */
   shareUrl: string;
 };
@@ -122,6 +124,7 @@ function headline(result: ResultData): string {
 export function ResultDialog({ game, open, result, onClose, onNext, onRetry, shareDetail, actions }: Props) {
   const t = useTranslations("common.result");
   const share_ = useTranslations("common.share");
+  const ranking = useTranslations("online.ranking");
   const text = useGameText();
   const [shareLabel, setShareLabel] = useState<string | null>(null);
   const suggested = useSuggestedGames(game, open);
@@ -187,6 +190,15 @@ export function ResultDialog({ game, open, result, onClose, onNext, onRetry, sha
         <div className="mg-stat"><dt>{text.mistakes(game.id)}</dt><dd>{result.mistakes}</dd></div>
         <div className="mg-stat"><dt>{t("moves")}</dt><dd>{result.moves}</dd></div>
       </dl>
+
+      {result.points !== undefined && (
+        <Link href={`/ranking?game=${game.id}`} prefetch={false} className="flex items-center justify-between gap-3 rounded-xl px-4 py-3 mb-3 bg-[var(--linen)] font-semibold" data-testid="game-result-points">
+          <span className="flex items-center gap-2">
+            <TrophyIcon className="w-5 h-5 text-[var(--accent)]" /> {ranking("earned", { points: result.points })}
+          </span>
+          <ArrowRightIcon className="w-4 h-4 text-[var(--ink-soft)]" />
+        </Link>
+      )}
 
       {result.streak && (
         <div className="flex items-center justify-between rounded-xl px-4 py-3 mb-4 bg-[var(--linen)]">

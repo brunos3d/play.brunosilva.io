@@ -4,7 +4,7 @@ import { useTranslations } from "next-intl";
 import { type FormEvent, useState } from "react";
 import type { GameMeta } from "@/games/registry";
 import { LOCALES, LOCALE_META } from "@/i18n/config";
-import { useRouter } from "@/i18n/navigation";
+import { Link, useRouter } from "@/i18n/navigation";
 import { DIFFICULTIES, type Difficulty } from "@/shared/engine/difficulty";
 import type { SeedCodec } from "@/shared/engine/seed-codec";
 import { useGameLanguage } from "@/shared/hooks/use-game-language";
@@ -13,7 +13,7 @@ import { buildPlayPath } from "@/shared/platform/share-text";
 import { LocaleFlag } from "./flags";
 import { GameFooter } from "./game-footer";
 import { GameHeader } from "./game-header";
-import { ShuffleIcon } from "./icons";
+import { ShuffleIcon, UsersIcon } from "./icons";
 import { randomSeedToken } from "./random-seed";
 
 type Props = { game: GameMeta; codec: SeedCodec };
@@ -33,6 +33,16 @@ export function GameLanguagePicker() {
         ))}
       </div>
     </fieldset>
+  );
+}
+
+/** From practice to a race: opens the room setup with this game already picked for every round. */
+export function ChallengeLink({ game }: { game: GameMeta["id"] }) {
+  const t = useTranslations("common.practice");
+  return (
+    <Link href={`/rooms/new?game=${game}`} prefetch={false} className="mg-button" data-testid="game-challenge">
+      <UsersIcon /> {t("challenge")}
+    </Link>
   );
 }
 
@@ -106,6 +116,8 @@ export function PracticeSetup({ game, codec }: Props) {
         <button type="submit" className="mg-button" data-variant="primary" data-testid="game-start">
           <ShuffleIcon /> {t(seed.trim() === "" ? "random" : "playSeed")}
         </button>
+
+        <ChallengeLink game={game.id} />
       </form>
 
       <GameFooter current={game.id} />
