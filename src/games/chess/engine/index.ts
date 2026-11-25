@@ -14,4 +14,4 @@ export * from "./generator/themes";
 export * from "./daily";
 export * from "./game/state";
 export * from "./coach/feedback";
-export * from "./coach/messages";
+export * from "./coach";

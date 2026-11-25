@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { type CSSProperties, type KeyboardEvent, type PointerEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { BISHOP, type Color, KNIGHT, QUEEN, ROOK, WHITE, squareName } from "../../engine/position";
@@ -35,9 +36,8 @@ const DRAG_THRESHOLD = 5;
 const EXIT_MS = 200;
 const PROMOTION_CHOICES = [QUEEN, KNIGHT, ROOK, BISHOP] as const;
 
-const PIECE_NAMES = ["", "peão", "cavalo", "bispo", "torre", "dama", "rei"];
-const FEMININE = [false, false, false, false, true, true, false];
-const describe = (piece: BoardPiece): string => `${PIECE_NAMES[piece.type]} ${piece.color === WHITE ? (FEMININE[piece.type] ? "branca" : "branco") : FEMININE[piece.type] ? "preta" : "preto"}`;
+/** Message keys of the pieces, indexed by piece type. Screen readers hear them in the interface locale. */
+const PIECE_KEYS = ["", "pawn", "knight", "bishop", "rook", "queen", "king"] as const;
 
 type Press = { square: number; x: number; y: number; dragging: boolean; wasSelected: boolean; touch: boolean };
 type Drag = { piece: BoardPiece; size: number; x: number; y: number; touch: boolean };
@@ -52,6 +52,7 @@ type Drag = { piece: BoardPiece; size: number; x: number; y: number; touch: bool
  * element sliding to a new place, forwards and backwards alike.
  */
 export function ChessBoard({ view, orientation, targets, locked, awaitingTakeBack, hintSquare, verdict, shakeSignal, label, onMove, onTakeBack }: BoardProps) {
+  const t = useTranslations("chess");
   const boardRef = useRef<HTMLDivElement>(null);
   const gridRef = useRef<HTMLDivElement>(null);
   const ghostRef = useRef<HTMLDivElement>(null);
@@ -269,7 +270,7 @@ export function ChessBoard({ view, orientation, targets, locked, awaitingTakeBac
       onPointerCancel={(event) => finish(event, true)}
       onContextMenu={(event) => event.preventDefault()}
     >
-      <div ref={gridRef} className="mg-grid" role="grid" lang="pt-BR" tabIndex={0} aria-label={label} aria-rowcount={8} aria-colcount={8} aria-activedescendant={`chess-square-${cursor}`} onKeyDown={handleKeyDown}>
+      <div ref={gridRef} className="mg-grid" role="grid" tabIndex={0} aria-label={label} aria-rowcount={8} aria-colcount={8} aria-activedescendant={`chess-square-${cursor}`} onKeyDown={handleKeyDown}>
         {Array.from({ length: 8 }, (_, row) => (
           <div key={row} role="row" style={{ display: "contents" }}>
             {Array.from({ length: 8 }, (_, column) => {
@@ -277,10 +278,10 @@ export function ChessBoard({ view, orientation, targets, locked, awaitingTakeBac
               const piece = pieceAt.get(square);
               const target = targetAt.get(square);
               const dark = ((square & 7) + (square >> 3)) % 2 === 0;
-              const parts = [squareName(square), piece ? describe(piece) : "vazia"];
-              if (square === selected) parts.push("selecionada");
-              if (target) parts.push(target.capture ? "captura possível" : "lance possível");
-              if (square === view.checkSquare) parts.push(view.checkmate ? "xeque-mate" : "em xeque");
+              const parts = [squareName(square), piece ? t(`board.piece.${piece.color === WHITE ? "white" : "black"}.${PIECE_KEYS[piece.type]}`) : t("board.empty")];
+              if (square === selected) parts.push(t("board.selected"));
+              if (target) parts.push(t(target.capture ? "board.canCapture" : "board.canMove"));
+              if (square === view.checkSquare) parts.push(t(view.checkmate ? "board.checkmate" : "board.inCheck"));
               return (
                 <div
                   key={square}
@@ -343,9 +344,9 @@ export function ChessBoard({ view, orientation, targets, locked, awaitingTakeBac
 
       {promotion && (
         <div className="mg-layer chess-promotion-layer">
-          <div className="chess-promotion" role="group" aria-label="Escolha a peça da promoção" lang="pt-BR" style={{ transform: `translate(${place(promotion.to).column * 100}%, 0)` }} onPointerDown={(event) => event.stopPropagation()}>
+          <div className="chess-promotion" role="group" aria-label={t("promotion.label")} style={{ transform: `translate(${place(promotion.to).column * 100}%, 0)` }} onPointerDown={(event) => event.stopPropagation()}>
             {PROMOTION_CHOICES.map((type) => (
-              <button key={type} type="button" aria-label={`Promover a ${PIECE_NAMES[type]}`} data-testid={`chess-promote-${type}`} onClick={() => choosePromotion(type)}>
+              <button key={type} type="button" aria-label={t(`promotion.${PIECE_KEYS[type]}`)} data-testid={`chess-promote-${type}`} onClick={() => choosePromotion(type)}>
                 <ChessPiece type={type} color={orientation} />
               </button>
             ))}

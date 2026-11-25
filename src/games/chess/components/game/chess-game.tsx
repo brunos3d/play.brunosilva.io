@@ -1,8 +1,10 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import { useTranslations } from "next-intl";
 import { GAMES } from "@/games/registry";
 import type { DailyInfo } from "@/shared/engine/daily";
+import { useGameLanguage } from "@/shared/hooks/use-game-language";
 import { useGeneratedPuzzle } from "@/shared/hooks/use-generated-puzzle";
 import { useSettings } from "@/shared/hooks/use-settings";
 import { buildPlayUrl } from "@/shared/platform/share-text";
@@ -39,10 +41,12 @@ export function ChessGame({ spec, daily, onNext }: GameProps) {
 type ViewProps = { spec: PuzzleSpec; puzzle: ChessPuzzle; generationMs: number; daily?: DailyInfo; onNext?: () => void };
 
 function GameView({ spec, puzzle, generationMs, daily, onNext }: ViewProps) {
+  const t = useTranslations("chess");
   const { settings } = useSettings();
-  const game = useChessGame({ puzzle, settings });
+  // The coach speaks the game language. Everything else on the page is in the interface locale.
+  const { language } = useGameLanguage();
+  const game = useChessGame({ puzzle, settings, language });
   const awaitingTakeBack = game.game.wrong !== null && !game.busy;
-  const side = game.solverColor === WHITE ? "brancas" : "pretas";
 
   return (
     <GameFrame
@@ -65,12 +69,12 @@ function GameView({ spec, puzzle, generationMs, daily, onNext }: ViewProps) {
           hintSquare={game.hintSquare}
           verdict={game.verdict}
           shakeSignal={game.shakeSignal}
-          label={`Tabuleiro de xadrez. Você joga de ${side}. As setas movem o cursor. Enter escolhe a peça e depois a casa de destino.`}
+          label={t("board.label", { side: game.solverColor === WHITE ? "white" : "black" })}
           onMove={game.tryMove}
           onTakeBack={game.takeBack}
         />
       }
-      statusSlot={<CoachPanel messages={game.messages} status={game.status} thinking={game.busy && !game.locked} awaitingTakeBack={awaitingTakeBack} />}
+      statusSlot={<CoachPanel coach={game.coach} messages={game.messages} status={game.status} thinking={game.busy && !game.locked} awaitingTakeBack={awaitingTakeBack} />}
       tutorial={(props) => <ChessTutorialDialog {...props} />}
       debug={DebugPanel ? <DebugPanel puzzle={puzzle} generationMs={generationMs} /> : undefined}
     />

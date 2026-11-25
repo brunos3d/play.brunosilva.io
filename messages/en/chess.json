@@ -1,1 +1,52 @@
-{}
+{
+  "board": {
+    "label": "Chess board. You play {side, select, white {White} other {Black}}. The arrow keys move the cursor. Enter picks a piece and then the square it goes to.",
+    "tutorialLabel": "Tutorial board. You play White.",
+    "empty": "empty",
+    "selected": "selected",
+    "canMove": "possible move",
+    "canCapture": "possible capture",
+    "inCheck": "in check",
+    "checkmate": "checkmate",
+    "piece": {
+      "white": {
+        "pawn": "white pawn",
+        "knight": "white knight",
+        "bishop": "white bishop",
+        "rook": "white rook",
+        "queen": "white queen",
+        "king": "white king"
+      },
+      "black": {
+        "pawn": "black pawn",
+        "knight": "black knight",
+        "bishop": "black bishop",
+        "rook": "black rook",
+        "queen": "black queen",
+        "king": "black king"
+      }
+    }
+  },
+  "promotion": {
+    "label": "Choose the piece the pawn becomes",
+    "queen": "Promote to a queen",
+    "knight": "Promote to a knight",
+    "rook": "Promote to a rook",
+    "bishop": "Promote to a bishop"
+  },
+  "tutorial": {
+    "title": "How to play Chess",
+    "steps": {
+      "opponent": {
+        "title": "The opponent moves first",
+        "body": "Every puzzle starts with the opponent's last move. Here Black took the rook off the back rank. That was a mistake, and it is up to you to punish it."
+      },
+      "move": {
+        "title": "Make your move",
+        "body": "Drag a piece, or tap it and then tap the square it goes to. The dots show where it can go. Find the checkmate in 1 move."
+      }
+    },
+    "doneTitle": "That is how it works",
+    "doneBody": "Sofia, the coach, comments on every move. If you get one wrong, she explains what the move allows: tap the board to take it back and try again. The first hint shows the piece, the second plays the move. The clock only stops when the puzzle is solved."
+  }
+}

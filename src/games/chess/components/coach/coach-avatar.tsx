@@ -1,13 +1,14 @@
-import type { CoachMood } from "../../engine/coach/messages";
+import type { CoachMood } from "../../engine/coach";
 
 /**
  * Sofia, the coach: an owl in the platform's fabric colours. Her eyes and brows
  * change with what she is saying, so the mood reads before the text does.
+ * `label` names her in the game language, the one she speaks.
  */
-export function CoachAvatar({ mood, className }: { mood: CoachMood; className?: string }) {
+export function CoachAvatar({ mood, label, className }: { mood: CoachMood; label: string; className?: string }) {
   const ink = "#2a2622";
   return (
-    <svg viewBox="0 0 64 64" className={className} role="img" aria-label="Sofia, a treinadora" data-mood={mood}>
+    <svg viewBox="0 0 64 64" className={className} role="img" aria-label={label} data-mood={mood}>
       <circle cx="32" cy="32" r="31" fill="#f3dc8f" />
       <path d="M17 19 15 7l11 6M47 19l2-12-11 6" fill="#c2553d" stroke={ink} strokeWidth="1.6" strokeLinejoin="round" />
       <path d="M32 11c-11.5 0-18 7.5-18 19v9c0 10.5 7.5 17 18 17s18-6.5 18-17v-9c0-11.5-6.5-19-18-19Z" fill="#c2553d" stroke={ink} strokeWidth="1.6" />

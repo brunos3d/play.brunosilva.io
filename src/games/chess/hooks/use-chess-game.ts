@@ -1,6 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { LOCALE_META } from "@/i18n/config";
+import type { GameLanguage } from "@/i18n/game-language";
 import { useGameClock } from "@/shared/hooks/use-game-clock";
 import { type SoundName, playSound } from "@/shared/platform/audio";
 import { type HapticPattern, vibrate } from "@/shared/platform/haptics";
@@ -9,7 +11,7 @@ import { loadBoard, saveBoard } from "@/shared/storage/progress";
 import type { Settings } from "@/shared/storage/settings";
 import { IDLE_STATUS, type StatusMessage } from "@/shared/ui/status-line";
 import { explainIllegalMove, explainWrongMove } from "../engine/coach/feedback";
-import { COACH_TEXT, type CoachMessage, illegalMessage, introMessage, moveHintMessage, pieceHintMessage, praiseMessage, revealMessage, solvedMessage, takeBackHintMessage, wrongMessage } from "../engine/coach/messages";
+import { type CoachMessage, coachFor } from "../engine/coach";
 import { type ChessState, beginReveal, canUndoChess, createChessGame, isChessLocked, movesOnBoard, playMove, playReply, playSolutionStep, recordChessHint, resetChess, showPunishment, undoChess } from "../engine/game/state";
 import { type Move, moveCaptured, moveFrom, movePromotion, moveTo, pieceType } from "../engine/position";
 import { boardView, positionAfter, resolvePuzzle } from "../engine/puzzle";
@@ -18,8 +20,8 @@ import { fromChessSnapshot, toChessSnapshot } from "../storage/progress";
 
 export type PlayableChess = ChessShape & { id: string; seed: string };
 
-/** A line in the coach's chat. `id` is its place in the conversation. */
-export type CoachEntry = CoachMessage & { id: number };
+/** A line in the coach's chat. `id` is its place in the conversation, and `lang` is the HTML language it was said in. */
+export type CoachEntry = CoachMessage & { id: number; lang: string };
 
 /** Squares a piece may move to, for the board. */
 export type MoveTarget = { to: number; capture: boolean; promotion: boolean };
@@ -34,7 +36,13 @@ const VERDICT_MS = 380;
 const REVEAL_STEP_MS = 800;
 const MAX_MESSAGES = 40;
 
-type Options = { puzzle: PlayableChess; settings: Settings; persist?: boolean };
+type Options = {
+  puzzle: PlayableChess;
+  settings: Settings;
+  /** The game language: the one the coach speaks. It is not the interface locale. */
+  language: GameLanguage;
+  persist?: boolean;
+};
 
 const summarize = (state: ChessState, elapsedMs: number): FinishSummary => ({ elapsedMs, hintsUsed: state.hintsUsed, mistakes: state.mistakes, moves: state.moves, revealed: state.revealed });
 
@@ -43,8 +51,12 @@ const summarize = (state: ChessState, elapsedMs: number): FinishSummary => ({ el
  * coach's conversation and the pauses that make the opponent feel like someone
  * moving pieces. Mount it with `key={puzzle.id}` so a new puzzle starts from a
  * clean slate.
+ *
+ * The coach is read at the moment she speaks. When the player changes the game
+ * language in the middle of a puzzle, the lines already in the chat stay as
+ * they were said and the next one comes in the new language.
  */
-export function useChessGame({ puzzle, settings, persist = true }: Options) {
+export function useChessGame({ puzzle, settings, language, persist = true }: Options) {
   const resolved = useMemo(() => resolvePuzzle(puzzle), [puzzle]);
   const [game, setGame] = useState<ChessState>(() => createChessGame(puzzle.id));
   /** False until the opponent's opening move has been played on the board. */
@@ -66,9 +78,13 @@ export function useChessGame({ puzzle, settings, persist = true }: Options) {
   const messageId = useRef(0);
   const variant = useRef(0);
   const settingsRef = useRef(settings);
+  const coachRef = useRef(coachFor(language));
   useEffect(() => {
     settingsRef.current = settings;
   }, [settings]);
+  useEffect(() => {
+    coachRef.current = coachFor(language);
+  }, [language]);
   useEffect(() => {
     const pending = timers.current;
     return () => {
@@ -101,7 +117,7 @@ export function useChessGame({ puzzle, settings, persist = true }: Options) {
   }, []);
 
   const say = useCallback((message: CoachMessage, kind: StatusMessage["kind"] = "info") => {
-    const entry = { ...message, id: ++messageId.current };
+    const entry = { ...message, id: ++messageId.current, lang: LOCALE_META[coachRef.current.language].htmlLang };
     setMessages((current) => [...current.slice(-(MAX_MESSAGES - 1)), entry]);
     setStatus({ kind, text: message.text });
   }, []);
@@ -139,7 +155,7 @@ export function useChessGame({ puzzle, settings, persist = true }: Options) {
     openedRef.current = true;
     setOpened(true);
     moveSound(resolved.setup, linePosition(0).inCheck());
-    say(introMessage(resolved));
+    say(coachRef.current.intro(resolved));
   }, [linePosition, moveSound, resolved, say]);
 
   const begin = useCallback(() => {
@@ -188,7 +204,7 @@ export function useChessGame({ puzzle, settings, persist = true }: Options) {
       const position = linePosition(state.progress);
       const move = position.legalMoves().find((candidate) => moveFrom(candidate) === from && moveTo(candidate) === to && movePromotion(candidate) === promotion);
       if (move === undefined) {
-        refuse(illegalMessage(explainIllegalMove(position, from, to), pieceType(position.board[from]), to));
+        refuse(coachRef.current.illegal(explainIllegalMove(position, from, to), pieceType(position.board[from]), to));
         return;
       }
 
@@ -201,12 +217,12 @@ export function useChessGame({ puzzle, settings, persist = true }: Options) {
       const turn = ++variant.current;
 
       if (outcome === "solved") {
-        say(solvedMessage(resolved, position, move, turn), "success");
+        say(coachRef.current.solved(resolved, position, move, turn), "success");
         end(next);
         return;
       }
       if (outcome === "continue") {
-        answer((reply) => praiseMessage(position, move, reply, turn));
+        answer((reply) => coachRef.current.praise(position, move, reply, turn));
         return;
       }
 
@@ -220,7 +236,7 @@ export function useChessGame({ puzzle, settings, persist = true }: Options) {
           show(showPunishment(gameRef.current, verdict.reply));
           feedback(moveCaptured(verdict.reply) !== 0 ? "capture" : "move", null);
         }
-        say(wrongMessage(position, move, verdict, turn), "invalid");
+        say(coachRef.current.wrong(position, move, verdict, turn), "invalid");
         setShakeSignal((signal) => signal + 1);
         feedback("invalid", "invalid");
         setBusyNow(false);
@@ -233,17 +249,18 @@ export function useChessGame({ puzzle, settings, persist = true }: Options) {
   const takeBack = useCallback(() => {
     if (busyRef.current || !gameRef.current.wrong) return;
     show(undoChess(gameRef.current));
-    setStatus({ kind: "info", text: COACH_TEXT.undone });
+    setStatus({ kind: "info", text: coachRef.current.text.undone });
     feedback("back", "remove");
   }, [feedback, show]);
 
   const runReveal = useCallback(() => {
     setBusyNow(true);
-    say(revealMessage(resolved));
+    // The board plays the line from where it stands, so the coach tells it from there too.
+    say(coachRef.current.reveal(resolved, gameRef.current.progress));
     const step = () => {
       const state = gameRef.current;
       if (state.status === "solved") {
-        setStatus({ kind: "success", text: COACH_TEXT.revealed });
+        setStatus({ kind: "success", text: coachRef.current.text.revealed });
         end(state);
         return;
       }
@@ -271,13 +288,13 @@ export function useChessGame({ puzzle, settings, persist = true }: Options) {
           // The opening move was seen in an earlier session. The board comes back with it already played.
           openedRef.current = true;
           setOpened(true);
-          say(introMessage(resolved));
+          say(coachRef.current.intro(resolved));
         }
         if (restored.state.status === "solved") {
           setSummary(summarize(restored.state, restored.clock.finishedMs ?? 0));
-          say({ mood: "happy", text: restored.state.revealed ? COACH_TEXT.revealed : COACH_TEXT.solvedBefore }, "success");
+          say({ mood: "happy", text: restored.state.revealed ? coachRef.current.text.revealed : coachRef.current.text.solvedBefore }, "success");
         } else if (restored.state.revealed) runReveal();
-        else if (started) say({ mood: "calm", text: COACH_TEXT.resumed });
+        else if (started) say({ mood: "calm", text: coachRef.current.text.resumed });
       }
       setReady(true);
     });
@@ -299,7 +316,7 @@ export function useChessGame({ puzzle, settings, persist = true }: Options) {
     if (next === state) return;
     show(next);
     save();
-    say({ mood: "calm", text: COACH_TEXT.undone });
+    say({ mood: "calm", text: coachRef.current.text.undone });
     feedback("back", "remove");
   }, [feedback, save, say, show, takeBack]);
 
@@ -309,7 +326,7 @@ export function useChessGame({ puzzle, settings, persist = true }: Options) {
     if (next === gameRef.current) return;
     show(next);
     save();
-    say({ mood: "calm", text: COACH_TEXT.reset });
+    say({ mood: "calm", text: coachRef.current.text.reset });
     feedback("remove", "remove");
   }, [feedback, save, say, show]);
 
@@ -325,13 +342,13 @@ export function useChessGame({ puzzle, settings, persist = true }: Options) {
 
     if (state.wrong) {
       show(recordChessHint(undoChess(state)));
-      say(takeBackHintMessage(), "hint");
+      say(coachRef.current.takeBackHint(), "hint");
       save();
       return;
     }
     if (state.hintStage === 0) {
       show(recordChessHint(state));
-      say(pieceHintMessage(resolved, move), "hint");
+      say(coachRef.current.pieceHint(resolved, move), "hint");
       save();
       return;
     }
@@ -343,7 +360,7 @@ export function useChessGame({ puzzle, settings, persist = true }: Options) {
     const check = position.inCheck();
     position.unmake(move);
     moveSound(move, check);
-    say(moveHintMessage(position, move), "hint");
+    say(coachRef.current.moveHint(position, move), "hint");
     if (next.status === "solved") {
       end(next);
       return;
@@ -399,6 +416,8 @@ export function useChessGame({ puzzle, settings, persist = true }: Options) {
     opened,
     busy,
     messages,
+    /** The coach in the current game language, for her name and the fixed labels around the chat. */
+    coach: coachFor(language),
     hintSquare,
     verdict,
     /** The side the player moves. */

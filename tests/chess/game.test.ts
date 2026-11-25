@@ -1,37 +1,27 @@
 import { describe, expect, it } from "vitest";
 import {
-  COACH_TEXT,
-  LETTERS_PT,
   Position,
   beginReveal,
   canUndoChess,
+  coachFor,
   createChessGame,
   explainIllegalMove,
   explainWrongMove,
   findMove,
   generateChessPuzzle,
-  illegalMessage,
-  introMessage,
   isSolutionMove,
   moveFromUci,
-  moveHintMessage,
   movesOnBoard,
-  pieceHintMessage,
   playMove,
   playReply,
   playSolutionStep,
   positionAfter,
-  praiseMessage,
   recordChessHint,
   resetChess,
   resolvePuzzle,
-  revealMessage,
   showPunishment,
-  solvedMessage,
-  toSan,
   undoChess,
   validateChessPuzzle,
-  wrongMessage,
   type ChessShape,
 } from "@/games/chess/engine";
 import { CHESS_TUTORIAL_PUZZLE } from "@/games/chess/components/tutorial/tutorial-puzzle";
@@ -165,27 +155,36 @@ describe("game state", () => {
 });
 
 describe("coach", () => {
+  const pt = coachFor("pt-br");
+  const en = coachFor("en");
   const start = positionAfter(smothered, []);
   const explain = (uci: string) => {
     const wrong = moveFromUci(start, uci);
     const feedback = explainWrongMove(start, wrong, "mate", 2);
-    return { feedback, text: wrongMessage(start, wrong, feedback, 0).text };
+    return { feedback, pt: pt.wrong(start, wrong, feedback, 0).text, en: en.wrong(start, wrong, feedback, 0).text };
   };
 
   it("says what a wrong move loses, without naming the right one", () => {
-    const solution = toSan(start, smothered.line[0], LETTERS_PT);
     const knight = explain("g1g2");
     expect(knight.feedback).toMatchObject({ kind: "loses-material", lost: 2, moved: false });
-    expect(knight.text).toBe("Mas e o seu cavalo? Depois de Rg2, o adversário captura em h6 com gxh6.");
+    expect(knight.pt).toBe("Mas e o seu cavalo? Depois desse lance, o adversário captura o cavalo em h6 com o peão.");
+    expect(knight.en).toBe("But what about your knight? After that move, your opponent takes the knight on h6 with the pawn.");
 
     const queen = explain("b3f3");
     expect(queen.feedback).toMatchObject({ kind: "loses-material", lost: 5, moved: true });
-    expect(queen.text).toMatch(/sua dama/);
+    expect(queen.pt).toBe("E a sua dama? Em f3, ela é capturada pela torre.");
+    expect(queen.en).toBe("What about your queen? On f3, it is taken by the rook.");
 
     const quiet = explain("b3b4");
     expect(quiet.feedback.kind).toBe("too-slow");
+    expect(quiet.pt).toBe("Esse lance dá tempo para o rei adversário se defender. Em um mate forçado, comece pelos xeques.");
+    expect(quiet.en).toBe("That move gives the enemy king time to defend. In a forced mate, start with the checks.");
 
-    for (const { text } of [knight, queen, quiet]) expect(text).not.toContain(solution);
+    // The square the solution goes to is the giveaway, in any wording.
+    for (const { pt: portuguese, en: english } of [knight, queen, quiet]) {
+      expect(portuguese).not.toContain("g8");
+      expect(english).not.toContain("g8");
+    }
     // The analysis left the position as it found it.
     expect(start.toFen()).toBe(positionAfter(smothered, []).toFen());
   });
@@ -195,25 +194,51 @@ describe("coach", () => {
     const wrong = moveFromUci(position, "d1d2");
     const feedback = explainWrongMove(position, wrong, "advantage", 0);
     expect(feedback).toMatchObject({ kind: "mated", mateIn: 2 });
-    expect(wrongMessage(position, wrong, feedback, 0).text).toBe("Cuidado! Td2 permite Ta1+, e o adversário dá mate em 2 lances.");
+    expect(pt.wrong(position, wrong, feedback, 0).text).toBe("Cuidado! Agora o adversário move a torre para a1, dando xeque. O mate vem no lance seguinte.");
+    expect(en.wrong(position, wrong, feedback, 0).text).toBe("Careful! Now your opponent moves the rook to a1, giving check. Mate comes on the next move.");
+
+    // A king that walks into the corner behind its own pawns is mated on the spot.
+    const corner = Position.fromFen("4k3/8/8/8/8/8/r4PPP/5K2 w - - 0 1");
+    const walk = moveFromUci(corner, "f1g1");
+    const now = explainWrongMove(corner, walk, "advantage", 0);
+    expect(now).toMatchObject({ kind: "mated", mateIn: 1 });
+    expect(pt.wrong(corner, walk, now, 0).text).toBe("Cuidado! Depois desse lance, o adversário move a torre para a1: xeque-mate.");
+    expect(en.wrong(corner, walk, now, 0).text).toBe("Careful! After that move, your opponent moves the rook to a1: checkmate.");
   });
 
   it("tells a check that leads nowhere from a slower mate", () => {
     // Nf7+ is Philidor's legacy the long way round: still a forced mate, one move later.
-    expect(explain("h6f7").feedback.kind).toBe("slower-mate");
+    const slower = explain("h6f7");
+    expect(slower.feedback.kind).toBe("slower-mate");
+    expect(slower.pt).toBe("Esse lance também vence, mas existe um mate mais rápido. Tente de novo.");
+    expect(slower.en).toBe("That move wins too, but there is a faster mate. Try again.");
+
     const position = Position.fromFen("4k3/pppp1ppp/8/8/8/8/5PPP/3Q2K1 w - - 0 1");
     const check = moveFromUci(position, "d1e2");
     const feedback = explainWrongMove(position, check, "mate", 1);
     expect(feedback.kind).toBe("check-answered");
-    expect(wrongMessage(position, check, feedback, 0).text).toContain("De2+ é xeque");
+    // The answer is not shown on the board, so the coach says what the opponent can do.
+    expect(pt.wrong(position, check, feedback, 0).text).toMatch(/^É xeque, mas não basta: o adversário pode mover o rei para [df]8\. O mate precisa ser forçado até o fim\.$/);
+    expect(en.wrong(position, check, feedback, 1).text).toMatch(/^Check is not mate: here your opponent can move the king to [df]8\. Look for a stronger check\.$/);
   });
 
   it("calls a small capture small and a miss a miss", () => {
     const hanging = resolvePuzzle(HANGING);
     const position = positionAfter(hanging, []);
-    const miss = explainWrongMove(position, moveFromUci(position, "g1f1"), "advantage", 0);
+    const quiet = moveFromUci(position, "g1f1");
+    const miss = explainWrongMove(position, quiet, "advantage", 0);
     expect(miss.kind).toBe("misses");
-    expect(wrongMessage(position, moveFromUci(position, "g1f1"), miss, 1).text).not.toContain("Txd6");
+    for (const coach of [pt, en]) for (const variant of [0, 1]) expect(coach.wrong(position, quiet, miss, variant).text).not.toContain("d6");
+
+    // A pawn for the taking, while a pawn of ours could take a whole rook.
+    const greedy = Position.fromFen("4k3/8/8/8/3p4/7r/3R2P1/6K1 w - - 0 1");
+    const pawn = moveFromUci(greedy, "d2d4");
+    const small = explainWrongMove(greedy, pawn, "advantage", 0);
+    expect(small).toMatchObject({ kind: "small-gain", taken: 1 });
+    expect(pt.wrong(greedy, pawn, small, 0).text).toBe("Capturar o peão é pouco. Tem um prêmio maior no tabuleiro.");
+    expect(pt.wrong(greedy, pawn, small, 1).text).toBe("Esse lance ganha um peão, mas o erro do adversário vale mais do que isso.");
+    expect(en.wrong(greedy, pawn, small, 0).text).toBe("Taking the pawn is not much. There is a bigger prize on the board.");
+    expect(en.wrong(greedy, pawn, small, 1).text).toBe("That move wins a pawn, but your opponent's mistake is worth more than that.");
   });
 
   it("explains illegal moves by their reason", () => {
@@ -222,23 +247,90 @@ describe("coach", () => {
     expect(explainIllegalMove(pinned, 12, 28)).toBe("unreachable");
     const checked = Position.fromFen("4r1k1/8/8/8/8/8/3B4/4K3 w - - 0 1");
     expect(explainIllegalMove(checked, 11, 18)).toBe("in-check");
-    expect(illegalMessage("unreachable", 3, 28)).toBe("O bispo não pode ir para e4.");
-    expect(illegalMessage("in-check", 3, 18)).toContain("xeque");
+    expect(pt.illegal("unreachable", 3, 28)).toBe("O bispo não pode ir para e4.");
+    expect(pt.illegal("unreachable", 4, 28)).toBe("A torre não pode ir para e4.");
+    expect(en.illegal("unreachable", 3, 28)).toBe("The bishop cannot go to e4.");
+    expect(pt.illegal("in-check", 3, 18)).toBe("Seu rei está em xeque. O lance precisa tirar o rei do xeque.");
+    expect(en.illegal("in-check", 3, 18)).toBe("Your king is in check. The move has to get the king out of check.");
+    expect(pt.illegal("exposes-king", 3, 19)).toBe("Esse lance deixaria o seu rei em xeque.");
+    expect(en.illegal("exposes-king", 3, 19)).toBe("That move would leave your king in check.");
   });
 
-  it("writes every line in Portuguese notation", () => {
-    expect(introMessage(smothered).text).toBe("As pretas jogaram Tf8. Foi um erro: existe xeque-mate forçado em 2 lances. Você joga de brancas.");
-    expect(introMessage(resolvePuzzle(HANGING)).text).toContain("deixaram material de graça");
-    expect(introMessage(resolvePuzzle(CHESS_TUTORIAL_PUZZLE)).text).toContain("xeque-mate em 1 lance");
-    expect(pieceHintMessage(smothered, smothered.line[0]).text).toBe("Dica: quem joga agora é a dama em b3. Às vezes vale entregar uma peça para abrir o caminho.");
-    expect(moveHintMessage(start, smothered.line[0]).text).toContain("Dg8+");
-    expect(praiseMessage(start, smothered.line[0], smothered.line[1], 0).text).toContain("O adversário respondeu Txg8");
-    const beforeMate = positionAfter(smothered, smothered.line.slice(0, 2));
-    expect(solvedMessage(smothered, beforeMate, smothered.line[2], 0).text).toContain("Cf7#");
+  it("opens every kind of puzzle with the opponent's move in words", () => {
+    expect(pt.intro(smothered).text).toBe("As pretas moveram a torre para f8. Foi um erro: existe xeque-mate forçado em 2 lances. Você joga de brancas.");
+    expect(en.intro(smothered).text).toBe("Black moved the rook to f8. That was a mistake: there is a forced checkmate in 2 moves. You play White.");
     const hanging = resolvePuzzle(HANGING);
-    expect(solvedMessage(hanging, positionAfter(hanging, []), hanging.line[0], 0).text).toContain("o cavalo");
-    expect(revealMessage(smothered).text).toContain("2. Dg8+ Txg8 3. Cf7#");
-    expect(COACH_TEXT.takeBack).toMatch(/voltar/);
+    expect(pt.intro(hanging).text).toBe("As pretas moveram o cavalo para d6. Esse lance deixou material de graça. Você joga de brancas: encontre o lance que ganha.");
+    expect(en.intro(hanging).text).toBe("Black moved the knight to d6. That move left material for free. You play White: find the move that wins it.");
+    const tutorial = resolvePuzzle(CHESS_TUTORIAL_PUZZLE);
+    expect(pt.intro(tutorial).text).toBe("As pretas moveram a torre para a2. Com isso, o rei delas ficou sem saída. Você joga de brancas: dê xeque-mate em 1 lance.");
+    expect(en.intro(tutorial).text).toBe("Black moved the rook to a2. That left their king with no way out. You play White: give checkmate in 1 move.");
+    // The two other openings only differ in the sentence after the move.
+    expect(pt.intro({ ...hanging, shape: { ...HANGING, kind: "defence" } }).text).toBe("As pretas moveram o cavalo para d6. É uma ameaça séria. Você joga de brancas, e só um lance mantém a posição de pé.");
+    expect(en.intro({ ...hanging, shape: { ...HANGING, kind: "defence" } }).text).toBe("Black moved the knight to d6. That is a serious threat. You play White, and only one move holds the position together.");
+    const longer = { ...smothered, shape: { ...SMOTHERED, kind: "advantage" as const } };
+    expect(pt.intro(longer).text).toBe("As pretas moveram a torre para f8. Parece seguro, mas perde material em 2 lances. Você joga de brancas.");
+    expect(en.intro(longer).text).toBe("Black moved the rook to f8. It looks safe, but it loses material in 2 moves. You play White.");
+  });
+
+  it("hints at the piece first and only then tells the move", () => {
+    expect(pt.pieceHint(smothered, smothered.line[0]).text).toBe("Dica: quem joga agora é a dama em b3. Às vezes vale entregar uma peça para abrir o caminho.");
+    expect(en.pieceHint(smothered, smothered.line[0]).text).toBe("Hint: the piece to move is the queen on b3. Sometimes it pays to give up a piece to open the way.");
+    expect(pt.moveHint(start, smothered.line[0]).text).toBe("O lance era mover a dama para g8, dando xeque. Repare por que ele funciona.");
+    expect(en.moveHint(start, smothered.line[0]).text).toBe("The answer was to move the queen to g8, giving check. Notice why it works.");
+    // A hint that plays the mate has nothing to add to it.
+    const beforeMate = positionAfter(smothered, smothered.line.slice(0, 2));
+    expect(pt.moveHint(beforeMate, smothered.line[2]).text).toBe("O lance era mover o cavalo para f7: xeque-mate.");
+    expect(en.moveHint(beforeMate, smothered.line[2]).text).toBe("The answer was to move the knight to f7: checkmate.");
+    expect(pt.takeBackHint().text).toBe("Voltei o seu lance: ele não resolve. Tente outro caminho, ou peça outra dica.");
+    expect(en.takeBackHint().text).toBe("I took your move back: it does not solve the puzzle. Try another way, or ask for another hint.");
+  });
+
+  it("comments on a right move and on the reply to it", () => {
+    const [first, reply, last] = smothered.line;
+    expect(pt.praise(start, first, reply, 0).text).toBe("Boa! A dama vai para g8, dando xeque. O adversário respondeu capturando a dama com a torre. Como continuar?");
+    expect(pt.praise(start, first, reply, 1).text).toBe("Isso mesmo: a dama vai para g8, dando xeque. O adversário respondeu capturando a dama com a torre. Como continuar?");
+    expect(en.praise(start, first, reply, 0).text).toBe("Nice! The queen goes to g8, giving check. Your opponent replied by taking the queen with the rook. How do you continue?");
+    expect(en.praise(start, first, reply, 3).text).toBe("Well done: the queen goes to g8, giving check. Your opponent replied by taking the queen with the rook. What now?");
+    expect(start.toFen()).toBe(positionAfter(smothered, []).toFen());
+
+    const beforeMate = positionAfter(smothered, smothered.line.slice(0, 2));
+    expect(pt.solved(smothered, beforeMate, last, 0).text).toBe("Xeque-mate! O cavalo vai para f7 e encerra a partida. Muito bem.");
+    expect(pt.solved(smothered, beforeMate, last, 1).text).toBe("O cavalo vai para f7 e acabou: xeque-mate. Belo lance!");
+    expect(pt.solved(smothered, beforeMate, last, 2).text).toBe("O cavalo vai para f7: xeque-mate. Perfeito!");
+    expect(en.solved(smothered, beforeMate, last, 0).text).toBe("Checkmate! The knight goes to f7 and the game is over. Well done.");
+    expect(en.solved(smothered, beforeMate, last, 1).text).toBe("The knight goes to f7 and that's it: checkmate. Lovely move!");
+    expect(en.solved(smothered, beforeMate, last, 2).text).toBe("The knight goes to f7: checkmate. Perfect!");
+
+    const hanging = resolvePuzzle(HANGING);
+    const won = positionAfter(hanging, []);
+    expect(pt.solved(hanging, won, hanging.line[0], 0).text).toBe("A torre captura o cavalo em d6. Material ganho, problema resolvido.");
+    expect(pt.solved(hanging, won, hanging.line[0], 1).text).toBe("Perfeito: a torre captura o cavalo em d6. A vantagem é sua.");
+    expect(en.solved(hanging, won, hanging.line[0], 0).text).toBe("The rook takes the knight on d6. Material won, puzzle solved.");
+    expect(en.solved(hanging, won, hanging.line[0], 2).text).toBe("Well done! The rook takes the knight on d6. You came out ahead.");
+    const held = { ...hanging, shape: { ...HANGING, kind: "defence" as const } };
+    expect(pt.solved(held, won, hanging.line[0], 0).text).toBe("A torre captura o cavalo em d6: era o único lance. Posição salva, muito bem!");
+    expect(en.solved(held, won, hanging.line[0], 0).text).toBe("The rook takes the knight on d6: that was the only move. Position saved, well done!");
+  });
+
+  it("reveals the solution as a sequence in words, from wherever the board stands", () => {
+    expect(pt.reveal(smothered).text).toBe("Veja a solução. Você move a dama para g8, dando xeque. O adversário captura a dama com a torre. Você move o cavalo para f7: xeque-mate.");
+    expect(en.reveal(smothered).text).toBe("Here is the solution. You move the queen to g8, giving check. Your opponent takes the queen with the rook. You move the knight to f7: checkmate.");
+    expect(pt.reveal(smothered, 2).text).toBe("Veja o resto da solução. Você move o cavalo para f7: xeque-mate.");
+    expect(en.reveal(smothered, 2).text).toBe("Here is the rest of the solution. You move the knight to f7: checkmate.");
+  });
+
+  it("has every fixed line in both languages", () => {
+    expect(pt.language).toBe("pt-br");
+    expect(en.language).toBe("en");
+    expect(pt.text).toMatchObject({ name: "Sofia", role: "Treinadora", takeBack: "Toque no tabuleiro para voltar o lance.", thinking: "Sofia está pensando" });
+    expect(en.text).toMatchObject({ name: "Sofia", role: "Coach", takeBack: "Tap the board to take the move back.", thinking: "Sofia is thinking" });
+    expect(Object.keys(en.text).sort()).toEqual(Object.keys(pt.text).sort());
+    for (const key of Object.keys(pt.text) as (keyof typeof pt.text)[]) {
+      expect(en.text[key], key).not.toBe("");
+      // Only her name is the same in both.
+      if (key !== "name") expect(en.text[key], key).not.toBe(pt.text[key]);
+    }
   });
 });
 

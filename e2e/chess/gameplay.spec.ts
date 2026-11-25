@@ -1,12 +1,15 @@
 import { expect, test } from "@playwright/test";
-import { LETTERS_PT, type Move, explainWrongMove, moveCaptured, moveFrom, movePromotion, moveTo, positionAfter, squareName, toSan } from "@/games/chess/engine";
+import { type Move, coachFor, explainWrongMove, moveCaptured, moveFrom, movePromotion, moveTo, positionAfter, squareName, toSan } from "@/games/chess/engine";
 import { confirmReveal, result, skipTutorials, status, timer, watchConsole } from "../shared";
-import { board, chessPuzzle, coach, dragMove, openChess, pieces, solve, tapMove, tapSquare, verdict } from "./helpers";
+import { NOTATION, board, chessPuzzle, coach, dragMove, openChess, pieces, solve, tapMove, tapSquare, tellings, verdict } from "./helpers";
 
 // A mate in two: two solver moves with a reply in between, which is the shortest puzzle that exercises the whole flow.
 const { puzzle, resolved, url } = chessPuzzle("e2e-chess-1", "medium");
 const start = positionAfter(resolved, []);
-const firstSan = toSan(start, resolved.line[0], LETTERS_PT);
+// These tests keep the game language the helpers pin, Portuguese, under an English interface.
+const sofia = coachFor("pt-br");
+/** The first move of the solution in every wording the coach has for it. A line that must not give it away contains none. */
+const firstMove = tellings(sofia, start, resolved.line[0]);
 
 /** A wrong first move of the kind the test asks for, found with the same analysis the coach uses. */
 function wrongMove(kind: "loses-material" | "other"): Move {
@@ -46,11 +49,15 @@ test("the opponent moves first, then taps solve the puzzle and the coach follows
   await tapSquare(page, puzzle, moveTo(resolved.line[0]));
 
   await expect(verdict(page)).toHaveAttribute("data-good", "true");
-  await expect(status(page)).toContainText(firstSan);
+  // The move is told in words, with the piece's name, and never in notation.
+  await expect(status(page)).toContainText(sofia.describeMove(start, resolved.line[0], "clause"), { ignoreCase: true });
   await expect(status(page)).toContainText("O adversário respondeu");
+  await expect(coach(page)).not.toContainText(toSan(start, resolved.line[0]));
+  await expect(coach(page)).not.toContainText(NOTATION);
 
   await solve(page, puzzle, resolved, 2);
-  await expect(status(page)).toContainText("#");
+  await expect(status(page)).toContainText("xeque-mate", { ignoreCase: true });
+  await expect(coach(page)).not.toContainText(NOTATION);
   await expect(status(page)).toHaveAttribute("data-kind", "success");
   await expect(board(page).locator('.chess-square[data-check="true"]')).toHaveCount(1);
   await expect(result(page)).toBeVisible();
@@ -78,7 +85,8 @@ test("a wrong move stays on the board, the coach explains it without giving the 
   await expect(verdict(page)).toHaveAttribute("data-good", "false");
   await expect(status(page)).toHaveAttribute("data-kind", "invalid");
   await expect(coach(page)).toContainText("Toque no tabuleiro para voltar o lance.");
-  await expect(coach(page)).not.toContainText(firstSan);
+  for (const telling of firstMove) await expect(coach(page)).not.toContainText(telling, { ignoreCase: true });
+  await expect(coach(page)).not.toContainText(NOTATION);
   await expect(board(page)).toHaveAttribute("data-take-back", "true");
   // The punishment is on the board: the last move shown is the opponent's reply.
   await expect(board(page)).toHaveAttribute("data-turn", puzzle.solver);
@@ -119,10 +127,10 @@ test("the first hint shows the piece, the second plays the move, and both are co
   await page.getByRole("button", { name: /Hint/ }).click();
   await expect(board(page).locator('.chess-square[data-hint="true"]')).toHaveAttribute("data-square", squareName(moveFrom(resolved.line[0])));
   await expect(status(page)).toContainText("Dica:");
-  await expect(status(page)).not.toContainText(firstSan);
+  for (const telling of firstMove) await expect(status(page)).not.toContainText(telling, { ignoreCase: true });
 
   await page.getByRole("button", { name: /Hint/ }).click();
-  await expect(status(page)).toContainText(`O lance era ${firstSan}`);
+  await expect(status(page)).toContainText(`O lance era ${sofia.describeMove(start, resolved.line[0], "infinitive")}`);
   await expect(board(page)).toHaveAttribute("data-locked", "false");
   await expect(page.getByRole("button", { name: "Hint. 2 used." })).toBeVisible();
 
@@ -134,7 +142,10 @@ test("the first hint shows the piece, the second plays the move, and both are co
 test("reveal plays the solution and the puzzle ends without a best time", async ({ page }) => {
   await openChess(page, url);
   await confirmReveal(page);
-  await expect(coach(page)).toContainText("A solução era");
+  // The whole line in words, one short sentence per move.
+  await expect(coach(page)).toContainText(sofia.reveal(resolved).text);
+  await expect(coach(page)).toContainText("Veja a solução. Você ");
+  await expect(coach(page)).not.toContainText(NOTATION);
   await expect(result(page)).toBeVisible({ timeout: 15_000 });
   await expect(result(page)).toContainText("Solution revealed");
   await expect(board(page).locator('.chess-square[data-check="true"]')).toHaveCount(1);
@@ -178,19 +189,25 @@ test("the practice setup has no board size and builds a chess seed", async ({ pa
 });
 
 test("the tutorial teaches the two things a new player needs and then gets out of the way", async ({ page }) => {
+  // A new player: no tutorial seen and no game language picked, so the coach follows the interface.
   await page.addInitScript(() => localStorage.setItem("minigames:settings:v1", JSON.stringify({ sound: false, haptics: false, tutorials: {} })));
   await page.goto(url);
   const tutorial = page.getByTestId("game-tutorial");
   await expect(tutorial).toBeVisible();
-  await expect(tutorial).toContainText("O adversário joga primeiro");
-  await expect(tutorial).toContainText("Faça o seu lance");
+  await expect(tutorial.getByRole("heading", { name: "How to play Chess" })).toBeVisible();
+  await expect(tutorial).toContainText("1. The opponent moves first");
+  await expect(tutorial).toContainText("2. Make your move");
+  await expect(tutorial.getByTestId("chess-tutorial-coach")).toContainText("Black moved the rook to a2.");
+  await expect(tutorial.getByRole("button", { name: "Hint" })).toBeVisible();
+  await expect(tutorial.getByRole("button", { name: "Skip" })).toBeVisible();
   // The teaching board is a back-rank mate: rook from e1 to e8, White at the bottom.
   const box = (await tutorial.getByTestId("chess-board").boundingBox())!;
   const at = (file: number, rank: number) => ({ x: box.x + ((file + 0.5) * box.width) / 8, y: box.y + ((7 - rank + 0.5) * box.height) / 8 });
   await page.mouse.click(at(4, 0).x, at(4, 0).y);
   await page.mouse.click(at(4, 7).x, at(4, 7).y);
-  await expect(tutorial).toContainText("É assim que funciona");
-  await tutorial.getByRole("button", { name: "Começar a jogar" }).click();
+  await expect(tutorial).toContainText("That is how it works");
+  await expect(tutorial.getByTestId("chess-tutorial-coach")).toContainText("checkmate", { ignoreCase: true });
+  await tutorial.getByRole("button", { name: "Start playing" }).click();
   await expect(tutorial).toBeHidden();
   // The clock only starts once the tutorial is closed, and so does the opponent's opening move.
   await expect(board(page)).toHaveAttribute("data-locked", "false");

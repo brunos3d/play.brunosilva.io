@@ -1,7 +1,10 @@
 /**
- * npm run chess:generate -- --seed 12345 --difficulty hard [--json] [--solution]
+ * npm run chess:generate -- --seed 12345 --difficulty hard [--json] [--solution] [--lang pt-br]
+ *
+ * `--lang` is the language of the coach's lines: en (default) or pt-br.
  */
-import { Position, chessSeeds, generateChessFromSpec, introMessage, lineToSan, positionAfter, resolvePuzzle, toSan, validateChessPuzzle } from "@/games/chess/engine";
+import { Position, chessSeeds, coachFor, generateChessFromSpec, lineToSan, positionAfter, resolvePuzzle, toSan, validateChessPuzzle } from "@/games/chess/engine";
+import { isGameLanguage } from "@/i18n/game-language";
 import { isDifficulty } from "@/shared/engine/difficulty";
 import { parseArgs } from "../shared/cli";
 import { renderPosition } from "./render";
@@ -10,6 +13,11 @@ const args = parseArgs(process.argv.slice(2));
 const difficulty = typeof args.difficulty === "string" ? args.difficulty : "medium";
 if (!isDifficulty(difficulty)) {
   console.error(`Unknown difficulty "${difficulty}". Use easy, medium, hard or expert.`);
+  process.exit(1);
+}
+const language = typeof args.lang === "string" ? args.lang : "en";
+if (!isGameLanguage(language)) {
+  console.error(`Unknown language "${language}". Use en or pt-br.`);
   process.exit(1);
 }
 
@@ -32,6 +40,10 @@ if (args.json) {
   console.log(`start       ${puzzle.fen}`);
   console.log(`opening     ${toSan(Position.fromFen(puzzle.fen), resolved.setup)}`);
   console.log(`\n${renderPosition(positionAfter(resolved, []))}`);
-  console.log(`\ncoach       ${introMessage(resolved).text}`);
-  if (args.solution) console.log(`solution    ${lineToSan(positionAfter(resolved, []), resolved.line)}`);
+  const coach = coachFor(language);
+  console.log(`\ncoach       ${coach.intro(resolved).text}`);
+  if (args.solution) {
+    console.log(`solution    ${lineToSan(positionAfter(resolved, []), resolved.line)}`);
+    console.log(`in words    ${coach.reveal(resolved).text}`);
+  }
 }

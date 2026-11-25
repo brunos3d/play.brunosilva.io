@@ -1,1 +1,52 @@
-{}
+{
+  "board": {
+    "label": "Tabuleiro de xadrez. Você joga de {side, select, white {brancas} other {pretas}}. As setas movem o cursor. Enter escolhe a peça e depois a casa de destino.",
+    "tutorialLabel": "Tabuleiro do tutorial. Você joga de brancas.",
+    "empty": "vazia",
+    "selected": "selecionada",
+    "canMove": "lance possível",
+    "canCapture": "captura possível",
+    "inCheck": "em xeque",
+    "checkmate": "xeque-mate",
+    "piece": {
+      "white": {
+        "pawn": "peão branco",
+        "knight": "cavalo branco",
+        "bishop": "bispo branco",
+        "rook": "torre branca",
+        "queen": "dama branca",
+        "king": "rei branco"
+      },
+      "black": {
+        "pawn": "peão preto",
+        "knight": "cavalo preto",
+        "bishop": "bispo preto",
+        "rook": "torre preta",
+        "queen": "dama preta",
+        "king": "rei preto"
+      }
+    }
+  },
+  "promotion": {
+    "label": "Escolha a peça da promoção",
+    "queen": "Promover a dama",
+    "knight": "Promover a cavalo",
+    "rook": "Promover a torre",
+    "bishop": "Promover a bispo"
+  },
+  "tutorial": {
+    "title": "Como jogar Xadrez",
+    "steps": {
+      "opponent": {
+        "title": "O adversário joga primeiro",
+        "body": "Todo problema começa com o último lance do adversário. Aqui as pretas tiraram a torre da última fileira. Foi um erro, e cabe a você punir."
+      },
+      "move": {
+        "title": "Faça o seu lance",
+        "body": "Arraste uma peça, ou toque nela e depois na casa de destino. Os pontos mostram para onde ela pode ir. Encontre o xeque-mate em 1 lance."
+      }
+    },
+    "doneTitle": "É assim que funciona",
+    "doneBody": "A treinadora Sofia comenta cada lance. Se errar, ela explica o que o lance permite: toque no tabuleiro para voltar e tentar de novo. A primeira dica mostra a peça, a segunda joga o lance. O relógio só para quando o problema é resolvido."
+  }
+}
