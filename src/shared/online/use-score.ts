@@ -5,6 +5,7 @@ import { useCallback } from "react";
 import { online } from "./api";
 import { randomAvatarSeed, randomPlayerName } from "./names";
 import type { ScoreSubmission } from "./types";
+import { refreshPlayer } from "./use-player";
 
 /**
  * Sends a finished daily puzzle to the ranking and resolves with the points it
@@ -22,6 +23,8 @@ export function useScoreSubmission(): (score: ScoreSubmission) => Promise<number
     async (score: ScoreSubmission) => {
       try {
         const answer = await online.submitScore(score, { name: randomPlayerName(locale), avatar: randomAvatarSeed(), locale });
+        // The submission may have just created this device's player. The rest of the page learns about it here.
+        refreshPlayer();
         return answer.recorded ? answer.points : null;
       } catch {
         return null;

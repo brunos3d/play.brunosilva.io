@@ -53,9 +53,10 @@ test("a solved daily puzzle earns points, and the player shows up in the ranking
   await page.getByTestId("ranking-game-zip").click();
   await expect(page.getByTestId("ranking-row").filter({ hasText: "you" }).getByTestId("ranking-name")).toHaveText("Bruno");
 
-  // The home screen shows the top of the week.
+  // The home screen shows the top of the week. Other tests score at the same time, so who is on it is not this test's to say.
   await page.goto("/");
-  await expect(page.getByTestId("hub-online")).toContainText("Bruno");
+  await expect(page.getByTestId("hub-online").getByTestId("ranking-row").first()).toBeVisible();
+  await expect(page.getByTestId("hub-online").getByTestId("ranking-row").first()).toContainText("pts");
   await page.getByTestId("hub-ranking").click();
   await expect(page).toHaveURL(/\/en\/ranking$/);
 

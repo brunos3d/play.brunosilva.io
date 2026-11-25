@@ -29,16 +29,33 @@ function subscribe(listener: () => void): () => void {
   return () => listeners.delete(listener);
 }
 
-function load(): Promise<void> {
+/** How long to wait before asking again after a failed answer. The first page load of a visit often meets a database that is still waking up. */
+const RETRY_MS = [800, 2_500];
+
+function load(attempt = 0): Promise<void> {
   loading ??= online
     .me()
     .then((me) => set({ me, unavailable: false }))
     .catch((error: unknown) => {
-      // No database behind this deployment: the online features hide themselves. A network error is not that, and is retried on the next page.
-      if (error instanceof OnlineError && error.code === "unavailable") set({ me: null, unavailable: true });
-      else loading = null;
+      // No database behind this deployment: the online features hide themselves. Anything else is a hiccup, and is asked again.
+      if (error instanceof OnlineError && error.code === "unavailable") {
+        set({ me: null, unavailable: true });
+        return;
+      }
+      loading = null;
+      if (attempt < RETRY_MS.length) window.setTimeout(() => void load(attempt + 1), RETRY_MS[attempt]);
     });
   return loading;
+}
+
+/**
+ * Asks the server again who this device is. The answer changes without this
+ * module being told when a player is created on the side, as when a first
+ * solved daily puzzle is sent to the ranking.
+ */
+export function refreshPlayer(): void {
+  loading = null;
+  void load();
 }
 
 /** For code outside React that has just learned who the player is, such as a room that created one on join. */

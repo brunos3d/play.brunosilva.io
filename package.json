@@ -21,6 +21,7 @@
     "chess:generate": "tsx scripts/chess/generate.ts",
     "chess:validate": "tsx scripts/chess/validate.ts",
     "chess:benchmark": "tsx scripts/chess/benchmark.ts",
+    "chess:coach": "tsx scripts/chess/coach.ts",
     "queens:generate": "tsx scripts/queens/generate.ts",
     "queens:validate": "tsx scripts/queens/validate.ts",
     "queens:benchmark": "tsx scripts/queens/benchmark.ts",

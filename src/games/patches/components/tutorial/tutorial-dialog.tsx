@@ -87,7 +87,7 @@ function TutorialBody({ settings, onClose }: Omit<Props, "open">) {
           {common("start")}
         </button>
       ) : (
-        <div className="patches-tutorial-actions">
+        <div className="mg-tutorial-actions">
           <button type="button" className="mg-button" onClick={game.undo} disabled={!game.canUndo}>
             <UndoIcon /> {common("undo")}
           </button>
