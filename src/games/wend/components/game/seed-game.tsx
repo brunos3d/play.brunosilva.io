@@ -36,8 +36,9 @@ export function WendSeedGame() {
   };
 
   // The seed decides the words, so the language setting cannot change the board on screen. When the player picks another language here, they get a new puzzle in it. A pick that matches the board's language already has what it asked for.
+  // A round of a challenge room is the exception: its seed is the room's, the same for every player, and it stays.
   useGameLanguageChange((language) => {
-    if (spec && language !== wendLanguage(spec)) another(language);
+    if (spec && !params.has("room") && language !== wendLanguage(spec)) another(language);
   });
 
   if (!spec) return <GameLoading game={GAME} />;
