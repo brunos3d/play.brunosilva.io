@@ -42,7 +42,8 @@ Defined in `src/server/schema.ts` as a list of idempotent statements.
 | `sessions` | One row per device signed in to an account: an id and the hash of a secret |
 | `challenges` | The value a passkey has to sign, kept between the two requests of a ceremony and used once |
 | `rooms`, `room_players` | Challenge rooms and the players in them |
-| `daily_scores` | The first solved daily puzzle of a player per game, language and date, with its points |
+| `daily_scores` | The first close of a daily per player, game, language and date: the outcome (`solved`, `revealed` or `failed`), time, hints, mistakes, moves, the points of a solve, and the finished board for two days |
+| `daily_opens` | The first open of a daily per player, by the server's clock, and the highest count of hints. Kept for two days |
 
 ### Migrations
 
@@ -57,7 +58,7 @@ Migrations are not part of the build. Run `npm run db:migrate` before deploying 
 
 ### Without a database
 
-When `DATABASE_URL` is not set, every route under `/api` answers `503 { "error": "unavailable" }`. The home screen then leaves out the ranking card, the room and ranking pages say the feature is off, and scores are not sent. Everything else works as before. A fork of the repository runs this way with no setup.
+When `DATABASE_URL` is not set, every route under `/api` answers `503 { "error": "unavailable" }`. The one exception is `GET /api/daily`, which every daily page asks: it answers `200` with empty lists and `unavailable: true`, and the page stops asking. The home screen then leaves out the ranking card, the room and ranking pages say the feature is off, and scores are not sent. Everything else works as before. A fork of the repository runs this way with no setup.
 
 ## Players
 
@@ -129,14 +130,16 @@ A device that signs in may already have a player of its own, with scores. That p
 
 `mergeDevice` runs as one transaction:
 
-- Scores move to the account. Where both solved the same daily puzzle, the earlier solve stays, as on one device, where only the first one counts.
+- Closed dailies move to the account. Where both closed the same daily puzzle, the earlier close stays, whichever way it ended, as on one device, where only the first one counts. A reveal on one is not undone by a later solve on the other.
+- A close that moves is held to the account's own first open of that puzzle and to its hints, when it has them, and scored again if that changes it. Thinking on the account and solving fast on a spare device player does not buy a better time.
+- Dailies either of them has open keep the earlier start and the higher count of hints.
 - The account takes the device player's place in rooms, unless it is already in the same room.
 - The streak is counted again from the days the merged scores cover.
 - The device player is deleted, and its cookie with it.
 
 Only a player without passkeys can be merged. Two accounts are never merged.
 
-Progress on the boards themselves (what is half drawn, the daily results the hub shows, best times) lives on each device and is not copied. An account carries the player: name, nickname, avatar, scores, streak in the ranking and rooms.
+A board that is still being played lives on its device and is not copied, and neither are best times. An account carries the player: name, nickname, avatar, streak in the ranking, rooms, and every daily the player has closed, with its finished board (see "A daily counts once per player" below).
 
 ### Deleting
 
@@ -166,7 +169,33 @@ There is no recovery. With no email and no password, an account whose every pass
 
 Only daily puzzles count. Practice and challenge rooms do not.
 
-When a daily puzzle is solved for the first time, the game frame sends the result to `POST /api/scores`. The answer carries the points, which then show on the result screen with a link to the ranking. A revealed or lost puzzle is not sent.
+When a daily puzzle ends, the game frame sends the result to `POST /api/scores`. For a solve, the answer carries the points, which then show on the result screen with a link to the ranking. A revealed or lost puzzle is sent too, for a device that has a player: it earns nothing, and it closes the day.
+
+## A daily counts once per player
+
+Progress lives on each device, so a second device of the same player knows nothing of the first. Without more, a player who solved the dailies on their phone would be offered them again on their computer. They could not score twice, since the server keeps one row per player, game, language and date. But they could reveal a puzzle on one device and solve it on the other, or think on one and finish on the other.
+
+Three things close that.
+
+**The server records every close.** A row of `daily_scores` is a closed daily: `outcome` is `solved`, `revealed` or `failed`. The first close wins, whatever it is and wherever it happens, and only a solved one has points and moves the streak. A reveal is reported 0.6 seconds after the board locks, not when the solution has finished playing, so closing the tab halfway closes the day all the same. The wait tells a reveal from a hint that solved the puzzle with its last step. A tab closed inside it reports nothing. Rankings count solved rows only.
+
+**The device follows the server.** `src/shared/online/daily-sync.ts` runs when a page loads. It reads `GET /api/daily`, and for every close of the player writes the result the hub shows and, for today and yesterday, the finished board the game page opens. The server's record replaces a local result that disagrees. The daily page waits for this before it builds the board (`DailyGate` in `src/shared/ui/daily-gate.tsx`), because the games read their storage once, when they mount. The wait is at most 2.5 seconds: a sync that does not answer lets the game through, and the server refuses the second close whatever the device showed.
+
+A daily closed elsewhere with no board on the server (the tab was closed during a reveal, or the close is older than boards) has nothing to show and nothing to play. The page says how it went and offers practice.
+
+**The clock and the hints are the server's.** The frame tells the server when a daily is open and after every hint (`POST /api/daily`). `daily_opens` keeps the first open, by the server's clock, and the highest count of hints. A submission is stored with at least the time since that open, when it is more than 5 seconds over what the device claims, and with at least those hints. The other device also starts its own clock from the first open (`ClockStartContext`), so what the player sees is what will count. Each open, by anyone, sweeps away what is past use for everyone: rows of `daily_opens` older than yesterday, and the boards of closes older than yesterday. A board is only kept for a player the server already knew when the close arrived: a request that creates its own player could otherwise store a board's worth of anything. The device sends the board again as soon as the answer names its new player, and with its next sync if that fails. A board for yesterday's close is still taken when the close itself would be too late.
+
+The cost is a close made offline: sent later, it is timed from the open the server saw, not from the device's clock. A close that could not be sent is kept in an outbox and goes with the next sync of the same player, as long as its puzzle can still be played.
+
+### A device is not a player
+
+Someone signs out, or another person signs in. The sync keeps a ledger of the results and boards the server confirmed for the current player. When the player on the device changes, those are removed, and the next sync writes the new player's. What the device recorded by itself and no server ever confirmed stays.
+
+### What it does not close
+
+A puzzle is generated in the browser from its date, so anyone can see today's solution as a guest in a private window and then solve it as themselves. No server check stops that short of generating puzzles on the server. For the same reason the times are still the device's word, within the bound above.
+
+The seed of a daily is an ordinary seed. Typed into `/zip/play?seed=...` it used to open the daily's board as practice, stored under the same key, with a Reveal that closed nothing. The seed of a daily that can still count, today's or yesterday's, now redirects to the daily page (`useDailySeedRedirect`), which shows today's puzzle in the player's game language. Seeds of older dailies still open as practice.
 
 ### Points
 
@@ -193,18 +222,30 @@ The response holds the top 50, and the asking player's own row when they are bel
 
 ### Streaks
 
-`players.streak_current` counts consecutive days with at least one scored daily puzzle, in any game. It shows as a flame next to a player from two days up. It is separate from the per-game streak on the device, which works offline and stays the source of truth for the result screen.
+`players.streak_current` counts consecutive days with at least one solved daily puzzle, in any game. It shows as a flame next to a player from two days up. It is separate from the per-game streak on the device, which works offline and is what the hub and the result screen show. The two count different things: the server's is one streak across all games, the device's is one per game. The sync writes the player's closes of the last 400 days into the device, so a device that has synced shows per-game streaks built from the same closes.
 
 ### API
 
 | Request | Does |
 | --- | --- |
-| `POST /api/scores` `{ game, variant?, date, number, difficulty, size, elapsedMs, hintsUsed, mistakes }` | Records a solved daily puzzle. Answers `{ points, recorded }`. |
+| `POST /api/scores` `{ game, variant?, date, number, difficulty, size, elapsedMs, hintsUsed, mistakes, moves?, revealed?, failed?, board? }` | Closes a daily puzzle. Answers `{ points, recorded, record, player }`: `record` is how the daily stands for the player, and `player` is whose it is, or `null` when a reveal or a loss came from a device without one. |
+| `GET /api/daily` | `{ player, today, records, opens }`: the player's closed dailies of the last 400 days, and the open ones of today and yesterday. With `unavailable: true` on a site without a database. |
+| `POST /api/daily` `{ game, variant?, date, hints }` | Notes that a daily is open and how many hints were used. Never creates a player. |
 | `GET /api/ranking?period=today\|week\|month\|all&game=all\|<id>&variant=` | A ranking. |
 
 ### Trust
 
-The time comes from the player's device, and the server cannot prove it is honest. It only refuses what cannot be true: a date that is not today's puzzle (with a day of slack for time zones), a time under one second or over a day, a second score for the same puzzle. That is enough for a ranking among friends. A real defence would replay the solution on the server, or compare the time with timestamps the server took itself, as challenge rooms do.
+The time comes from the player's device, and the server cannot prove a solve was honest. What it can do cheaply, it does:
+
+- Number, difficulty and seed come from the game's daily schedule (`src/games/daily.ts`), not from the request. The request still has to carry a number and a difficulty, as older clients send them, and they are ignored. A claim of "expert" for an easy day earns nothing extra.
+- A variant is accepted only for a game with one daily per language, and only for a language it has. Anything else would be one more scored puzzle for the same day.
+- The time is at least the time since the server saw the player open the puzzle, and the hints at least what any device reported.
+- Yesterday's puzzle counts only when it was opened before midnight Pacific, or in the first six hours of the new day.
+- A time under one second or over a day is refused, and so is a second close of the same puzzle.
+
+A write that a page of another site set off is refused (`isCrossSiteWrite` in `src/server/http.ts`). Without that, such a request, arriving without the visitor's cookies, would be answered with a new player's cookie and replace the one the device had.
+
+That is enough for a ranking among friends. A real defence would generate and check puzzles on the server.
 
 ## Cookie notice and legal pages
 
@@ -219,7 +260,7 @@ The texts were written to describe the code plainly, and were not reviewed by a 
 ## Not built yet
 
 - Account recovery. It needs an email address or a recovery code, and the site stores neither.
-- Copying progress on the boards between devices. An account carries the player, not what each device has saved.
+- Copying a board that is still being played, or best times, between devices. An account carries the player and the dailies the player has closed, and nothing else a device has saved.
 - A way to stay out of the ranking while keeping scores.
 - Rate limits at the edge. The API has per-player limits for rooms only. The Vercel Firewall can cap requests per address without code.
 - A filter or a report button for names and nicknames.

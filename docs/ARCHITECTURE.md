@@ -15,10 +15,11 @@ src/
       rooms/new/ rooms/[code]/ ranking/                     challenge rooms and the ranking
       profile/ privacy/ terms/                              the player's profile and account, and the legal pages
       [...rest]/          old Zip links, and the 404 of everything else
-    api/                  route handlers: session, account, rooms, scores, ranking
+    api/                  route handlers: session, account, rooms, scores, daily, ranking
   server/                 database access, players, accounts (passkeys), rooms, scores (server only)
   games/
     registry.ts           id, route and shape of every game
+    daily.ts              the daily puzzle of every game, by id: the hub, the sync and the server ask the same table
     codecs.ts             the seed format of every game, by id
     zip/      engine/ components/ hooks/ storage/
     patches/  engine/ components/ hooks/ storage/
@@ -42,7 +43,7 @@ tests/                    shared/ and one folder per game (Vitest)
 e2e/                      platform/ and one folder per game (Playwright, production build)
 ```
 
-Dependencies point one way. A game imports `shared`, never another game. `shared` imports a game in exactly two places, both about listing games: `games/registry.ts` for names and routes, and the hub, which asks each game for today's daily info. The hub must stay small, so a game that ships data, as Wend and Termo do with their words, keeps its daily schedule and puzzle id in modules that do not import the generator (`engine/daily.ts` and `engine/seed.ts`). Each `engine/` folder is pure TypeScript with no React, DOM or storage, which the CLI tools and unit tests prove by running it in plain Node.
+Dependencies point one way. A game imports `shared`, never another game. `shared` imports a game in exactly two places, both about listing games: `games/registry.ts` for names and routes, and `games/daily.ts`, the table of each game's daily info and puzzle id, which the hub, the sync between a player's devices and the server all read. The hub must stay small, so a game that ships data, as Wend and Termo do with their words, keeps its daily schedule and puzzle id in modules that do not import the generator (`engine/daily.ts` and `engine/seed.ts`). Each `engine/` folder is pure TypeScript with no React, DOM or storage, which the CLI tools and unit tests prove by running it in plain Node.
 
 The UI never decides a rule. A board turns pointer and key events into a rectangle (Patches), a cell (Zip, Queens), a pair of cells (Chess, Sumbreak), a trail of cells (Wend) or a typed word (Termo) and hands it to its hook, and the engine answers whether the move is legal, whether the puzzle is complete and what the next hint is.
 
@@ -52,7 +53,7 @@ The UI never decides a rule. A board turns pointer and key events into a rectang
 2. Create `games/<id>/engine` with a seed codec (`createSeedCodec`), a generator, a daily config and a pure game state.
 3. Write a hook that returns a `GameSession` (see below) and a board component. Put every sentence in `messages/<locale>/<id>.json` and add the namespace to `i18n/messages.ts`. The engine returns data, and a `text.ts` next to it builds the sentences (see [I18N.md](I18N.md)).
 4. Add `app/[locale]/<id>/` with the three routes, an icon in `public/icons/` and in `shared/ui/game-icons.tsx`, and the routes to `ROUTES` in `public/sw.js`. Bump the cache name there, so installed copies fetch the new pages.
-5. Register today's daily info in the hub's `DAILY` table.
+5. Register the game's daily info and puzzle id in `DAILY_GAMES` in `games/daily.ts`. Wrap the game of the daily page in `DailyGate` (`shared/ui/daily-gate.tsx`) with that puzzle id, and call `useDailySeedRedirect` in the seeded page, as the other games do: a daily counts once per player, on every device (see [ONLINE.md](ONLINE.md)).
 6. Add a shortcut to `public/manifest.webmanifest`, an icon target to `scripts/make-icons.ts`, a card to `scripts/make-og-images.ts`, and the game to `skipTutorials` in `e2e/shared.ts`.
 
 Chess, Queens, Sumbreak, Wend and Termo were added this way. None of them changed a line of the games that came before.

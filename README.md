@@ -141,6 +141,8 @@ A solved daily puzzle scores 100 points, minus 10 per hint, plus up to 50 for sp
 
 A player needs no account: the first score or the first room creates one, tied to the browser. Each player has a display name, free to pick, and a nickname that nobody else can have.
 
+A daily puzzle counts once per player. Closed on one device, by solving it, revealing it or losing it, it is closed on every device of the account, which opens the same finished board. A clock started on one device keeps running on the next.
+
 To be the same player on a phone and on a computer, create an account on the profile page. It uses a passkey: no password and no email. Any authenticator works, from Google Password Manager and iCloud Keychain to a security key. Signing in on a device that already has scores offers to add them to the account. The same page deletes the player and everything stored about it.
 
 A first visit gets a short notice about cookies. The site sets only the ones it needs, and has no ads and no trackers. The [privacy policy](https://play.brunosilva.io/privacy) lists what is stored.
