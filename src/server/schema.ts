@@ -135,6 +135,25 @@ export function schemaStatements(schema: string): string[] {
       primary key (player_id, game, variant, date)
     )`,
 
+    // A device that asked to be reminded of a streak about to end. The endpoint and the two keys are what its browser's push
+    // service gave it: with them the server can send that one device a message, and nothing else. `last_sent` is the Pacific
+    // date of the last reminder, so a day gets one at most.
+    `create table if not exists ${s}.push_subscriptions (
+      endpoint text primary key,
+      player_id uuid not null references ${s}.players (id) on delete cascade,
+      p256dh text not null,
+      auth text not null,
+      locale text not null,
+      timezone text not null,
+      created_at timestamptz not null default now(),
+      last_sent date,
+      failures integer not null default 0
+    )`,
+    `create index if not exists push_subscriptions_player on ${s}.push_subscriptions (player_id)`,
+    // The day a player was last reminded. A subscription is deleted and made again by signing out and in, and its own
+    // `last_sent` goes with it: this is what stops the new row from being reminded a second time that day.
+    `alter table ${s}.players add column if not exists reminded_on date`,
+
     // The random value a passkey has to sign, kept between the two requests of a ceremony and used once.
     `create table if not exists ${s}.challenges (
       id uuid primary key,

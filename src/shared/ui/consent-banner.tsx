@@ -41,6 +41,11 @@ function accept(): void {
   for (const listener of listeners) listener();
 }
 
+/** True once the notice has been answered. False on the server and until the page has hydrated, so nothing that waits for the answer shows early. */
+export function useConsentAnswered(): boolean {
+  return useSyncExternalStore(subscribe, accepted, () => false);
+}
+
 export function ConsentBanner() {
   const t = useTranslations("common.consent");
   // The server and the first client render say "accepted", so the banner never flashes for someone who has answered.

@@ -4,6 +4,7 @@ import { useLocale } from "next-intl";
 import { useEffect } from "react";
 import { warmOfflineData } from "@/games/offline";
 import { useGameLanguage } from "@/shared/hooks/use-game-language";
+import { refreshPush } from "./push-client";
 
 const SERVICE_WORKER_URL = "/sw.js";
 const SERVICE_WORKER_SCOPE = "/";
@@ -30,6 +31,8 @@ export function ServiceWorker() {
         .then((registration) => {
           if (cancelled) return;
           registration.active?.postMessage({ type: "precache", locale });
+          // A device with reminders on tells the server its language and time zone again, in case either changed.
+          void refreshPush(locale);
           // The word data of the player's game language, fetched while idle so it never competes with the page itself.
           // It only reaches the worker's cache once the worker controls this page, which on a first visit is a moment after it activates.
           const warm = () => {

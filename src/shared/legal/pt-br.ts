@@ -16,7 +16,7 @@ export const ptBr: LegalContent = {
             list: [
               "Você pode jogar todos os jogos sem conta e sem informar nenhum dado pessoal.",
               "Seu progresso, suas configurações e seus resultados ficam no seu navegador.",
-              "O servidor só guarda algo sobre você quando você resolve um desafio diário (para o ranking), entra em uma sala de desafio, edita seu perfil ou cria uma conta: um nome de exibição, um apelido, um avatar e seus resultados diários.",
+              "O servidor só guarda algo sobre você quando você resolve um desafio diário (para o ranking), entra em uma sala de desafio, edita seu perfil, ativa os lembretes ou cria uma conta: um nome de exibição, um apelido, um avatar, seus resultados diários e, com os lembretes ativos, para onde enviá-los.",
               "O site nunca pede e-mail, senha, telefone nem o seu nome verdadeiro.",
               "Você pode apagar seu jogador e tudo o que está guardado sobre ele a qualquer momento, na página Perfil.",
             ],
@@ -29,7 +29,7 @@ export const ptBr: LegalContent = {
           "Isto é guardado pelo seu navegador. Não é enviado ao servidor, a não ser o que a seção sobre o servidor lista.",
           {
             list: [
-              "Configurações (local storage): som, vibração, tema, idioma dos jogos, quais tutoriais você já viu e o fato de ter aceitado o aviso de cookies.",
+              "Configurações (local storage): som, vibração, tema, idioma dos jogos, quais tutoriais você já viu, o fato de ter aceitado o aviso de cookies e quando você disse \"agora não\" para instalar o app ou para os lembretes.",
               "Progresso (IndexedDB): os tabuleiros em andamento, o resultado de cada desafio diário, suas sequências e seus melhores tempos.",
               "Uma lista curta de desafios de prática que você recomeçou (local storage), para que uma segunda tentativa não registre melhor tempo.",
               "Uma cópia offline do site (cache storage): as páginas, os scripts e as listas de palavras necessários para abrir sem conexão.",
@@ -45,8 +45,8 @@ export const ptBr: LegalContent = {
           {
             list: [
               "NEXT_LOCALE: o idioma que você escolheu para a interface. Dura 1 ano.",
-              "play_player: o jogador deste aparelho, na forma de um identificador e um segredo aleatório. É criado na primeira vez que você resolve um desafio diário, entra em uma sala ou salva seu perfil. Dura 2 anos. Os scripts da página não conseguem lê-lo.",
-              "play_session: indica que este aparelho está conectado a uma conta. É criado quando você entra com uma passkey. Dura 2 anos, ou até você sair.",
+              "play_player: o jogador deste aparelho, na forma de um identificador e um segredo aleatório. É criado na primeira vez que você resolve um desafio diário, entra em uma sala, salva seu perfil ou ativa os lembretes. Dura 2 anos. Os scripts da página não conseguem lê-lo.",
+              "play_session: indica que este aparelho está conectado a uma conta. É criado quando você cria uma passkey ou entra com uma. Dura 2 anos, ou até você sair. Deixa de funcionar após 180 dias sem uso.",
               "play_challenge: um valor de uso único, usado enquanto uma passkey é criada ou conferida. Dura 5 minutos.",
             ],
           },
@@ -65,6 +65,7 @@ export const ptBr: LegalContent = {
               "Salas de desafio: as salas que você abre ou em que entra, as rodadas, quando você começou e terminou cada rodada e se a resolveu. As salas são apagadas cerca de 36 horas depois de criadas.",
               "Passkeys, se você criar uma conta: o identificador e a chave pública da passkey, um contador de uso, como o autenticador se conecta, se a passkey é sincronizada, um rótulo com o navegador e o sistema em que foi criada, e quando foi criada e usada pela última vez.",
               "Sessões: para cada aparelho conectado à sua conta, um identificador aleatório, o hash de um segredo e duas datas.",
+              "Lembretes, se você os ativar: o endereço que o serviço de notificações do seu navegador deu a este aparelho e as duas chaves que o acompanham, o idioma e o fuso horário em que lembrar você, quando você os ativou, a data do último lembrete e uma contagem de entregas que falharam. São apagados quando você desativa os lembretes, quando você sai da conta, quando o serviço de notificações diz que o aparelho não existe mais, ou junto com o seu jogador.",
             ],
           },
           "A chave privada de uma passkey nunca sai do seu aparelho ou do seu gerenciador de senhas. O site nunca vê sua digital, seu rosto nem seu PIN: é o seu aparelho que confere isso sozinho.",
@@ -91,6 +92,7 @@ export const ptBr: LegalContent = {
               "A Vercel hospeda o site. Como qualquer hospedagem, ela processa seu endereço IP e a identificação do seu navegador para entregar as páginas, e mantém registros de acesso por tempo limitado. Ela também informa ao site de que país vem cada acesso. O site usa isso uma vez, para escolher o idioma na sua primeira visita, e não guarda essa informação.",
               "A Neon hospeda o banco de dados, nos Estados Unidos.",
               "Se você usar uma passkey, seu gerenciador de senhas ou aparelho (Google, Apple, Microsoft, uma chave de segurança e assim por diante) cuida dela conforme os próprios termos. O site não recebe dele nenhum dado pessoal.",
+              "Se você ativar os lembretes, o serviço de notificações do seu navegador (Google, Mozilla, Microsoft ou Apple) faz a entrega. O servidor entrega a ele uma mensagem criptografada para o seu aparelho, que o serviço não consegue ler: uma linha dizendo que sua sequência acaba hoje.",
             ],
           },
           "As fontes e os avatares são servidos ou desenhados pelo próprio site. Nenhuma página carrega conteúdo dos servidores de outra empresa.",
@@ -111,7 +113,8 @@ export const ptBr: LegalContent = {
               "Salas de desafio: cerca de 36 horas.",
               "Desafios de passkey não usados: apagados quando o próximo é criado, 10 minutos ou mais depois de feitos.",
               "O registro de um desafio diário que você abriu e o tabuleiro final de um que você fechou: cerca de dois dias. Depois disso o resultado fica e o tabuleiro não.",
-              "Seu jogador, suas pontuações, passkeys e sessões: até você apagar seu jogador.",
+              "Uma sessão: até você sair naquele aparelho, até você desconectar os outros aparelhos a partir de um deles, ou 180 dias depois do último uso.",
+              "Seu jogador, suas pontuações e passkeys: até você apagar seu jogador.",
             ],
           },
         ],
@@ -124,6 +127,7 @@ export const ptBr: LegalContent = {
               "Ver e mudar seu nome de exibição, seu apelido e seu avatar na página Perfil.",
               "Apagar seu jogador e tudo o que o servidor guarda sobre ele na página Perfil. É imediato e definitivo, e nenhuma cópia é mantida.",
               "Sair de um aparelho, ou remover uma passkey, na página Perfil.",
+              "Ativar ou desativar os lembretes nas configurações, e retirar a permissão no navegador quando quiser.",
               "Limpar o que está no seu aparelho pelas configurações do próprio navegador.",
             ],
           },

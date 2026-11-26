@@ -142,5 +142,24 @@
     "practice": "Play in Practice",
     "ranking": "See the ranking",
     "otherGames": "See the other games"
+  },
+  "offers": {
+    "later": "Not now",
+    "gotIt": "Got it",
+    "install": {
+      "title": "Install {app}",
+      "body": "Open it from your home screen, full screen, even without a connection.",
+      "accept": "Install",
+      "ios": "Tap <share></share> <strong>Share</strong> in your browser, then <strong>Add to Home Screen</strong>."
+    },
+    "reminders": {
+      "title": "{count, plural, one {Keep your # day streak} other {Keep your # day streak}}",
+      "body": "Get one notification on a day your streak is about to end, while there is still time to play.",
+      "accept": "Remind me"
+    }
+  },
+  "reminder": {
+    "title": "{count, plural, one {Your # day streak is about to end} other {Your # day streak is about to end}}",
+    "body": "Solve one of today's puzzles to keep it going."
   }
 }

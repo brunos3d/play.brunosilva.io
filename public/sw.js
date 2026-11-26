@@ -21,8 +21,11 @@
  *   the HTML page, and serving one for the other would break the app. Offline,
  *   the failed fetch makes Next.js fall back to a full navigation, which the
  *   cached page answers.
+ * - Push: the server sends a reminder as JSON, already written in the
+ *   player's language: { title, body, url, tag }. The worker shows it, and a tap
+ *   brings the app to the front on that URL.
  */
-const CACHE = "minigames-shell-v5";
+const CACHE = "minigames-shell-v6";
 const LOCALES = ["en", "pt-br"];
 const DEFAULT_LOCALE = "en";
 /** Routes without their locale. "" is the hub. */
@@ -145,4 +148,44 @@ self.addEventListener("fetch", (event) => {
   if (url.pathname.startsWith("/_next/static/") || url.pathname.startsWith("/icons/") || url.pathname === "/manifest.webmanifest") {
     event.respondWith(assetFromCache(request));
   }
+});
+
+self.addEventListener("push", (event) => {
+  let message = {};
+  try {
+    message = event.data ? event.data.json() : {};
+  } catch {
+    // Not JSON. A push must still show something, or the browser shows its own "updated in the background" notice.
+  }
+  const title = typeof message.title === "string" && message.title ? message.title : "Minigames";
+  event.waitUntil(
+    self.registration.showNotification(title, {
+      body: typeof message.body === "string" ? message.body : "",
+      icon: "/icons/icon-192.png",
+      // One reminder at a time: a new one replaces the last instead of piling up. It still makes itself noticed, since
+      // the one it replaces may be yesterday's. `renotify` needs a tag that is not empty.
+      tag: typeof message.tag === "string" && message.tag ? message.tag : "minigames",
+      renotify: true,
+      data: { url: typeof message.url === "string" ? message.url : "/" },
+    }),
+  );
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  // Only a path of this site: the URL comes from a message, and a tap must never open anything else.
+  const target = new URL(String((event.notification.data && event.notification.data.url) || "/"), self.location.origin);
+  const url = target.origin === self.location.origin ? target.href : self.location.origin;
+  event.waitUntil(
+    // Only windows this worker controls: it cannot navigate any other (a tab that was force-reloaded, say), and a tap
+    // that does nothing is worse than a second window. Without one, the tap opens the site, inside the installed app
+    // when there is one.
+    self.clients.matchAll({ type: "window" }).then(async (windows) => {
+      const open = windows[0];
+      if (!open) return self.clients.openWindow(url);
+      // Focus first, while the tap still allows it. Going to the address is best effort: the window is the site already.
+      const focused = await open.focus().catch(() => open);
+      await focused.navigate(url).catch(() => undefined);
+    }),
+  );
 });

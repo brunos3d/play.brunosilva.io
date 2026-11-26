@@ -142,5 +142,24 @@
     "practice": "Jogar na Prática",
     "ranking": "Ver o ranking",
     "otherGames": "Ver os outros jogos"
+  },
+  "offers": {
+    "later": "Agora não",
+    "gotIt": "Entendi",
+    "install": {
+      "title": "Instalar o {app}",
+      "body": "Abra direto da tela inicial, em tela cheia, mesmo sem conexão.",
+      "accept": "Instalar",
+      "ios": "Toque em <share></share> <strong>Compartilhar</strong> no navegador e depois em <strong>Adicionar à Tela de Início</strong>."
+    },
+    "reminders": {
+      "title": "{count, plural, one {Mantenha sua sequência de # dia} other {Mantenha sua sequência de # dias}}",
+      "body": "Receba uma notificação no dia em que sua sequência estiver para acabar, enquanto ainda dá tempo de jogar.",
+      "accept": "Quero o lembrete"
+    }
+  },
+  "reminder": {
+    "title": "{count, plural, one {Sua sequência de # dia está para acabar} other {Sua sequência de # dias está para acabar}}",
+    "body": "Resolva um dos desafios de hoje para não perder."
   }
 }

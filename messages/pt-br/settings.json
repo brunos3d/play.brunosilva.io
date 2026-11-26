@@ -25,5 +25,10 @@
     "unsupported": "Este aparelho não tem vibração."
   },
   "replay": "Rever o tutorial",
-  "note": "Estas configurações valem para todos os jogos. Progresso, sequências e melhores tempos ficam salvos neste aparelho. Um desafio diário resolvido também vai para o ranking, com um nome gerado que você pode mudar no seu perfil. A partir daí o servidor guarda os desafios diários que você abre e fecha, para que cada um valha uma vez em todos os seus aparelhos. As animações seguem a configuração de movimento reduzido do sistema."
+  "note": "Estas configurações valem para todos os jogos. Progresso, sequências e melhores tempos ficam salvos neste aparelho. Um desafio diário resolvido também vai para o ranking, com um nome gerado que você pode mudar no seu perfil. A partir daí o servidor guarda os desafios diários que você abre e fecha, para que cada um valha uma vez em todos os seus aparelhos. As animações seguem a configuração de movimento reduzido do sistema.",
+  "reminders": {
+    "label": "Lembrete da sequência",
+    "hint": "Uma notificação no dia em que sua sequência estiver para acabar, enquanto ainda dá tempo de jogar.",
+    "blocked": "As notificações deste site estão bloqueadas nas configurações do navegador."
+  }
 }

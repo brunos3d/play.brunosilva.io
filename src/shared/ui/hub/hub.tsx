@@ -17,6 +17,7 @@ import { DAILY_SYNC_EVENT, syncDaily } from "@/shared/online/daily-sync";
 import { HubOnline } from "@/shared/online/ranking-screen";
 import { REPOSITORY_URL } from "@/shared/platform/site";
 import { loadBoard, loadDailyResult, loadDailyResults, streakDates } from "@/shared/storage/progress";
+import { AppBanner } from "../app-banner";
 import { GameIcon, PlatformIcon } from "../game-icons";
 import { ArrowRightIcon, CheckIcon, ClockIcon, FlameIcon, RevealIcon, SettingsIcon } from "../icons";
 import { LocaleSwitcher } from "../locale-switcher";
@@ -210,6 +211,7 @@ export function Hub() {
       </footer>
 
       <SettingsDialog open={settingsOpen} settings={settings} onChange={update} onClose={() => setSettingsOpen(false)} showGameLanguage />
+      <AppBanner />
     </main>
   );
 }

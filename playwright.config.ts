@@ -3,6 +3,10 @@ import { defineConfig, devices } from "@playwright/test";
 const PORT = Number(process.env.E2E_PORT ?? 3100);
 const ORIGIN = `http://localhost:${PORT}`;
 export const E2E_DB_SCHEMA = "play_e2e";
+/** The secret the tests call the scheduled route with. The real one is in the Vercel project. */
+export const E2E_CRON_SECRET = "e2e-cron-secret";
+/** A key pair made for the tests and used nowhere else. With PUSH_DRY_RUN nothing is ever signed with it or sent. */
+const E2E_VAPID = { publicKey: "BLL_6F5cJxoRRSNJOnbAf9_dry3x5OsZBTSK4wfYa0jJ2-8TRPZd_gtssUZmclgw9FqiZYAVJurP4qG4VjYb9Ao", privateKey: "9OZxGM_wP6pS5XXJYkTyGGui29BBV8JycqBbxj35Pqo" };
 
 export default defineConfig({
   testDir: "./e2e",
@@ -26,7 +30,8 @@ export default defineConfig({
   webServer: {
     // The build goes to its own folder: `next dev` may be running from `.next` at the same time. E2E_DIST_DIR names another one, for a second run next to this one (with its own E2E_PORT).
     // The online features write to a Postgres schema of their own, never next to real players. Create it once with `PLAY_DB_SCHEMA=play_e2e npm run db:migrate`.
-    env: { NEXT_DIST_DIR: process.env.E2E_DIST_DIR ?? ".next-e2e", PLAY_DB_SCHEMA: E2E_DB_SCHEMA },
+    // Reminders run dry: who is due is worked out and marked, and no message leaves the machine.
+    env: { NEXT_DIST_DIR: process.env.E2E_DIST_DIR ?? ".next-e2e", PLAY_DB_SCHEMA: E2E_DB_SCHEMA, CRON_SECRET: E2E_CRON_SECRET, VAPID_PUBLIC_KEY: E2E_VAPID.publicKey, VAPID_PRIVATE_KEY: E2E_VAPID.privateKey, PUSH_DRY_RUN: "1" },
     command: `npm run build && npm run start -- --port ${PORT}`,
     url: `http://localhost:${PORT}/`,
     reuseExistingServer: !process.env.CI,

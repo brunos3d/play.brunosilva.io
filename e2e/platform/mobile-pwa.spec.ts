@@ -116,7 +116,7 @@ test("after one online visit the hub and every game load and play offline", asyn
   await page.evaluate(async () => {
     await navigator.serviceWorker.ready;
     for (let i = 0; i < 150; i++) {
-      const keys = await (await caches.open("minigames-shell-v5")).keys();
+      const keys = await (await caches.open("minigames-shell-v6")).keys();
       const has = (suffix: string) => keys.some((key) => new URL(key.url).pathname === suffix);
       // The worker caches the pages of the locale in use, and marks the locale once all of them are in.
       if (navigator.serviceWorker.controller && has("/__sw/precached/en") && has("/en/zip/play") && has("/en/termo/play") && !has("/pt-br/zip/play") && keys.some((key) => key.url.includes("/_next/static/"))) return;

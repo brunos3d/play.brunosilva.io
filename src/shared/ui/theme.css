@@ -759,6 +759,8 @@ button.mg-chip[data-active] { color: var(--linen); background: var(--ink); }
 @media (max-width: 420px) {
   .mg-consent .mg-button { flex: 1 1 100%; }
 }
+/* An invitation with two answers: they share a row while both fit. */
+.mg-consent .mg-actions .mg-button { flex: 1 1 auto; }
 
 /* ---------- Status line ---------- */
 

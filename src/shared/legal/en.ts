@@ -16,7 +16,7 @@ export const en: LegalContent = {
             list: [
               "You can play every game without an account and without giving any personal data.",
               "Your progress, your settings and your results stay in your browser.",
-              "The server stores something about you only when you solve a daily puzzle (for the ranking), join a challenge room, edit your profile or create an account: a display name, a nickname, an avatar and your daily results.",
+              "The server stores something about you only when you solve a daily puzzle (for the ranking), join a challenge room, edit your profile, turn on reminders or create an account: a display name, a nickname, an avatar, your daily results and, with reminders on, where to send them.",
               "The site never asks for an email address, a password, a phone number or your real name.",
               "You can delete your player and everything stored about it at any time, on the Profile page.",
             ],
@@ -29,7 +29,7 @@ export const en: LegalContent = {
           "This is kept by your browser. It is not sent to the server, except for what the section about the server lists.",
           {
             list: [
-              "Settings (local storage): sound, vibration, theme, the language of the games, which tutorials you have seen, and the fact that you accepted the cookie notice.",
+              "Settings (local storage): sound, vibration, theme, the language of the games, which tutorials you have seen, the fact that you accepted the cookie notice, and when you said \"not now\" to installing the app or to reminders.",
               "Progress (IndexedDB): the boards you are playing, the result of each daily puzzle, your streaks and your best times.",
               "A short list of practice puzzles you started over (local storage), so a second try does not set a best time.",
               "An offline copy of the site (cache storage): the pages, scripts and word lists it needs to open without a connection.",
@@ -45,8 +45,8 @@ export const en: LegalContent = {
           {
             list: [
               "NEXT_LOCALE: the language you chose for the interface. Kept for 1 year.",
-              "play_player: the player of this device, as an id and a random secret. Set the first time you solve a daily puzzle, join a room or save your profile. Kept for 2 years. Scripts on the page cannot read it.",
-              "play_session: says this device is signed in to an account. Set when you sign in with a passkey. Kept for 2 years, or until you sign out.",
+              "play_player: the player of this device, as an id and a random secret. Set the first time you solve a daily puzzle, join a room, save your profile or turn on reminders. Kept for 2 years. Scripts on the page cannot read it.",
+              "play_session: says this device is signed in to an account. Set when you create a passkey or sign in with one. Kept for 2 years, or until you sign out. It stops working after 180 days without use.",
               "play_challenge: a one-time value used while a passkey is being created or checked. Kept for 5 minutes.",
             ],
           },
@@ -65,6 +65,7 @@ export const en: LegalContent = {
               "Challenge rooms: the rooms you open or join, their rounds, when you started and finished each round and whether you solved it. Rooms are deleted about 36 hours after they are created.",
               "Passkeys, if you create an account: the passkey's identifier and public key, a usage counter, how the authenticator connects, whether the passkey is synced, a label with the browser and system it was made on, and when it was created and last used.",
               "Sessions: for each device signed in to your account, a random id, a hash of a secret and two dates.",
+              "Reminders, if you turn them on: the address your browser's push service gave this device and the two keys that go with it, the language and the time zone to remind you in, when you turned them on, the date of the last reminder and a count of deliveries that failed. They are deleted when you turn reminders off, when you sign out, when the push service says the device is gone, or with your player.",
             ],
           },
           "A passkey's private key never leaves your device or your password manager. The site never sees your fingerprint, your face or your PIN: your device checks those by itself.",
@@ -91,6 +92,7 @@ export const en: LegalContent = {
               "Vercel hosts the site. Like any host, it processes your IP address and your browser's identification to deliver the pages, and keeps request logs for a limited time. It also tells the site which country a request comes from. The site uses that once, to pick a language on your first visit, and does not store it.",
               "Neon hosts the database, in the United States.",
               "If you use a passkey, your password manager or device (Google, Apple, Microsoft, a security key and so on) handles it under its own terms. The site receives no personal data from it.",
+              "If you turn on reminders, your browser's push service (Google, Mozilla, Microsoft or Apple) delivers them. The server hands it a message encrypted for your device, which the push service cannot read: one line saying your streak ends today.",
             ],
           },
           "Fonts and avatars are served or drawn by the site itself. No page loads content from another company's servers.",
@@ -111,7 +113,8 @@ export const en: LegalContent = {
               "Challenge rooms: about 36 hours.",
               "Unused passkey challenges: deleted when the next one is created, 10 minutes or more after they were made.",
               "The record of a daily you opened, and the finished board of a daily you closed: about two days. After that the result stays and the board does not.",
-              "Your player, scores, passkeys and sessions: until you delete your player.",
+              "A session: until you sign out on that device, until you sign out the other devices from one of them, or 180 days after you last used it.",
+              "Your player, scores and passkeys: until you delete your player.",
             ],
           },
         ],
@@ -124,6 +127,7 @@ export const en: LegalContent = {
               "See and change your display name, nickname and avatar on the Profile page.",
               "Delete your player and everything the server stores about it on the Profile page. It is immediate and permanent, and no copy is kept.",
               "Sign out of a device, or remove a passkey, on the Profile page.",
+              "Turn reminders on or off in the settings, and withdraw the permission in your browser at any time.",
               "Clear what is on your device with your browser's own settings.",
             ],
           },

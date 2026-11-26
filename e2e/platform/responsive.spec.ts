@@ -1,4 +1,4 @@
-import { type Browser, type BrowserContext, type Page, expect, test } from "@playwright/test";
+import { type Browser, type BrowserContext, type Page, devices, expect, test } from "@playwright/test";
 import { pacificDateKey } from "@/shared/engine/pacific-time";
 import { PHONE_HEIGHT, phoneProblems } from "../layout";
 import { SETTINGS_KEY, inLocale, skipTutorials } from "../shared";
@@ -342,6 +342,30 @@ test.describe("phone layout, first visit", () => {
       await expect(page.locator('[data-control="hint"]')).toBeEnabled({ timeout: 30_000 });
       await expect(page.getByTestId("consent")).toBeVisible();
       await expectToFit(page, "game with the cookie notice");
+
+      // With the notice answered, the home screen invites the player to install: Android's way, with a button.
+      await page.goto(inLocale(locale, "/"));
+      await page.getByTestId("consent-accept").click();
+      await page.evaluate(() => {
+        const event = new Event("beforeinstallprompt", { cancelable: true }) as Event & { prompt: () => Promise<void>; userChoice: Promise<{ outcome: string }> };
+        event.prompt = async () => undefined;
+        event.userChoice = Promise.resolve({ outcome: "dismissed" });
+        window.dispatchEvent(event);
+      });
+      await expect(page.getByTestId("app-banner")).toHaveAttribute("data-kind", "prompt");
+      await expectToFit(page, "hub with the install invitation");
+    });
+
+    test(`the install instructions of an iPhone, ${locale}`, async ({ browser }) => {
+      const context = await browser.newContext({ userAgent: devices["iPhone 14"].userAgent, viewport: { width: 360, height: PHONE_HEIGHT }, hasTouch: true });
+      const page = await context.newPage();
+      await skipTutorials(page, { gameLanguage: locale });
+      await page.goto(inLocale(locale, "/"));
+      // This group starts as a first visit: the invitation waits for the cookie notice to be answered.
+      await page.getByTestId("consent-accept").click();
+      await expect(page.getByTestId("app-banner")).toHaveAttribute("data-kind", "ios");
+      await expectToFit(page, "hub with the iOS install instructions");
+      await context.close();
     });
   }
 });
