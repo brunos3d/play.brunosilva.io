@@ -145,6 +145,8 @@ A daily puzzle counts once per player. Closed on one device, by solving it, reve
 
 To be the same player on a phone and on a computer, create an account on the profile page. It uses a passkey: no password and no email. Any authenticator works, from Google Password Manager and iCloud Keychain to a security key. Signing in on a device that already has scores offers to add them to the account. The same page deletes the player and everything stored about it.
 
+On a phone or tablet the home screen offers to install the site as an app: full screen, from the home screen, playable offline. A player with a streak can also ask for a reminder, one notification on a day the streak is about to end, sent while there is still time to play and written in their language.
+
 A first visit gets a short notice about cookies. The site sets only the ones it needs, and has no ads and no trackers. The [privacy policy](https://play.brunosilva.io/privacy) lists what is stored.
 
 ## How the games work
@@ -279,7 +281,8 @@ The e2e tests need Chromium once: `npx playwright install chromium`.
 - [Architecture](docs/ARCHITECTURE.md): layers, the shared game frame, the clock, persistence, the visual system, PWA
 - [Languages](docs/I18N.md): locales and how a visitor gets one, messages, the game language, seeds with a language
 - [Challenge rooms](docs/MULTIPLAYER.md): how a race works, who wins, why polling and not WebSockets or WebRTC
-- [Online features](docs/ONLINE.md): the database, players, nicknames, accounts with passkeys, the ranking and its points, the cookie notice and the legal pages
+- [Online features](docs/ONLINE.md): the database, players, nicknames, accounts with passkeys, the ranking and its points, streak reminders, the cookie notice and the legal pages
+- [Security](docs/SECURITY.md): the review of 2026-11-26, why SQL injection cannot happen, what was fixed and what is left
 - [Seeds and daily puzzles](docs/SEEDS.md): determinism, seed format, versioning, Pacific time, streaks
 - [Zip](docs/zip/ZIP.md): rules, solver, generator, tiers, interaction, benchmark
 - [Chess](docs/chess/CHESS.md): engine, generator, recipes per tier, the coach, the board, benchmark

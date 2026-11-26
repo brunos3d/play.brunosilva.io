@@ -41,6 +41,7 @@ Defined in `src/server/schema.ts` as a list of idempotent statements.
 | `passkeys` | The public key of each passkey of an account, its counter, transports, whether it is synced, a label and two dates |
 | `sessions` | One row per device signed in to an account: an id and the hash of a secret |
 | `challenges` | The value a passkey has to sign, kept between the two requests of a ceremony and used once |
+| `push_subscriptions` | One row per device that asked for streak reminders: its push endpoint and keys, language, time zone and the date of the last reminder |
 | `rooms`, `room_players` | Challenge rooms and the players in them |
 | `daily_scores` | The first close of a daily per player, game, language and date: the outcome (`solved`, `revealed` or `failed`), time, hints, mistakes, moves, the points of a solve, and the finished board for two days |
 | `daily_opens` | The first open of a daily per player, by the server's clock, and the highest count of hints. Kept for two days |
@@ -64,7 +65,7 @@ When `DATABASE_URL` is not set, every route under `/api` answers `503 { "error":
 
 A player starts as a device, with no account. A passkey turns the player into an account that other devices can sign in to (see Accounts below). Nobody is ever asked for an email address or a password.
 
-The first time a device needs an identity (it joins or opens a room, solves a daily puzzle, or saves its profile), the server creates a player and sets a cookie:
+The first time a device needs an identity (it joins or opens a room, solves a daily puzzle, saves its profile, or turns on reminders), the server creates a player and sets a cookie:
 
 ```
 play_player=<player id>.<random secret>; HttpOnly; SameSite=Lax; Secure; Max-Age=2 years
@@ -122,7 +123,13 @@ Signing in creates a row in `sessions` and a second cookie, built like the devic
 play_session=<session id>.<random secret>; HttpOnly; SameSite=Lax; Secure; Max-Age=2 years
 ```
 
-`currentPlayer` reads the session first and the device cookie second. The device cookie stays where it is while a session is open, so signing out gives the device back the player it had. One exception: when the device's own player is the account (the device it was made on), signing out removes that cookie too, since the player is one passkey away.
+`currentPlayer` reads the session first and the device cookie second. The device cookie stays where it is while a session is open, so signing out gives the device back the player it had.
+
+The device an account is made on is the exception. Until that moment it reached the player with its device cookie. Creating the passkey opens a session for it. The next request that carries both cookies proves the session arrived, and `currentPlayer` then sets the player's `secret_hash` to an empty string (no secret hashes to that) and drops the device cookie. From then on every device of an account holds a session, and a session can be ended. An account made before this rule keeps a working device secret until that device signs out, which retires it.
+
+A session ends after 180 days without use. Reading one moves its `last_seen_at`, at most once a day. The hourly job deletes the expired ones, and opening a session keeps the 20 most recently used of the account.
+
+"Sign out on other devices" on the profile page deletes every session of the account but the one asking, and retires the device secret, in one transaction. A lost phone is out, and the player is not: the session of the device asking is never touched, so the button cannot lock out someone whose only other passkey was on that phone.
 
 ### Bringing a device's scores along
 
@@ -143,7 +150,7 @@ A board that is still being played lives on its device and is not copied, and ne
 
 ### Deleting
 
-"Delete my player and my data" on the profile page removes the player, its scores, its place in rooms, the rooms it opened, its passkeys and its sessions, in one transaction. It works for a device player too. Nothing is kept.
+"Delete my player and my data" on the profile page removes the player, its scores, its place in rooms, its passkeys, its sessions and its reminders, in one transaction. A room it opened goes with it only when nobody else is in it. Otherwise the player who has been there longest becomes the host. It works for a device player too. Nothing is kept.
 
 ### API
 
@@ -156,7 +163,7 @@ Every request is same-origin, with the cookies above.
 | `POST /api/account/register` `{ action: "verify", response, label }` | Stores the new passkey. |
 | `POST /api/account/login` `{ action: "options" }` | The challenge for signing in. |
 | `POST /api/account/login` `{ action: "verify", response }` | Checks the signature and opens a session. |
-| `POST /api/account/logout` | Ends the session. |
+| `POST /api/account/logout` `{ everywhere? }` | Ends the session. With `everywhere: true`, every other session of the account, and this device stays signed in. |
 | `POST /api/account/merge` | Moves the device's own player into the account. |
 | `DELETE /api/account/passkeys/:id` | Removes a passkey. The last one cannot be removed. |
 | `DELETE /api/account` | Deletes the player and everything stored about it. |
@@ -246,6 +253,61 @@ The time comes from the player's device, and the server cannot prove a solve was
 A write that a page of another site set off is refused (`isCrossSiteWrite` in `src/server/http.ts`). Without that, such a request, arriving without the visitor's cookies, would be answered with a new player's cookie and replace the one the device had.
 
 That is enough for a ranking among friends. A real defence would generate and check puzzles on the server.
+
+## Streak reminders
+
+A player can ask to be reminded on the day their streak is about to end. It is a Web Push notification, so it arrives with the site closed. On iOS that only works in the installed app, which is one reason the site invites phones to install it.
+
+### Subscribing
+
+The switch is in the settings, and the home screen offers it to a player with a streak. Turning it on asks the browser for permission, subscribes with the server's public key, and posts the subscription to `POST /api/push` with the page's language and the device's time zone. The row in `push_subscriptions` belongs to the current player. A device asks again each time the app opens and after signing in or out, so a change of language, a trip or a change of player is picked up. A player keeps up to 8 devices. One more replaces the oldest.
+
+The subscription follows the player on the device. Signing out deletes the row first, so a signed-out device stops hearing about the account. Signing out the other devices deletes every row of the account. Merging a device player into an account moves its rows to the account. A device left with no player at all drops its subscription in the browser too (`refreshPush`), so whoever plays there next is asked again.
+
+The key of a subscription has to be a point of the P-256 curve, which `subscribe` checks. A message cannot be encrypted for anything else.
+
+The endpoint of a subscription is a URL the server will send requests to. `isPushEndpoint` (`src/shared/online/push.ts`) takes only `https` URLs on the default port at the push services of the browsers that have one: Google's, Mozilla's, Microsoft's and Apple's. Anything else is refused, so the route cannot be used to make the server call an address of the caller's choosing.
+
+### Sending
+
+`vercel.json` schedules `GET /api/cron/reminders` once an hour. Vercel calls it with the project's `CRON_SECRET` as a bearer token, and the route refuses every other caller. `sendReminders` (`src/server/push.ts`) then picks the devices that are due:
+
+- the player's streak ends today: the last day they scored is yesterday on the Pacific calendar;
+- it is the hour for it where the device is (`isReminderHour` in `src/shared/online/push.ts`);
+- the device has not been reminded today.
+
+The hour follows the deadline. The day that counts ends at midnight Pacific, which is 05:00 in Sao Paulo, 08:00 in Lisbon and 17:00 in Tokyo. So a fixed evening hour would be right in the first two and two hours late in the third. The rule has two parts, both between 09:00 and 21:59 local:
+
+- from 19:00, when waiting for the next morning would leave less than three hours to play. That is the evening reminder of the Americas, Europe and Africa;
+- at any of those hours, once five hours or fewer are left. That is 12:00 in Tokyo, 14:00 in Sydney and 16:00 in Auckland.
+
+Both stay true for the following runs, so a run that failed is made up for an hour later. No hour passes the rule in the first eight hours of a Pacific day, which is why a device marked for a day cannot be due twice in it.
+
+Each device is marked before its message goes out (`last_sent`), so two runs that overlap cannot both send. A send that got no answer, a 429 or a 5xx takes the mark back, and the next run tries again. The player is marked too (`players.reminded_on`), and a subscription made later that day starts as reminded: signing out and in again makes a new row, and must not earn a second reminder.
+
+A push service holds a message for a device it cannot reach. The time it may do so is cut to whichever comes first: four hours, the end of the Pacific day, or 22:00 where the device is. A run sends 12 messages at a time and stops taking on devices after 90 seconds. What is left waits an hour, and the devices reminded longest ago go first. The text is written on the server in the device's language, from `common.reminder` in the message files, the same files the interface uses. The message is encrypted for the device and signed with the site's VAPID key (`web-push`). A push service that answers 404 or 410 gets the subscription deleted, and five failures in a row do too.
+
+### Setting it up
+
+Three environment variables, in the Vercel project and in `.env.local`:
+
+```
+VAPID_PUBLIC_KEY     the key browsers subscribe with
+VAPID_PRIVATE_KEY    the key the server signs with
+CRON_SECRET          the token the scheduler presents
+```
+
+`npx web-push generate-vapid-keys` makes a pair. Changing the pair invalidates every subscription. Without the keys the feature is off: `GET /api/push` answers `key: null` and nothing is offered. `PUSH_DRY_RUN=1` makes a run mark who was due without sending, which is how the tests run it. Only such a run accepts `?at=<time>` to say what time to pretend it is.
+
+### API
+
+| Request | Does |
+| --- | --- |
+| `GET /api/push` | `{ key }`: the public key, or `null` when reminders are not set up. |
+| `POST /api/push` `{ subscription, locale, timezone }` | Subscribes this device for the current player. An existing subscription changes only when the keys match the stored ones. |
+| `POST /api/push` `{ action: "status", endpoint }` | `{ key, subscribed }`: whether that endpoint is subscribed for the current player. The endpoint travels in the body so it stays out of logs. |
+| `DELETE /api/push` `{ endpoint, auth }` | Stops the reminders of a device. Both values are needed, and only the device has them. |
+| `GET /api/cron/reminders` | Sends the reminders that are due, and deletes sessions unused for 180 days. Scheduler only. |
 
 ## Cookie notice and legal pages
 

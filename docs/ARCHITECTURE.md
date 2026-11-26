@@ -212,6 +212,19 @@ Fonts are self-hosted under `/_next/static`, and audio is synthesized with Web A
 
 `public/manifest.webmanifest` installs the platform as one app with a shortcut to each daily. `npm run icons` renders the PNGs from the SVG marks in `public/icons/`.
 
+### The invitation to install
+
+A phone or tablet that can install the site is invited to on the home screen (`shared/ui/app-banner.tsx`), in the site's own words and language. How depends on the browser, and `shared/platform/install.ts` hides the difference:
+
+- Chrome, Edge and Samsung Internet on Android fire `beforeinstallprompt`. The module keeps the event from the moment it loads, and the banner's Install button calls its `prompt()`, which opens the browser's own dialog. The event works once.
+- Safari and every other browser on iOS and iPadOS have no such event. The banner says how to do it by hand: Share, then "Add to Home Screen".
+
+Nothing is offered on a computer, in a copy that is already installed (`display-mode: standalone`), or before the cookie notice is answered. "Not now" is remembered for 30 days in local storage under `minigames:offers:v1`. The settings keep the same offer for whoever wants it later.
+
+### Reminders
+
+The same banner invites a player with a streak to be reminded before it ends, and the settings have a switch for it. See "Streak reminders" in [ONLINE.md](ONLINE.md). The worker's part is two handlers at the end of `public/sw.js`: `push` shows the notification the server wrote, and `notificationclick` brings the app to the front on the URL that came with it, if it is a URL of this site.
+
 ## Developer mode
 
 Each game has a debug panel (seed, puzzle id, generator version, board size, solver and generation time, solution count, and a switch that shows the solution). The containers import it behind `process.env.NODE_ENV === "development"`, a build-time constant, so the bundler drops the module from production builds.
