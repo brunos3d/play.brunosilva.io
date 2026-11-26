@@ -140,6 +140,20 @@ export function GameFrame({ game, daily, difficulty, size, seed, shareUrl, sessi
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dailyOpen, daily?.seed, game.id, hintsUsed]);
 
+  // The fields of a close that the frame knows before the game has ended.
+  const closing = (elapsedMs: number, hints: number): ScoreSubmission => ({
+    game: game.id,
+    variant: daily?.variant,
+    date: daily?.date ?? "",
+    number: daily?.number ?? 0,
+    difficulty,
+    size,
+    // The server takes no close under a second, and a reveal can be asked for the moment the board appears.
+    elapsedMs: Math.max(elapsedMs, 1_000),
+    hintsUsed: hints,
+    mistakes: 0,
+  });
+
   // Result flow. A board that ended just now records its result. A reopened one only reads it.
   const boardId = useDailyBoardId();
   useEffect(() => {
@@ -200,19 +214,6 @@ export function GameFrame({ game, daily, difficulty, size, seed, shareUrl, sessi
   const sessionRef = useRef(session);
   useEffect(() => {
     sessionRef.current = session;
-  });
-  // The fields of a close that the frame knows before the game has ended.
-  const closing = (elapsedMs: number, hints: number): ScoreSubmission => ({
-    game: game.id,
-    variant: daily?.variant,
-    date: daily?.date ?? "",
-    number: daily?.number ?? 0,
-    difficulty,
-    size,
-    // The server takes no close under a second, and a reveal can be asked for the moment the board appears.
-    elapsedMs: Math.max(elapsedMs, 1_000),
-    hintsUsed: hints,
-    mistakes: 0,
   });
   /**
    * A reveal of a daily closes the day a moment after the board locks, not when the solution has finished playing: a
