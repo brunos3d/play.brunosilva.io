@@ -4,7 +4,8 @@ import { detectLocale } from "@/i18n/detect";
 import { isPagePath, resolveHostRedirect } from "@/shared/platform/site";
 
 /**
- * Two jobs, in this order.
+ * Two jobs, in this order, after turning away any address that is not valid
+ * text.
  *
  * 1. Shortcut domains. The platform lives at play.brunosilva.io, and
  *    zip.brunosilva.io and patches.brunosilva.io open their game there. The
@@ -32,10 +33,22 @@ function rememberLocale(response: NextResponse, locale: string): void {
   response.cookies.set(LOCALE_COOKIE, locale, { path: "/", maxAge: LOCALE_COOKIE_MAX_AGE, sameSite: "lax" });
 }
 
+function isDecodable(pathname: string): boolean {
+  try {
+    decodeURIComponent(pathname);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export function proxy(request: NextRequest) {
   // Behind Vercel's edge the public host arrives in x-forwarded-host.
   const host = request.headers.get("x-forwarded-host") ?? request.headers.get("host");
   const { pathname, search } = request.nextUrl;
+  // A path whose percent-encoding is not valid text names nothing on this site. Let through, it would only fail deeper
+  // in, when a route tried to read its parameters, and be answered as an error of the server.
+  if (!isDecodable(pathname)) return new NextResponse("Bad Request", { status: 400, headers: { "Cache-Control": "no-store" } });
   const moved = resolveHostRedirect(host, pathname, search);
   if (moved) return NextResponse.redirect(moved, HOST_REDIRECT_STATUS);
 

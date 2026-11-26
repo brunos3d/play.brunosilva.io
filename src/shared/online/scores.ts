@@ -75,7 +75,10 @@ export function parseBoard(input: unknown): Record<string, unknown> | null {
   const board = input as Record<string, unknown>;
   if (typeof board.finishedMs !== "number" || !Number.isFinite(board.finishedMs) || board.finishedMs < 0) return null;
   try {
-    return new TextEncoder().encode(JSON.stringify(board)).length <= BOARD_MAX_BYTES ? board : null;
+    const text = JSON.stringify(board);
+    // Postgres cannot store a NUL character or half of a surrogate pair inside JSON, and no board has either.
+    if (/\\u0000|\\ud[89a-f][0-9a-f]{2}/i.test(text)) return null;
+    return new TextEncoder().encode(text).length <= BOARD_MAX_BYTES ? board : null;
   } catch {
     return null;
   }

@@ -7,6 +7,7 @@ import { LOCALE_META, type Locale } from "@/i18n/config";
 import { useHydrated } from "@/shared/hooks/use-settings";
 import { ConfirmDialog } from "@/shared/ui/confirm-dialog";
 import { CheckIcon, CloseIcon, FlameIcon, KeyIcon, SignOutIcon } from "@/shared/ui/icons";
+import { refreshPush, releasePush } from "@/shared/platform/push-client";
 import { PageHeader } from "@/shared/ui/page-header";
 import { SiteFooter } from "@/shared/ui/site-footer";
 import { OnlineError, online } from "./api";
@@ -73,6 +74,7 @@ export function ProfileScreen() {
   const [notice, setNotice] = useState<Notice>(null);
   const [removing, setRemoving] = useState<PasskeyInfo | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [everywhere, setEverywhere] = useState(false);
 
   if (unavailable || (account.error instanceof OnlineError && account.error.code === "unavailable")) return <OnlineUnavailable title={t("profile.title")} />;
 
@@ -112,11 +114,17 @@ export function ProfileScreen() {
   const signIn = () =>
     run("signIn", async () => {
       apply(await signInWithPasskey());
+      // A device that already had reminders on is reminded about the account from here on.
+      void refreshPush(locale);
       return { kind: "done", message: "signedIn" };
     });
-  const signOut = () =>
+  const signOut = (everywhere = false) =>
     run("signOut", async () => {
-      await online.signOut();
+      // The reminders of this device were about the account's streak. They stop before the device stops being the account.
+      await releasePush();
+      await online.signOut(everywhere);
+      // Whoever the device is now (the player it had before, or still the account) can keep its subscription.
+      void refreshPush(locale);
       refreshPlayer();
       await queryClient.invalidateQueries({ queryKey: ACCOUNT_QUERY });
       void queryClient.invalidateQueries({ queryKey: ["ranking"] });
@@ -201,7 +209,7 @@ export function ProfileScreen() {
               <button type="button" className="mg-button" onClick={create} disabled={busy !== null} data-testid="passkey-add">
                 <KeyIcon /> {t("account.add")}
               </button>
-              <button type="button" className="mg-button" onClick={signOut} disabled={busy !== null} data-testid="account-sign-out">
+              <button type="button" className="mg-button" onClick={() => signOut()} disabled={busy !== null} data-testid="account-sign-out">
                 <SignOutIcon /> {t("account.signOut")}
               </button>
             </div>
@@ -244,6 +252,12 @@ export function ProfileScreen() {
         </section>
       )}
 
+      {isAccount && (
+        // For a phone that was lost, or a computer that was not the player's own: every device has to sign in again.
+        <button type="button" className="mg-text-link text-sm text-[var(--ink-soft)]" onClick={() => setEverywhere(true)} disabled={busy !== null} data-testid="account-sign-out-everywhere">
+          {t("account.signOutEverywhere")}
+        </button>
+      )}
       {player && (
         <button type="button" className="mg-text-link text-sm text-[var(--ink-soft)]" onClick={() => setDeleting(true)} disabled={busy !== null} data-testid="account-delete">
           {t("account.deleteLink")}
@@ -265,6 +279,19 @@ export function ProfileScreen() {
         }}
       >
         {t("account.removeBody")}
+      </ConfirmDialog>
+      <ConfirmDialog
+        open={everywhere}
+        title={t("account.everywhereTitle")}
+        confirmLabel={t("account.everywhereConfirm")}
+        testId="account-everywhere-confirm"
+        onClose={() => setEverywhere(false)}
+        onConfirm={() => {
+          setEverywhere(false);
+          void signOut(true);
+        }}
+      >
+        {t("account.everywhereBody")}
       </ConfirmDialog>
       <ConfirmDialog
         open={deleting}

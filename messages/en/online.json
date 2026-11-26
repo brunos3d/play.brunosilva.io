@@ -188,6 +188,10 @@
       "tooMany": "This account has as many passkeys as it can hold. Remove one first.",
       "offline": "No connection. Try again.",
       "failed": "Something went wrong with the passkey. Try again."
-    }
+    },
+    "signOutEverywhere": "Sign out on other devices",
+    "everywhereTitle": "Sign out on other devices?",
+    "everywhereBody": "Every other device signed in to this account is signed out, and stops getting its reminders. This one stays signed in. For a phone you lost: after this, remove its passkey from the list above.",
+    "everywhereConfirm": "Sign out the others"
   }
 }

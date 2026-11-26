@@ -188,6 +188,10 @@
       "tooMany": "Esta conta já tem o máximo de passkeys. Remova uma antes.",
       "offline": "Sem conexão. Tente de novo.",
       "failed": "Algo deu errado com a passkey. Tente de novo."
-    }
+    },
+    "signOutEverywhere": "Sair nos outros aparelhos",
+    "everywhereTitle": "Sair nos outros aparelhos?",
+    "everywhereBody": "Todos os outros aparelhos conectados a esta conta são desconectados e param de receber os lembretes. Este continua conectado. Para um celular perdido: depois disso, remova a passkey dele na lista acima.",
+    "everywhereConfirm": "Sair nos outros"
   }
 }

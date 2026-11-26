@@ -8,7 +8,7 @@ import { type RelyingParty, relyingPartyFor } from "@/shared/online/relying-part
 import type { Account, DevicePlayer, Me, PasskeyInfo } from "@/shared/online/types";
 import { query, t, transaction } from "./db";
 import { ApiFailure } from "./http";
-import { currentPlayer, devicePlayer, forgetDevicePlayer, forgetSession, openSession, playerById } from "./players";
+import { UUID, currentPlayer, devicePlayer, forgetDevicePlayer, forgetSession, isSignedInAs, openSession, playerById } from "./players";
 import { CLOCK_SLACK_MS, DAY_MS, pointsSql } from "./scores";
 
 /**
@@ -31,6 +31,11 @@ const CHALLENGE_COOKIE = "play_challenge";
 const CHALLENGE_MAX_AGE = 5 * 60;
 const MAX_PASSKEYS = 10;
 const LABEL_MAX_LENGTH = 40;
+/** How an authenticator can be reached, as WebAuthn names them. What a client says about its own is kept only when it is one of these. */
+const TRANSPORTS = ["ble", "cable", "hybrid", "internal", "nfc", "smart-card", "usb"];
+/** A credential id is at most 1023 bytes, which is this many characters of base64url. A public key is a few hundred. */
+const CREDENTIAL_ID = /^[A-Za-z0-9_-]{1,1366}$/;
+const PUBLIC_KEY_MAX_LENGTH = 4096;
 
 /** The relying party of a request, or a 400 for a request passkeys are not offered to. */
 export function relyingParty(request: Request): RelyingParty {
@@ -54,7 +59,7 @@ async function takeChallenge(kind: "register" | "login", playerId: string | null
   const jar = await cookies();
   const id = jar.get(CHALLENGE_COOKIE)?.value;
   jar.delete({ name: CHALLENGE_COOKIE, path: "/api/account" });
-  if (!id || !/^[0-9a-f-]{36}$/.test(id)) throw new ApiFailure(400, "no-challenge");
+  if (!id || !UUID.test(id)) throw new ApiFailure(400, "no-challenge");
   const [row] = await query<{ challenge: string }>(
     `delete from ${t("challenges")} where id = $1 and kind = $2 and player_id is not distinct from $3::uuid and created_at > now() - make_interval(secs => $4) returning challenge`,
     [id, kind, playerId, CHALLENGE_MAX_AGE],
@@ -106,12 +111,28 @@ export async function verifyRegistration(player: Me, party: RelyingParty, respon
   const result = await verifyRegistrationResponse({ response: response as RegistrationResponseJSON, expectedChallenge, expectedOrigin: party.origin, expectedRPID: party.rpID, requireUserVerification: false }).catch(() => null);
   if (!result?.verified) throw new ApiFailure(400, "passkey-refused");
   const { credential, credentialBackedUp } = result.registrationInfo;
-  const [stored] = await query(
-    `insert into ${t("passkeys")} (id, player_id, public_key, counter, transports, synced, label)
-     values ($1, $2, $3, $4, $5::jsonb, $6, $7) on conflict (id) do nothing returning id`,
-    [credential.id, player.id, Buffer.from(credential.publicKey).toString("base64url"), credential.counter, JSON.stringify(credential.transports ?? []), credentialBackedUp, cleanLabel(label)],
-  );
-  if (!stored) throw new ApiFailure(409, "passkey-exists");
+  // The signature proves the key belongs to the challenge. It says nothing about the size of what came with it, or about
+  // the transports, which the client adds on the side: both are held to what a real authenticator produces.
+  const publicKey = Buffer.from(credential.publicKey).toString("base64url");
+  if (!CREDENTIAL_ID.test(credential.id) || publicKey.length > PUBLIC_KEY_MAX_LENGTH) throw new ApiFailure(400, "passkey-refused");
+  const transports = Array.isArray(credential.transports) ? [...new Set(credential.transports.filter((transport) => TRANSPORTS.includes(transport)))] : [];
+  // The limit is checked where the row is written, with the player's row locked, so answers to several ceremonies
+  // started together are counted one after the other and cannot all get in.
+  const results = await transaction([
+    { text: `select 1 from ${t("players")} where id = $1 for no key update`, params: [player.id] },
+    {
+      text: `insert into ${t("passkeys")} (id, player_id, public_key, counter, transports, synced, label)
+             select $1, $2, $3, $4, $5::jsonb, $6, $7 where (select count(*) from ${t("passkeys")} where player_id = $2) < ${MAX_PASSKEYS}
+             on conflict (id) do nothing returning id`,
+      params: [credential.id, player.id, publicKey, credential.counter, JSON.stringify(transports), credentialBackedUp, cleanLabel(label)],
+    },
+    { text: `select count(*)::int as total from ${t("passkeys")} where player_id = $1`, params: [player.id] },
+  ]);
+  if (results[1].length === 0) throw new ApiFailure(409, Number(results[2][0]?.total) >= MAX_PASSKEYS ? "too-many-passkeys" : "passkey-exists");
+  // The device the account is made on was reaching the player with its own secret. From here on it holds a session like
+  // every other device of the account. Its secret is retired by the first request that shows the session cookie arrived
+  // (see `currentPlayer`): nothing reaches an account that cannot be signed out.
+  if (!(await isSignedInAs(player.id))) await openSession(player.id);
   return readAccount({ ...player, account: true });
 }
 
@@ -129,7 +150,8 @@ export async function loginOptions(party: RelyingParty): Promise<PublicKeyCreden
 export async function verifyLogin(party: RelyingParty, response: unknown): Promise<Account> {
   const expectedChallenge = await takeChallenge("login", null);
   const answer = response as AuthenticationResponseJSON;
-  const id = typeof answer?.id === "string" ? answer.id : "";
+  const id = typeof answer?.id === "string" && CREDENTIAL_ID.test(answer.id) ? answer.id : "";
+  if (!id) throw new ApiFailure(404, "unknown-passkey");
   const [row] = await query<PasskeyRow>(`select id, player_id, public_key, counter, transports, synced, label, created_at, last_used_at from ${t("passkeys")} where id = $1`, [id]);
   // The account was deleted, or the passkey belongs to another deployment of the site.
   if (!row) throw new ApiFailure(404, "unknown-passkey");
@@ -149,6 +171,7 @@ export async function verifyLogin(party: RelyingParty, response: unknown): Promi
 
 /** Removes a passkey. The last one stays: without it the account could not be reached again, and deleting the account is its own button. */
 export async function removePasskey(player: Me, id: string): Promise<Account> {
+  if (!CREDENTIAL_ID.test(id)) throw new ApiFailure(409, "last-passkey");
   const [removed] = await query(
     `delete from ${t("passkeys")} where id = $1 and player_id = $2 and (select count(*) from ${t("passkeys")} where player_id = $2) > 1 returning id`,
     [id, player.id],
@@ -249,6 +272,8 @@ export async function mergeDevice(account: Me): Promise<Account> {
     },
     { text: `delete from ${t("room_players")} where player_id = $1`, params: gone },
     { text: `update ${t("rooms")} set host_id = $1 where host_id = $2`, params: ids },
+    // The device's reminders are now about the account's streak. Left behind, they would be deleted with the device player.
+    { text: `update ${t("push_subscriptions")} set player_id = $1 where player_id = $2`, params: ids },
     {
       // Runs of consecutive days: a date minus its place in the order is the same for every day of one run.
       text: `with days as (select distinct date from ${scores} where player_id = $1 and outcome = 'solved'),
@@ -271,16 +296,23 @@ export async function mergeDevice(account: Me): Promise<Account> {
 
 /**
  * Deletes the current player and everything stored about them: scores, their
- * place in rooms, the rooms they opened, passkeys and sessions. There is no
- * way back, and no copy is kept.
+ * place in rooms, the rooms only they were in, passkeys, sessions and
+ * reminders. There is no way back, and no copy is kept.
  */
 export async function deletePlayer(player: Me): Promise<void> {
   const device = await devicePlayer();
   const id = [player.id];
   await transaction([
     { text: `delete from ${t("daily_scores")} where player_id = $1`, params: id },
+    // A room with other players in it outlives its host: the one who has been there longest takes it over. Deleting a
+    // player must not be a way to erase a race other people are in.
+    {
+      text: `update ${t("rooms")} r set host_id = (select rp.player_id from ${t("room_players")} rp where rp.room_code = r.code and rp.player_id <> $1 order by rp.joined_at, rp.player_id limit 1)
+             where r.host_id = $1 and exists (select 1 from ${t("room_players")} rp where rp.room_code = r.code and rp.player_id <> $1)`,
+      params: id,
+    },
     { text: `delete from ${t("room_players")} where player_id = $1`, params: id },
-    // A room goes with its host, and takes the other players' rows of it along (on delete cascade).
+    // What is left is rooms nobody else was in.
     { text: `delete from ${t("rooms")} where host_id = $1`, params: id },
     // Passkeys, sessions and pending challenges go with the player (on delete cascade).
     { text: `delete from ${t("players")} where id = $1`, params: id },

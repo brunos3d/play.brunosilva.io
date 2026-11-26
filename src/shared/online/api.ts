@@ -54,7 +54,8 @@ export const online = {
   loginOptions: () => call<{ options: unknown }>("/api/account/login", { method: "POST", body: { action: "options" } }).then((body) => body.options),
   loginVerify: (response: unknown) => call<Account>("/api/account/login", { method: "POST", body: { action: "verify", response } }),
   removePasskey: (id: string) => call<Account>(`/api/account/passkeys/${encodeURIComponent(id)}`, { method: "DELETE" }),
-  signOut: () => call<{ ok: true }>("/api/account/logout", { method: "POST", body: {} }),
+  /** Signs this device out, or with `everywhere` every device of the account. */
+  signOut: (everywhere = false) => call<{ ok: true }>("/api/account/logout", { method: "POST", body: { everywhere } }),
   mergeDevice: () => call<Account>("/api/account/merge", { method: "POST", body: {} }),
   deleteAccount: () => call<{ ok: true }>("/api/account", { method: "DELETE" }),
 

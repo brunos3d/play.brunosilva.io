@@ -1,1 +1,12 @@
 .github/
+.env*
+.next-e2e*
+/out
+/build
+/coverage
+/test-results
+/playwright-report
+.vitest
+.claude
+*.tsbuildinfo
+*.pem

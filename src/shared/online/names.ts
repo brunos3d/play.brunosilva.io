@@ -11,21 +11,38 @@ const ANIMALS: Record<string, readonly string[]> = {
 export const NAME_MAX_LENGTH = 20;
 
 export function randomPlayerName(locale: string, random: () => number = Math.random): string {
-  const animals = ANIMALS[locale] ?? ANIMALS.en;
+  // Own keys only: "constructor" or "toString" as a locale would otherwise find something that is not a list of animals.
+  const animals = Object.hasOwn(ANIMALS, locale) ? ANIMALS[locale] : ANIMALS.en;
   return `${animals[Math.floor(random() * animals.length)]} ${Math.floor(random() * 900) + 100}`;
 }
+
+/** One emoji of a joined sequence: a picture, with the mark that makes it colourful or gives it a skin tone. */
+const EMOJI_PART = "\\p{Extended_Pictographic}[\\u{FE0F}\\u{1F3FB}-\\u{1F3FF}]?";
+const INVISIBLE = new RegExp(
+  `(\\u{1F3F4}[\\u{E0030}-\\u{E0039}\\u{E0061}-\\u{E007A}]{1,6}\\u{E007F}|${EMOJI_PART}(?:\\u200D${EMOJI_PART})+)` +
+    "|[\\p{Cc}\\p{Cf}\\p{Co}\\p{Cn}\\p{Cs}\\p{Zl}\\p{Zp}\\u115f\\u1160\\u3164\\uffa0\\u2800\\ufffc]",
+  "gu",
+);
+
+const keepEmoji = (_match: string, emoji?: string): string => emoji ?? "";
 
 /** A name as it will be stored: one line, trimmed, bounded. Null when nothing readable is left. */
 export function cleanPlayerName(input: unknown): string | null {
   if (typeof input !== "string") return null;
   const name = input
     .normalize("NFC")
-    // Control characters, zero-width characters and bidirectional marks: they can hide or reorder text in someone else's table.
-    .replace(/[\u0000-\u001f\u007f-\u009f​-‏‪-‮⁠-⁯﻿]/g, "")
+    // What cannot be seen, or changes what is seen around it: control and format characters (zero-width ones, the marks
+    // that reorder text), private-use and unassigned code points, line separators, and the letters that render as
+    // nothing. In someone else's table they would make a row look empty, or look like another player's. Two uses of
+    // invisible characters are emoji, and are kept whole: the flags of England, Scotland and Wales (a black flag, the
+    // region's letters as tag characters and a closing tag), and emoji joined into one picture by zero-width joiners.
+    .replace(INVISIBLE, keepEmoji)
     .replace(/\s+/g, " ")
     .trim();
-  const clipped = [...name].slice(0, NAME_MAX_LENGTH).join("").trim();
-  return clipped.length > 0 ? clipped : null;
+  // The cut can fall inside a joined emoji or a flag. Cleaning once more drops the joiner or the tags left hanging.
+  const clipped = [...name].slice(0, NAME_MAX_LENGTH).join("").replace(INVISIBLE, keepEmoji).trim();
+  // Something has to be there to read: a letter, a digit, a sign or a picture. Marks on their own show as nothing.
+  return /[\p{L}\p{N}\p{P}\p{S}]/u.test(clipped) ? clipped : null;
 }
 
 /** The seed of an avatar: letters, digits and dashes. The picture is generated from it on each device. */

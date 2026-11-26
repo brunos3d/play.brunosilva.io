@@ -1,9 +1,11 @@
 import { createHash, timingSafeEqual } from "node:crypto";
 import { handle, json } from "@/server/http";
+import { sweepSessions } from "@/server/players";
 import { sendReminders } from "@/server/push";
 
 /**
- * Sends the streak reminders that are due. Vercel calls it once an hour
+ * The hourly chores: sends the streak reminders that are due, and deletes the
+ * sessions nobody has used in months. Vercel calls it once an hour
  * (vercel.json) with the project's CRON_SECRET as a bearer token, and nobody
  * else can: without the secret in the environment the route refuses everyone.
  */
@@ -21,5 +23,8 @@ export const GET = handle(async (request: Request) => {
   // A run that only marks who was due (PUSH_DRY_RUN, which is how the tests run it) can be told what time to pretend it
   // is. A run that sends always uses the clock.
   const at = process.env.PUSH_DRY_RUN === "1" ? Date.parse(new URL(request.url).searchParams.get("at") ?? "") : Number.NaN;
-  return json(await sendReminders(Number.isNaN(at) ? new Date() : new Date(at)));
+  const run = await sendReminders(Number.isNaN(at) ? new Date() : new Date(at));
+  // After the reminders, and never in their way: a sweep that fails is tried again in an hour.
+  await sweepSessions().catch((error: unknown) => console.error("session sweep failed", error));
+  return json(run);
 });

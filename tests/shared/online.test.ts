@@ -210,7 +210,8 @@ describe("points for a daily puzzle", () => {
     expect(parseBoard(board)).toEqual(board);
     expect(parseScore({ ...score, board })).toMatchObject({ board });
     // Not finished, not an object, or far too big to be a board: the score still counts, without it.
-    for (const refused of [{ ...board, finishedMs: null }, { path: [0] }, [1, 2, 3], "board", 7, null, { finishedMs: 5, junk: "x".repeat(BOARD_MAX_BYTES) }]) {
+    // The last two hold what Postgres cannot store inside JSON: a NUL character, and half of a surrogate pair.
+    for (const refused of [{ ...board, finishedMs: null }, { path: [0] }, [1, 2, 3], "board", 7, null, { finishedMs: 5, junk: "x".repeat(BOARD_MAX_BYTES) }, { finishedMs: 5, text: "a\u0000b" }, { finishedMs: 5, ["\ud800"]: 1 }]) {
       expect(parseBoard(refused), JSON.stringify(refused).slice(0, 40)).toBeNull();
       expect(parseScore({ ...score, board: refused })).not.toHaveProperty("board");
     }
@@ -250,6 +251,19 @@ describe("player names and avatars", () => {
     expect(cleanPlayerName("João Açaí")).toBe("João Açaí");
     // Characters that hide or reorder text in someone else's table are dropped.
     expect(cleanPlayerName("A​n‮a\n")).toBe("Ana");
+    expect(cleanPlayerName("a\u202Eb\u2066c\u{E0041}d\uFEFFe\u3164f")).toBe("abcdef");
+    // Emoji that are built with invisible characters stay whole: joined pictures, and the flags of England, Scotland and Wales.
+    for (const emoji of ["\u{1F469}\u200D\u{1F4BB}", "\u{1F3F3}\uFE0F\u200D\u{1F308}", "\u{1F468}\u200D\u{1F469}\u200D\u{1F467}", "\u{1F3F4}\u{E0067}\u{E0062}\u{E0073}\u{E0063}\u{E0074}\u{E007F}"]) {
+      expect(cleanPlayerName(`Ana ${emoji}`), emoji).toBe(`Ana ${emoji}`);
+    }
+    // Nothing but marks that show as nothing is not a name.
+    for (const empty of ["\uFE0F", "\u034F", "\u{E0100}", "\uFFFC", "\u200D\uFE0F "]) expect(cleanPlayerName(empty), JSON.stringify(empty)).toBeNull();
+    // The cut at 20 characters can fall inside a joined emoji. What is left hanging goes, and the result is stable.
+    const cut = cleanPlayerName(`${"x".repeat(18)}\u{1F469}\u200D\u{1F4BB}`);
+    expect(cut).toBe(`${"x".repeat(18)}\u{1F469}`);
+    expect(cleanPlayerName(cut)).toBe(cut);
+    // A joiner or a tag with nothing to join is still dropped.
+    expect(cleanPlayerName("A\u200Dna \u{1F3F4}\u{E0067}")).toBe("Ana \u{1F3F4}");
     expect([...(cleanPlayerName("x".repeat(80)) ?? "")]).toHaveLength(20);
     expect(cleanPlayerName("   ​ ")).toBeNull();
     expect(cleanPlayerName(42)).toBeNull();

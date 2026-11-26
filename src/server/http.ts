@@ -40,10 +40,26 @@ export function isCrossSiteWrite(request: Request): boolean {
 
 export const json = (body: unknown, init: { status?: number; headers?: Record<string, string> } = {}): NextResponse => NextResponse.json(body, { status: init.status ?? 200, headers: { ...NO_STORE, ...init.headers } });
 
-/** Reads a JSON body. Anything that is not an object comes back as an empty one, and the handler's own checks refuse it. */
+/** The largest body any route has a use for: a finished board is at most 24 KB, and everything else is a few fields. */
+export const BODY_MAX_BYTES = 64 * 1024;
+
+/**
+ * Reads a JSON body. Anything that is not an object comes back as an empty
+ * one, and the handler's own checks refuse it. A body larger than any route
+ * needs is refused before it is parsed.
+ */
 export async function readBody(request: Request): Promise<Record<string, unknown>> {
+  if (Number(request.headers.get("content-length") ?? 0) > BODY_MAX_BYTES) throw new ApiFailure(413, "too-large");
+  let text: string;
   try {
-    const body: unknown = await request.json();
+    text = await request.text();
+  } catch {
+    return {};
+  }
+  // The header can be missing or wrong. What arrived is what counts.
+  if (text.length > BODY_MAX_BYTES) throw new ApiFailure(413, "too-large");
+  try {
+    const body: unknown = JSON.parse(text);
     return typeof body === "object" && body !== null && !Array.isArray(body) ? (body as Record<string, unknown>) : {};
   } catch {
     return {};

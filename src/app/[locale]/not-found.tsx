@@ -1,5 +1,13 @@
+import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
+
+/**
+ * An address that leads nowhere has no canonical address and no versions in
+ * other languages. Without this it would inherit the home page's, and tell
+ * search engines and Share menus that it is the home page.
+ */
+export const metadata: Metadata = { alternates: {} };
 
 /** A page that does not exist, in the visitor's language. */
 export default async function NotFound() {

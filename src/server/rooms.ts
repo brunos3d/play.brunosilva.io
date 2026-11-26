@@ -124,15 +124,21 @@ export async function readRoom(code: string, playerId: string | null): Promise<R
 
 /** Adds the player to the room. Joining twice is harmless. A race in progress can still be joined: a late player's clock starts at their own first board. */
 export async function joinRoom(code: string, player: Me): Promise<RoomState> {
-  const [joined] = await query(
-    `insert into ${t("room_players")} (room_code, player_id)
-     select r.code, $2 from ${t("rooms")} r
-     where r.code = $1 and r.status <> 'finished'
-       and (select count(*) from ${t("room_players")} where room_code = $1) < $3
-     on conflict (room_code, player_id) do update set last_seen_at = now()
-     returning room_code`,
-    [code, player.id, MAX_PLAYERS],
-  );
+  // The room's row is locked first, so joins that arrive together count one after the other and the limit holds. The
+  // lock lives inside this one round trip.
+  const results = await transaction([
+    { text: `select 1 from ${t("rooms")} where code = $1 for no key update`, params: [code] },
+    {
+      text: `insert into ${t("room_players")} (room_code, player_id)
+             select r.code, $2 from ${t("rooms")} r
+             where r.code = $1 and r.status <> 'finished'
+               and (select count(*) from ${t("room_players")} where room_code = $1) < $3
+             on conflict (room_code, player_id) do update set last_seen_at = now()
+             returning room_code`,
+      params: [code, player.id, MAX_PLAYERS],
+    },
+  ]);
+  const [joined] = results[1];
   if (!joined) {
     const state = await readRoom(code, player.id);
     if (state.you) return state;
