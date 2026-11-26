@@ -73,6 +73,9 @@ type FrameProps = {
 
 /** Lets the solve animation finish before the result covers the board. */
 const RESULT_DELAY_MS = 1_000;
+/** How often a confirmed reveal is asked again while the game is busy, and when to stop asking. */
+const REVEAL_RETRY_MS = 100;
+const REVEAL_GIVE_UP_MS = 5_000;
 
 /**
  * Everything around a board that is the same in every game: header, status
@@ -159,6 +162,28 @@ export function GameFrame({ game, daily, difficulty, size, seed, shareUrl, sessi
     }, RESULT_DELAY_MS);
     return () => window.clearTimeout(timeout);
   }, [summary, raceKnowsPlayer]);
+
+  // A confirmed reveal is asked of the game until the board locks. A game refuses a reveal while a hint is still drawing,
+  // which takes up to a second and a half, and a confirmation given in that pause would otherwise do nothing at all.
+  const [revealWanted, setRevealWanted] = useState(false);
+  const sessionRef = useRef(session);
+  useEffect(() => {
+    sessionRef.current = session;
+  });
+  useEffect(() => {
+    if (!revealWanted) return;
+    const stop = () => setRevealWanted(false);
+    const interval = window.setInterval(() => {
+      if (sessionRef.current.locked) stop();
+      else sessionRef.current.reveal();
+    }, REVEAL_RETRY_MS);
+    // No pause is this long. Past it the board is in a state the reveal does not apply to.
+    const timeout = window.setTimeout(stop, REVEAL_GIVE_UP_MS);
+    return () => {
+      window.clearInterval(interval);
+      window.clearTimeout(timeout);
+    };
+  }, [revealWanted]);
 
   // Leaving a board the player has started asks first: the clock keeps running while they are away.
   const inProgress = session.ready && !summary && (session.started ?? (session.canUndo || session.canReset));
@@ -279,6 +304,7 @@ export function GameFrame({ game, daily, difficulty, size, seed, shareUrl, sessi
         onConfirm={() => {
           setConfirmOpen(false);
           session.reveal();
+          setRevealWanted(true);
         }}
       >
         {race ? online("revealBody") : t(daily ? "reveal.daily" : "reveal.practice")}

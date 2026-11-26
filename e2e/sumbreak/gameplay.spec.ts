@@ -149,6 +149,16 @@ test("the keyboard plays the whole game", async ({ page }) => {
   await expect(result(page)).toBeVisible();
 });
 
+test("a reveal confirmed while a hint is still playing is not lost", async ({ page }) => {
+  await openSumbreak(page, url);
+  // The hint pulses for a moment before it merges. The confirmation arrives inside that pause.
+  await page.getByRole("button", { name: /^Hint/ }).click();
+  await confirmReveal(page);
+  await expect(result(page)).toBeVisible({ timeout: 15_000 });
+  await expect(result(page)).toContainText("Solution revealed");
+  await expect(tiles(page)).toHaveCount(1);
+});
+
 test("reveal plays the solution, from the last good position if the board was ruined", async ({ page }) => {
   await openSumbreak(page, url);
   await tapMerge(page, SIZE, trap!);
