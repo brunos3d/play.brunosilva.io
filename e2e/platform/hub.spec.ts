@@ -27,7 +27,7 @@ test("the hub follows a daily puzzle from running clock to solved, with the stre
   const { puzzle } = getZipDailyPuzzle(FIXED_INSTANT);
 
   await page.goto("/");
-  await page.getByTestId("hub-card-zip").getByRole("link", { name: /Play today's puzzle/ }).click();
+  await page.getByTestId("hub-card-zip").getByRole("link", { name: /Play today/ }).click();
   await expect(page).toHaveURL(/\/zip$/);
   await openZip(page, "/zip");
   await drawCells(page, puzzle.width, puzzle.solution.slice(0, 5));
@@ -37,7 +37,7 @@ test("the hub follows a daily puzzle from running clock to solved, with the stre
   await page.goto("/");
   await expect(page.getByTestId("hub-today-zip")).toContainText("Clock running");
   await expect(page.getByTestId("hub-today-zip")).toContainText(/02:\d\d/);
-  await expect(page.getByTestId("hub-card-zip").getByRole("link", { name: /Continue playing/ })).toBeVisible();
+  await expect(page.getByTestId("hub-card-zip").getByRole("link", { name: /Continue/ })).toBeVisible();
 
   await openZip(page, "/zip");
   await drawCells(page, puzzle.width, puzzle.solution.slice(4));
@@ -49,7 +49,7 @@ test("the hub follows a daily puzzle from running clock to solved, with the stre
   await page.goto("/");
   await expect(page.getByTestId("hub-today-zip")).toContainText("Solved in");
   await expect(page.getByTestId("hub-card-zip").getByLabel("1 day streak")).toBeVisible();
-  await expect(page.getByTestId("hub-card-zip").getByRole("link", { name: /See today's result/ })).toBeVisible();
+  await expect(page.getByTestId("hub-card-zip").getByRole("link", { name: /See result/ })).toBeVisible();
   // The other game is untouched.
   await expect(page.getByTestId("hub-today-patches")).toContainText("Not played yet");
 });
@@ -78,7 +78,7 @@ test("every game is on the hub from its launch day, numbered from 1", async ({ p
   // Wend counts from the day LinkedIn's Wend launched, and Termo from its own first day here.
   await expect(page.getByTestId("hub-today-wend")).toContainText("#168");
   await expect(page.getByTestId("hub-today-termo")).toContainText("#2");
-  await page.getByTestId("hub-card-chess").getByRole("link", { name: /Play today's puzzle/ }).click();
+  await page.getByTestId("hub-card-chess").getByRole("link", { name: /Play today/ }).click();
   await expect(page).toHaveURL(/\/chess$/);
   await expect(page.getByTestId("chess-board")).toBeVisible();
 });
@@ -98,7 +98,7 @@ test("the game's mark in the header leads home, and asks first once a puzzle is 
   const leave = page.getByTestId("game-leave");
   await expect(leave).toBeVisible();
   await expect(leave).toContainText("the clock keeps running");
-  await leave.getByRole("button", { name: "Keep playing" }).click();
+  await leave.getByRole("button", { name: "Cancel" }).click();
   await expect(leave).toBeHidden();
   await expect(page).toHaveURL(/\/zip$/);
 
@@ -108,7 +108,7 @@ test("the game's mark in the header leads home, and asks first once a puzzle is 
   await expect(leave).toBeVisible();
   await leave.getByRole("button", { name: "Leave" }).click();
   await expect(page).toHaveURL(/\/en$/);
-  await expect(page.getByTestId("hub-card-zip").getByRole("link", { name: /Continue playing/ })).toBeVisible();
+  await expect(page.getByTestId("hub-card-zip").getByRole("link", { name: /Continue/ })).toBeVisible();
 
   // A solved board has nothing left to lose, so it leaves at once.
   await openZip(page, "/zip");

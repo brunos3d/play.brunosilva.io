@@ -185,7 +185,7 @@ export function ResultDialog({ game, open, result, onClose, onNext, onRetry, sha
         </div>
       </div>
 
-      <dl className="grid grid-cols-3 gap-2 mb-3">
+      <dl className="mg-stats mb-3">
         <div className="mg-stat"><dt>{t("hints")}</dt><dd>{result.hintsUsed}</dd></div>
         <div className="mg-stat"><dt>{text.mistakes(game.id)}</dt><dd>{result.mistakes}</dd></div>
         <div className="mg-stat"><dt>{t("moves")}</dt><dd>{result.moves}</dd></div>
@@ -201,7 +201,7 @@ export function ResultDialog({ game, open, result, onClose, onNext, onRetry, sha
       )}
 
       {result.streak && (
-        <div className="flex items-center justify-between rounded-xl px-4 py-3 mb-4 bg-[var(--linen)]">
+        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-0.5 whitespace-nowrap rounded-xl px-4 py-3 mb-4 bg-[var(--linen)]">
           <div className="flex items-center gap-2 font-semibold">
             <FlameIcon className="w-5 h-5 text-[var(--accent)]" />
             <span>{t.rich("streak", { count: result.streak.current, n: (chunks) => <span data-testid="game-streak">{chunks}</span> })}</span>

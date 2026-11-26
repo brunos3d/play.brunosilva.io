@@ -28,7 +28,7 @@ export function GameLanguagePicker() {
       <div className="mg-segment" data-testid="game-language">
         {LOCALES.map((option) => (
           <button key={option} type="button" aria-pressed={language === option} data-value={option} lang={LOCALE_META[option].htmlLang} className="mg-segment-flag" onClick={() => choose(option)}>
-            <LocaleFlag locale={option} className="mg-flag" /> {LOCALE_META[option].nativeLabel}
+            <LocaleFlag locale={option} className="mg-flag" /> {LOCALE_META[option].languageLabel}
           </button>
         ))}
       </div>
@@ -103,7 +103,7 @@ export function PracticeSetup({ game, codec }: Props) {
             className="mg-field"
             value={seed}
             onChange={(event) => setSeed(event.target.value)}
-            placeholder={t("seedPlaceholder", { prefix: codec.prefix })}
+            placeholder={t("seedPlaceholder")}
             autoComplete="off"
             autoCapitalize="off"
             spellCheck={false}

@@ -10,7 +10,7 @@ import { useGameText } from "@/shared/hooks/use-game-text";
 import { share } from "@/shared/platform/sharing";
 import { LocaleFlag } from "@/shared/ui/flags";
 import { GameIcon } from "@/shared/ui/game-icons";
-import { ArrowRightIcon, CheckIcon, CloseIcon, CopyIcon, FlagIcon, ShareIcon, TrophyIcon, UsersIcon } from "@/shared/ui/icons";
+import { ArrowRightIcon, CopyIcon, FlagIcon, ShareIcon, TrophyIcon, UsersIcon } from "@/shared/ui/icons";
 import { PageHeader } from "@/shared/ui/page-header";
 import { OnlineError, online } from "./api";
 import { PlayerAvatar } from "./player-avatar";
@@ -36,7 +36,7 @@ function RoundList({ rounds }: { rounds: readonly RoundConfig[] }) {
         {rounds.map((round, index) => {
           const game = GAMES[round.game];
           return (
-            <li key={index} className="flex items-center gap-2.5 text-sm">
+            <li key={index} className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-sm">
               <GameIcon game={round.game} className="w-6 h-6 flex-none rounded-[6px] shadow-[0_0_0_1.5px_var(--thread)]" />
               <span className="font-semibold">{t("roundLine", { number: index + 1, game: text.name(round.game) })}</span>
               <span className="mg-chip">
@@ -53,49 +53,77 @@ function RoundList({ rounds }: { rounds: readonly RoundConfig[] }) {
   );
 }
 
-/** One line of the table: place, player, how far they are and their time. */
-function StandingRow({ standing, place, total, you, host }: { standing: Standing; place: number; total: number; you: boolean; host: boolean }) {
+/**
+ * One row of the table. The first line has the place, the player, how far they
+ * are and their time. Under it, one cell per round played says how long the
+ * round took, so the table also answers "where did I lose it?".
+ */
+function StandingRow({ standing, place, rounds, fastest, you, host }: { standing: Standing; place: number; rounds: readonly RoundConfig[]; fastest: readonly (number | null)[]; you: boolean; host: boolean }) {
   const t = useTranslations("online.room");
+  const text = useGameText();
   const { player, state } = standing;
+  const total = rounds.length;
+  const progress = state === "gave-up" ? t("stateGaveUp") : state === "waiting" ? t("stateWaiting") : state === "racing" ? t("stateRacing", { round: Math.min(standing.played + 1, total), total }) : null;
+  const splits = standing.splitsMs.slice(0, total);
   return (
-    <li className="mg-row" data-you={you || undefined} data-state={state} data-testid="room-standing">
+    <li className="mg-row" data-detail={splits.length > 0 || undefined} data-you={you || undefined} data-state={state} data-testid="room-standing">
       <span className="mg-rank">{place}</span>
       <PlayerAvatar seed={player.avatar} size={36} />
       <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-1.5 min-w-0">
-          <span className="font-semibold truncate" data-testid="room-player-name">
+        <div className="mg-player-line">
+          <span className="mg-player-name" data-testid="room-player-name">
             {player.name}
           </span>
           {you && <span className="mg-tag">{t("you")}</span>}
           {host && <span className="mg-tag">{t("host")}</span>}
           {standing.away && state !== "finished" && state !== "gave-up" && <span className="mg-tag">{t("away")}</span>}
         </div>
-        <div className="flex items-center gap-2 text-xs text-[var(--ink-soft)]">
-          {/* One mark per round played: solved or not. */}
-          <span className="flex items-center gap-0.5" aria-hidden="true">
-            {player.results.map((result, index) => (result.solved ? <CheckIcon key={index} className="w-3.5 h-3.5 text-[var(--valid)]" /> : <CloseIcon key={index} className="w-3.5 h-3.5 text-[var(--invalid)]" />))}
-          </span>
-          <span>{state === "gave-up" ? t("stateGaveUp") : state === "waiting" ? t("stateWaiting") : state === "racing" ? t("stateRacing", { round: Math.min(standing.played + 1, total), total }) : t("solved", { solved: standing.solved, total })}</span>
+        {/* Each piece stays whole. Together they take a second line when the row is narrow. */}
+        <div className="flex flex-wrap gap-x-2.5 text-xs text-[var(--ink-soft)] whitespace-nowrap">
+          {progress && <span>{progress}</span>}
+          {(standing.played > 0 || !progress) && <span>{t("solved", { solved: standing.solved, total })}</span>}
+          {standing.penaltyMs > 0 && (
+            <span className="text-[var(--hint)]" data-testid="room-penalty">
+              {t("penalty", { seconds: Math.round(standing.penaltyMs / 1000) })}
+            </span>
+          )}
         </div>
       </div>
-      <div className="text-right flex-none">
-        <div className="font-semibold tabular-nums" data-testid="room-time">
-          {standing.timeMs === null ? "--:--" : formatTime(standing.timeMs)}
-        </div>
-        {standing.penaltyMs > 0 && <div className="text-[11px] text-[var(--ink-faint)]">{t("penalty", { seconds: Math.round(standing.penaltyMs / 1000) })}</div>}
+      <div className="font-semibold tabular-nums flex-none whitespace-nowrap" data-testid="room-time">
+        {standing.timeMs === null ? "--:--" : formatTime(standing.timeMs)}
       </div>
+      {splits.length > 0 && (
+        <ol className="mg-splits" aria-label={t("splits")} data-testid="room-splits">
+          {splits.map((split, index) => {
+            const solved = player.results[index].solved;
+            const game = rounds[index].game;
+            const time = formatTime(split);
+            return (
+              <li key={index} className="mg-split" data-solved={solved} data-best={(solved && fastest[index] === split) || undefined} aria-label={t(solved ? "splitSolved" : "splitMissed", { round: index + 1, game: text.name(game), time })} data-testid="room-split">
+                <GameIcon game={game} />
+                <span aria-hidden="true">{time}</span>
+              </li>
+            );
+          })}
+        </ol>
+      )}
     </li>
   );
 }
 
 function Standings({ room, now, title }: { room: RoomState; now: string; title: string }) {
   const table = rankRoom(room.players, room.rounds.length, now);
+  // The fastest solve of each round, marked in the rows. With one player there is nobody to be faster than.
+  const fastest = room.rounds.map((_, index) => {
+    const solves = table.filter((standing) => standing.player.results[index]?.solved && standing.splitsMs[index] !== undefined).map((standing) => standing.splitsMs[index]);
+    return table.length > 1 && solves.length > 0 ? Math.min(...solves) : null;
+  });
   return (
     <section className="w-full flex flex-col gap-2">
       <h2 className="text-xs font-bold tracking-wider uppercase text-[var(--ink-soft)]">{title}</h2>
       <ol className="flex flex-col gap-2" data-testid="room-table">
         {table.map((standing, index) => (
-          <StandingRow key={standing.player.id} standing={standing} place={index + 1} total={room.rounds.length} you={standing.player.id === room.you} host={standing.player.id === room.hostId} />
+          <StandingRow key={standing.player.id} standing={standing} place={index + 1} rounds={room.rounds} fastest={fastest} you={standing.player.id === room.you} host={standing.player.id === room.hostId} />
         ))}
       </ol>
     </section>
@@ -126,14 +154,18 @@ function Invite({ room }: { room: RoomState }) {
     }
   };
 
+  const url = typeof window === "undefined" ? "" : inviteUrl(room.code);
   return (
     <section className="mg-card" data-testid="room-invite">
       <div>
         <h2 className="font-semibold">{t("inviteTitle")}</h2>
         <p className="text-sm text-[var(--ink-soft)] leading-relaxed">{t("inviteBody")}</p>
       </div>
-      <input className="mg-field text-sm" readOnly value={typeof window === "undefined" ? "" : inviteUrl(room.code)} onFocus={(event) => event.target.select()} aria-label={t("copy")} data-testid="room-link" />
-      <div className="grid grid-cols-2 gap-2">
+      {/* The link as text, so it shows whole on any phone: an input would cut it. The address bar already says it is https. */}
+      <p className="mg-link-box" data-url={url} data-testid="room-link">
+        {url.replace(/^https?:\/\//, "")}
+      </p>
+      <div className="mg-actions" data-even="true">
         <button type="button" className="mg-button" onClick={() => send(false)} data-testid="room-copy">
           <CopyIcon /> <span aria-live="polite">{t(copied ? "copied" : "copy")}</span>
         </button>
@@ -266,11 +298,13 @@ export function RoomScreen({ code }: { code: string }) {
               {room.players.map((player) => (
                 <li key={player.id} className="mg-row" data-you={player.id === room.you || undefined}>
                   <PlayerAvatar seed={player.avatar} size={36} />
-                  <span className="font-semibold truncate flex-1" data-testid="room-player-name">
-                    {player.name}
-                  </span>
-                  {player.id === room.you && <span className="mg-tag">{t("you")}</span>}
-                  {player.id === room.hostId && <span className="mg-tag">{t("host")}</span>}
+                  <div className="mg-player-line flex-1">
+                    <span className="mg-player-name" data-testid="room-player-name">
+                      {player.name}
+                    </span>
+                    {player.id === room.you && <span className="mg-tag">{t("you")}</span>}
+                    {player.id === room.hostId && <span className="mg-tag">{t("host")}</span>}
+                  </div>
                 </li>
               ))}
             </ul>
@@ -294,8 +328,8 @@ export function RoomScreen({ code }: { code: string }) {
       )}
 
       {winner && (
-        <p className="w-full flex items-center justify-center gap-2 mg-display text-[22px] font-semibold" data-testid="room-winner">
-          <TrophyIcon className="w-6 h-6 text-[var(--accent)]" /> {t("winner", { name: winner.name })}
+        <p className="w-full flex items-center justify-center gap-2 mg-display text-[22px] font-semibold leading-tight" data-testid="room-winner">
+          <TrophyIcon className="w-6 h-6 flex-none text-[var(--accent)]" /> <span className="min-w-0 [overflow-wrap:anywhere]">{t("winner", { name: winner.name })}</span>
         </p>
       )}
 
@@ -320,7 +354,7 @@ export function RoomScreen({ code }: { code: string }) {
           <p className="text-xs text-[var(--ink-faint)] leading-relaxed">
             {t("clockNote")} {online_("race.rules")}
           </p>
-          <button type="button" className="text-sm underline underline-offset-2 text-[var(--ink-soft)] self-center" onClick={leave} data-testid="room-leave">
+          <button type="button" className="mg-text-link text-sm text-[var(--ink-soft)] self-center" onClick={leave} data-testid="room-leave">
             {t("leave")}
           </button>
         </section>
@@ -330,12 +364,13 @@ export function RoomScreen({ code }: { code: string }) {
       {room.status === "finished" && (
         <section className="w-full flex flex-col gap-2.5">
           {room.rematchCode ? (
-            <Link href={roomPath(room.rematchCode)} prefetch={false} className="mg-button justify-between" data-variant="primary" data-testid="room-rematch-join">
-              <span>
-                {t("rematchOpen", { host: host?.name ?? "?" })} {t("rematchJoin")}
-              </span>
-              <ArrowRightIcon />
-            </Link>
+            // The news is a sentence and the button is a verb: together in one button they broke into three lines on a phone.
+            <div className="mg-card" style={{ gap: 10, padding: 14 }} role="status">
+              <p className="font-semibold leading-snug">{t("rematchOpen", { host: host?.name ?? "?" })}</p>
+              <Link href={roomPath(room.rematchCode)} prefetch={false} className="mg-button justify-between" data-variant="primary" data-testid="room-rematch-join">
+                {t("rematchJoin")} <ArrowRightIcon />
+              </Link>
+            </div>
           ) : isHost ? (
             <button type="button" className="mg-button" data-variant="primary" onClick={rematch} disabled={busy === "rematch"} data-testid="room-rematch">
               <FlagIcon /> {t("rematch")}
@@ -348,7 +383,7 @@ export function RoomScreen({ code }: { code: string }) {
       )}
 
       <footer className="mg-footer w-full pt-2 flex flex-wrap items-center justify-center gap-x-2 text-xs text-[var(--ink-faint)]">
-        <Link href="/" prefetch={false} className="underline underline-offset-2 hover:text-[var(--ink-soft)]">
+        <Link href="/" prefetch={false} className="mg-text-link">
           {t("home")}
         </Link>
       </footer>

@@ -95,7 +95,7 @@ The game's mark and name in the header are one link to the hub, because that is 
 ## Platform rules shared by every game
 
 - **Hints act, and they are counted.** A hint first looks for a mistake (a patch no solution contains, a path that left the solution, a wrong queen, a wrong chess move still on the board, a Sumbreak merge that left the board unsolvable, a Wend trail that is not the start of a hidden word), flags it and takes it off. Otherwise it plays the next forced move itself, with a one-sentence reason. Chess splits that in two: the first hint shows the piece, the second plays the move. Every generated puzzle has a proven solution, so a hint is never a guess. In Sumbreak, where many orders of merges work, the solver knows for every position whether it can still be finished. Wend and Termo have no forced move to play, so their hints reveal one letter.
-- **Reveal** asks for confirmation, then plays the solution piece by piece. The puzzle ends as `revealed`: the day is closed, but it earns no streak credit, sets no best time and cannot be shared. A lost Termo game is stored the same way with `failed` on top, and that one can be shared.
+- **Reveal** asks for confirmation, then plays the solution piece by piece. The puzzle ends as `revealed`: the day is closed, but it earns no streak credit, sets no best time and cannot be shared. A lost Termo game is stored the same way with `failed` on top, and that one can be shared. A game refuses `reveal()` while a hint is still drawing, so the frame asks again every 100 ms until the board locks: a confirmation given during that pause is not lost.
 - **Reset** clears the board and the undo stack. The clock and the counters survive, so a reset cannot polish a result.
 - **Try again** is offered once a practice puzzle is over, next to "View result" and "New game", and on the result screen. It plays the same seed from the start with a fresh clock. `shared/ui/puzzle-attempts.tsx` wraps each game's board: it erases the saved board, notes the seed in `shared/storage/replays.ts` and mounts the game again, so no game has code for it. A replay is played with the answer already seen, so `buildResult` records no best time for it and the result screen says so. Daily puzzles have no Try again.
 - **Illegal moves change nothing.** The board shakes, the offending cell or rectangle is hatched, a sound plays and the status line names the rule. Feedback never relies on colour alone. In Chess a move can be legal and still wrong: that one is played, marked and explained, and it waits on the board to be taken back. Sumbreak plays such a merge without a word, as the original does, and counts it for the result screen. Wend keeps any trail the player draws and only gives it colour when it is a hidden word.
@@ -138,6 +138,29 @@ Boards are saved when the clock starts, after every move (in Zip after every ges
 All boards are DOM, not canvas: `role="gridcell"` elements in a CSS grid with absolutely positioned layers on top, sized in percent. Every cell draws a rounded tile, and patches, previews, hints and visited Zip cells use the same `--tile-gap` and `--tile-radius`, which scale with the cell through container query units. The board width is rounded down with CSS `round()` to a whole number of pixels per cell, and the left margin is rounded too, because plain centring leaves half a pixel on each side whenever the leftover width is odd. E2e tests assert an integer grid origin and integer cell size at seven viewport sizes for both games.
 
 Each game adds one stylesheet for what is unique to its board: `patches.css`, `zip.css`, `chess.css`, `queens.css`, `sumbreak.css`, `wend.css` and `termo.css`, each in its game's `components/` folder. Wend and Termo put more than a board on the stage (a word list, a keyboard), so each of them also sets the stage width for itself with a `:has()` rule. The chess board keeps the shared container and grid and makes the tiles flush, and its squares and pieces keep the same colours in both themes.
+
+## Phone layout
+
+The site is laid out for a phone first: one column, at most 560 px wide, with nothing that needs a hover. Three widths are the reference: 320 px (the narrowest phone still in use), 360 px (most Android phones) and 412 px (a large phone). Portuguese labels run longer than English ones, so every screen has to fit in both languages.
+
+A few rules in `shared/ui/theme.css` keep text whole instead of breaking or cutting it:
+
+- `.mg-actions` is a row of buttons that becomes a column when the labels do not fit side by side. `data-even="true"` asks for equal halves, as in Cancel and Confirm.
+- `.mg-player-line` holds a player's name and the tags after it ("you", "host"). The tags move under the name before they squeeze it, and the name wraps instead of ending in an ellipsis.
+- `.mg-stats` gives a long label ("Redesenhos") the room it needs from the two tiles beside it.
+- `.mg-select` draws its own arrow, so the room for the text is the same in every browser, and uses 16 px text, as `.mg-field` does, so iOS does not zoom the page on focus.
+- `.mg-text-link` gives a standalone text link a 28 px target.
+- Under 400 px the race strip shows two faces and counts the rest. Under 380 px a row of a table tightens and the strip drops the word "Round". Under 340 px buttons and cards lose a little padding, and the puzzle's number goes under the game's name in the header.
+
+A rule in `theme.css` is not layered, so it wins over a Tailwind utility on the same property. A component that needs another value for an `mg-` class sets it in the stylesheet or with `style`, not with a utility class.
+
+`e2e/platform/responsive.spec.ts` walks every screen at the three widths, in both languages: the hub, each game's daily puzzle with its dialogs, practice, the tutorial, the ranking, and a challenge room from the setup to the final table with eight players. `e2e/layout.ts` holds the checks: nothing scrolls or sticks out sideways, no button, tab, chip or title breaks in two, no text is cut off or runs out of its box, placeholders and select options show whole, and every control is at least 24 px in both directions (WCAG 2.5.8). To look at the screens themselves, run it with a folder for screenshots:
+
+```
+LAYOUT_SHOTS=/tmp/shots npx playwright test e2e/platform/responsive.spec.ts --project=mobile
+```
+
+When a label does not fit, shorten the text in `messages/` first. Change the layout when the short text would stop being clear.
 
 ## Input
 

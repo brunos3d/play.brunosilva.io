@@ -49,13 +49,13 @@ export function RankingRow({ entry, you, byTime }: { entry: RankingEntry; you: b
       <span className="mg-rank">{entry.rank}</span>
       <PlayerAvatar seed={entry.avatar} size={36} />
       <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-1.5 min-w-0">
-          <span className="font-semibold truncate" data-testid="ranking-name">
+        <div className="mg-player-line">
+          <span className="mg-player-name" data-testid="ranking-name">
             {entry.name}
           </span>
           {you && <span className="mg-tag">{t("you")}</span>}
         </div>
-        <div className="flex items-center gap-2 text-xs text-[var(--ink-soft)]">
+        <div className="flex flex-wrap items-center gap-x-2 text-xs text-[var(--ink-soft)] whitespace-nowrap">
           {byTime ? <span>{t("hints", { count: entry.hints ?? 0 })}</span> : <span>{t("solved", { count: entry.solved })}</span>}
           {entry.streak > 1 && (
             <span className="flex items-center gap-0.5" aria-label={t("streak", { count: entry.streak })}>
@@ -64,7 +64,7 @@ export function RankingRow({ entry, you, byTime }: { entry: RankingEntry; you: b
           )}
         </div>
       </div>
-      <div className="font-semibold tabular-nums flex-none" data-testid="ranking-score">
+      <div className="font-semibold tabular-nums flex-none whitespace-nowrap" data-testid="ranking-score">
         {byTime ? formatTime(entry.elapsedMs ?? 0) : t("points", { points: entry.points })}
       </div>
     </li>
@@ -193,7 +193,7 @@ export function HubOnline() {
           {own && <RankingRow entry={own} you byTime={false} />}
         </ol>
       )}
-      <div className="grid grid-cols-2 gap-2">
+      <div className="mg-actions">
         <Link href="/ranking" prefetch={false} className="mg-button" data-testid="hub-ranking">
           {t("see")}
         </Link>

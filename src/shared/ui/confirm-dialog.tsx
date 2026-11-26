@@ -20,9 +20,9 @@ export function ConfirmDialog({ open, title, confirmLabel, cancelLabel, testId =
   return (
     <Dialog open={open} onClose={onClose} title={title} testId={testId}>
       <div className="text-[15px] leading-relaxed text-[var(--ink-soft)] mb-5">{children}</div>
-      <div className="grid grid-cols-2 gap-2.5">
+      <div className="mg-actions" data-even="true">
         <button type="button" className="mg-button" onClick={onClose}>
-          {cancelLabel ?? t("keepPlaying")}
+          {cancelLabel ?? t("cancel")}
         </button>
         <button type="button" className="mg-button" data-variant="primary" onClick={onConfirm}>
           {confirmLabel}

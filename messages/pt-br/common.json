@@ -46,7 +46,7 @@
   },
   "dialog": {
     "close": "Fechar",
-    "keepPlaying": "Continuar jogando"
+    "cancel": "Cancelar"
   },
   "result": {
     "title": "Resultado",
@@ -69,10 +69,10 @@
     "shared": "Compartilhado",
     "copied": "Copiado para a área de transferência",
     "shareFailed": "Não foi possível compartilhar",
-    "keepPracticing": "Continuar jogando na Prática",
+    "keepPracticing": "Continuar na Prática",
     "next": "Próximo desafio",
     "tryAgain": "Tentar de novo",
-    "playToday": "Jogar o {game} de hoje",
+    "playToday": "{game} de hoje",
     "allGames": "Todos os jogos",
     "otherGames": "Ver os outros jogos",
     "nextIn": "Próximo desafio em <time></time>"
@@ -89,7 +89,7 @@
     "sizeOption": "{size} por {size}",
     "language": "Idioma das palavras",
     "seed": "Seed (opcional)",
-    "seedPlaceholder": "Uma palavra, um número ou uma seed {prefix}:… compartilhada",
+    "seedPlaceholder": "Palavra, número ou seed",
     "seedNoteSized": "A mesma seed, dificuldade e tamanho sempre geram o mesmo desafio.",
     "seedNote": "A mesma seed e dificuldade sempre geram o mesmo desafio.",
     "random": "Desafio aleatório",

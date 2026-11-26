@@ -36,15 +36,14 @@ export function GameHeader({ game, mode, numberLabel, difficulty, size, elapsedM
   return (
     <header className="mg-header w-full flex flex-col gap-2">
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-1 min-w-0">
-          {/* The game's mark is the way home: it is where players look for it first. */}
-          <Link href="/" prefetch={false} className="mg-home-link" aria-label={t("home", { game: name })} onClick={onHome} data-testid="game-home">
-            <GameIcon game={game.id} className="mg-home-mark flex-none rounded-[9px] shadow-[0_0_0_1.5px_var(--thread)]" />
+        {/* The game's mark is the way home: it is where players look for it first. The puzzle's number sits on the name's baseline, and under the name at 320 px. */}
+        <Link href="/" prefetch={false} className="mg-home-link" aria-label={t("home", { game: name })} onClick={onHome} data-testid="game-home">
+          <GameIcon game={game.id} className="mg-home-mark flex-none rounded-[9px] shadow-[0_0_0_1.5px_var(--thread)]" />
+          <div className="mg-home-text">
             <h1 className="mg-display mg-home-name font-semibold leading-none">{name}</h1>
-          </Link>
-          {/* Nudged down to sit on the title's baseline: the link beside it is centred on the icon, not on the text. */}
-          {numberLabel && <span className="text-sm font-semibold text-[var(--ink-soft)] tabular-nums translate-y-[4px]">{numberLabel}</span>}
-        </div>
+            {numberLabel && <span className="mg-home-number">{numberLabel}</span>}
+          </div>
+        </Link>
         {/* Help, theme, interface language, settings. The way back to the hub is the game's mark on the left. */}
         <div className="mg-header-actions flex items-center">
           {onHelp && (

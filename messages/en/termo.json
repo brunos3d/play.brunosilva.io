@@ -51,9 +51,9 @@
   },
   "next": {
     "label": "More Termo",
-    "termo": "Play the daily Termo",
-    "dueto": "Play the daily Dueto",
-    "quarteto": "Play the daily Quarteto",
+    "termo": "Daily Termo",
+    "dueto": "Daily Dueto",
+    "quarteto": "Daily Quarteto",
     "practice": "Practice"
   },
   "practice": {

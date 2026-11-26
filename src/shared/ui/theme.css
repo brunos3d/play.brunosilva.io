@@ -249,10 +249,13 @@
   justify-content: center;
   gap: 8px;
   min-height: 48px;
-  padding: 0 18px;
+  /* The vertical padding and the line height only show when a label breaks in two, which the layouts below are there to avoid. */
+  padding: 6px 18px;
   border-radius: 14px;
   font-weight: 600;
   font-size: 15px;
+  line-height: 1.2;
+  text-align: center;
   color: var(--ink);
   background: var(--surface);
   box-shadow: 0 0 0 1.5px var(--thread), 0 2px 0 var(--thread);
@@ -264,6 +267,26 @@
 .mg-button:active:not(:disabled) { transform: translateY(2px); box-shadow: 0 0 0 1.5px var(--thread), 0 0 0 var(--thread); }
 .mg-button:disabled { opacity: 0.4; cursor: not-allowed; }
 .mg-button svg { width: 18px; height: 18px; flex: none; }
+
+/* The narrowest phones: a little less air inside buttons and cards buys each label about a word of room. */
+@media (max-width: 340px) {
+  .mg-button { padding-inline: 14px; }
+  .mg-card { padding: 16px; }
+}
+
+/*
+ * A row of buttons. They sit side by side while every label fits on one line.
+ * When one does not, as happens with Portuguese on a 320 px phone, the row
+ * becomes a column: a full-width button reads better than a label broken in two.
+ */
+.mg-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.mg-actions > * { flex: 1 1 auto; }
+/* Two buttons of the same weight, such as Cancel and Confirm: equal halves, or one above the other. */
+.mg-actions[data-even="true"] > * { flex-basis: calc(50% - 4px); }
 
 /* Icon over label. Used by the four game controls so they fit a 360 px screen. */
 .mg-button[data-layout="stacked"] {
@@ -315,6 +338,28 @@
 .mg-home-link:hover { background: var(--linen-deep); }
 .mg-home-mark { width: 36px; height: 36px; }
 .mg-home-name { font-size: 28px; }
+/* The name and, for a daily puzzle, its number: "Zip #618". */
+.mg-home-text {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+.mg-home-number {
+  font-size: 14px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  color: var(--ink-soft);
+}
+/* The title of a page that is not a game. It is a sentence, not a name, so it is smaller and may be cut with an ellipsis as a last resort. */
+.mg-page-title {
+  font-size: 24px;
+  /* Room for descenders: "Ranking" loses the tail of its g under `line-height: 1` once the overflow is hidden. */
+  line-height: 1.25;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 
 /*
  * The header carries four icon buttons next to the game's name. On a narrow
@@ -327,10 +372,28 @@
   .mg-home-link { gap: 8px; padding-right: 6px; }
   .mg-home-mark { width: 32px; height: 32px; }
   .mg-home-name { font-size: 24px; }
+  .mg-page-title { font-size: 22px; }
 }
 @media (max-width: 380px) {
   .mg-header-actions .mg-icon-button { width: 35px; }
   .mg-home-name { font-size: 22px; }
+  .mg-page-title { font-size: 20px; }
+}
+
+/* At 320 px "Sumbreak #167" and four buttons do not share a line at any readable size. The number goes under the name. */
+@media (max-width: 340px) {
+  .mg-home-text { flex-direction: column; align-items: flex-start; gap: 2px; }
+  .mg-home-name { font-size: 20px; }
+  .mg-home-number { font-size: 11px; line-height: 1; }
+  .mg-page-title { font-size: 18px; }
+}
+
+/* The platform's mark and name on the home screen. At 320 px they give up some size, so the name stays clear of the three buttons beside it. */
+.mg-hub-mark { width: 44px; height: 44px; }
+.mg-hub-name { font-size: 30px; }
+@media (max-width: 340px) {
+  .mg-hub-mark { width: 36px; height: 36px; }
+  .mg-hub-name { font-size: 24px; }
 }
 
 /* ---------- Language switcher ---------- */
@@ -407,6 +470,11 @@ button.mg-chip[data-active] { color: var(--linen); background: var(--ink); }
   gap: 8px;
 }
 .mg-tutorial-actions .mg-button { padding: 0 10px; }
+/* At 320 px the three of them only fit with less air around each label. */
+@media (max-width: 340px) {
+  .mg-tutorial-actions { gap: 6px; }
+  .mg-tutorial-actions .mg-button { padding: 0 6px; gap: 5px; font-size: 14px; }
+}
 
 /* ---------- Challenge rooms ---------- */
 
@@ -425,7 +493,8 @@ button.mg-chip[data-active] { color: var(--linen); background: var(--ink); }
 }
 .mg-race svg { width: 16px; height: 16px; flex: none; color: var(--accent); }
 .mg-race-players { display: flex; align-items: center; margin-left: auto; }
-.mg-race-player { position: relative; margin-left: -6px; border-radius: 50%; box-shadow: 0 0 0 2px var(--linen-deep); }
+/* Side by side, not overlapping: each face carries a badge at its corner, and the next face would cover it. */
+.mg-race-player { position: relative; margin-left: 7px; border-radius: 50%; box-shadow: 0 0 0 2px var(--linen-deep); }
 .mg-race-player[data-state="finished"] { box-shadow: 0 0 0 2px var(--valid); }
 .mg-race-player[data-state="gave-up"] { opacity: 0.45; }
 .mg-race-badge {
@@ -454,6 +523,23 @@ button.mg-chip[data-active] { color: var(--linen); background: var(--ink); }
   cursor: pointer;
 }
 .mg-race-quit:hover { color: var(--ink); background: var(--surface); }
+.mg-race-quit { white-space: nowrap; flex: none; }
+.mg-race-more { margin-left: 6px; color: var(--ink-soft); white-space: nowrap; }
+.mg-race-more[data-when="narrow"] { display: none; }
+/*
+ * A phone has no room for five faces between the clock and "Give up": two are
+ * shown and the rest are counted. Narrower still, "Round" goes too and the
+ * flag stands for it.
+ */
+@media (max-width: 400px) {
+  .mg-race { gap: 8px; }
+  .mg-race-player[data-extra="true"],
+  .mg-race-more[data-when="wide"] { display: none; }
+  .mg-race-more[data-when="narrow"] { display: inline; }
+}
+@media (max-width: 380px) {
+  .mg-race-word { display: none; }
+}
 
 /* With the race strip the column is taller. The board gives up a little so a short screen still shows the controls. */
 .mg-shell[data-race="true"] .mg-stage { width: min(100%, max(240px, calc(100dvh - 400px))); }
@@ -503,6 +589,33 @@ button.mg-chip[data-active] { color: var(--linen); background: var(--ink); }
   box-shadow: 0 0 0 1.5px var(--thread);
 }
 .mg-row[data-you="true"] { box-shadow: 0 0 0 2px var(--ink); }
+/* A row with a second line under it, the full width of the row: the times of each round in a race. */
+.mg-row[data-detail="true"] { flex-wrap: wrap; row-gap: 8px; }
+/* A player's name always shows whole. A long one takes a second line instead of an ellipsis. */
+.mg-player-name {
+  min-width: 0;
+  font-weight: 600;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+  text-wrap: balance;
+}
+/* On a narrow phone the row gives its width to the name: less air between the pieces, a smaller place number. */
+@media (max-width: 380px) {
+  .mg-row { gap: 8px; padding: 10px; }
+  .mg-rank { width: 18px; }
+  .mg-player-name { font-size: 15px; }
+}
+/*
+ * The name and the tags after it ("you", "host"). The tags move under the
+ * name when the two do not fit on one line, so they never squeeze it.
+ */
+.mg-player-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 3px 6px;
+  min-width: 0;
+}
 .mg-rank {
   width: 26px;
   flex: none;
@@ -523,17 +636,59 @@ button.mg-chip[data-active] { color: var(--linen); background: var(--ink); }
   text-transform: uppercase;
   color: var(--ink-soft);
   background: var(--linen-deep);
+  white-space: nowrap;
 }
+
+/*
+ * How each round of a race went for one player: one cell per round, with the
+ * game, whether it was solved and the time it took. The cells are a grid of
+ * fixed columns, so the same round sits in the same place in every row of the
+ * table and two players can be compared by looking down.
+ */
+.mg-splits {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(68px, 1fr));
+  gap: 4px;
+  flex-basis: 100%;
+}
+.mg-split {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 28px;
+  padding: 0 6px;
+  border-radius: 8px;
+  font-size: 12.5px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  color: var(--ink);
+  background: var(--linen);
+}
+.mg-split svg { width: 16px; height: 16px; flex: none; border-radius: 4px; }
+/* A round that was not solved keeps its time, struck through: it was spent, and it did not count. */
+.mg-split[data-solved="false"] { color: var(--ink-faint); text-decoration: line-through; }
+.mg-split[data-solved="false"] svg { opacity: 0.55; }
+/* The fastest solve of a round. */
+.mg-split[data-best="true"] { color: var(--valid); background: color-mix(in oklab, var(--valid) 14%, var(--linen)); }
+
 .mg-select {
   width: 100%;
+  min-width: 0;
   min-height: 44px;
-  padding: 0 10px;
+  /* The arrow is drawn here, so the room it takes is known and the same in every browser. */
+  padding: 0 30px 0 12px;
   border-radius: 12px;
-  font-size: 15px;
+  font-size: 16px; /* as in .mg-field: under 16px iOS zooms the page when the select takes focus */
   font-weight: 600;
   color: var(--ink);
-  background: var(--surface);
+  appearance: none;
+  background:
+    var(--surface)
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' fill='none' stroke='%23857c70' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2.5 4.5 6 8l3.5-3.5'/%3E%3C/svg%3E")
+    no-repeat right 10px center / 12px 12px;
   box-shadow: 0 0 0 1.5px var(--thread);
+  text-overflow: ellipsis;
   cursor: pointer;
 }
 .mg-range { width: 100%; accent-color: var(--accent); min-height: 32px; cursor: pointer; }
@@ -577,6 +732,16 @@ button.mg-chip[data-active] { color: var(--linen); background: var(--ink); }
 .mg-dialog[open] { animation: dialog-in 260ms cubic-bezier(0.2, 0.9, 0.3, 1.1) both; }
 .mg-dialog[open]::backdrop { animation: fade-in 200ms ease both; }
 
+/*
+ * The three numbers of a result. Equal columns while every label fits. A long
+ * label, such as "Redesenhos", takes the room it needs from the other two
+ * instead of running out of its tile.
+ */
+.mg-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(max-content, 1fr));
+  gap: 8px;
+}
 .mg-stat {
   display: flex;
   flex-direction: column;
@@ -587,6 +752,11 @@ button.mg-chip[data-active] { color: var(--linen); background: var(--ink); }
 }
 .mg-stat dt { font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-soft); }
 .mg-stat dd { font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; }
+@media (max-width: 380px) {
+  .mg-stats { gap: 6px; }
+  .mg-stat { padding: 10px 8px; }
+  .mg-stat dt { font-size: 10px; letter-spacing: 0.04em; }
+}
 
 .mg-switch {
   position: relative;
@@ -622,7 +792,45 @@ button.mg-chip[data-active] { color: var(--linen); background: var(--ink); }
   color: var(--ink);
   background: var(--surface);
   box-shadow: 0 0 0 1.5px var(--thread);
+  text-overflow: ellipsis;
 }
+
+/* A link that has to be read and copied whole: it breaks anywhere instead of running out of its box, and one tap selects all of it. */
+.mg-link-box {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+  color: var(--ink);
+  background: var(--linen);
+  box-shadow: 0 0 0 1.5px var(--thread);
+  -webkit-user-select: all;
+  user-select: all;
+}
+
+/*
+ * A text link that stands alone, as in a footer. Its box is 28 px tall, a
+ * target a thumb can hit (WCAG asks for 24), and the negative margin gives the
+ * extra height back to the layout: a one-line footer is as tall as its text,
+ * which the desktop layout counts on to keep a 720 px screen free of scroll.
+ * A footer that wraps sets a 12 px row gap, so the targets of two rows touch
+ * and never overlap.
+ */
+.mg-text-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  margin-block: -6px;
+  padding: 0 2px;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  touch-action: manipulation;
+  cursor: pointer;
+}
+.mg-text-link:hover { color: var(--ink-soft); }
 
 .mg-segment {
   display: grid;

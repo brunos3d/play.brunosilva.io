@@ -16,7 +16,7 @@ export function PageHeader({ title }: { title: string }) {
         <Link href="/" prefetch={false} className="mg-home-link" aria-label={t("home", { game: PLATFORM_NAME })} data-testid="page-home">
           <PlatformIcon className="mg-home-mark flex-none rounded-[9px] shadow-[0_0_0_1.5px_var(--thread)]" />
         </Link>
-        <h1 className="mg-display mg-home-name font-semibold leading-none truncate">{title}</h1>
+        <h1 className="mg-display mg-page-title font-semibold min-w-0">{title}</h1>
       </div>
       <div className="mg-header-actions flex items-center flex-none">
         <ThemeToggle />

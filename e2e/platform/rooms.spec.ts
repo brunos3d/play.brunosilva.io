@@ -47,7 +47,7 @@ async function openRoom(host: Page, rounds: number): Promise<string> {
   await host.getByTestId("room-create").click();
   await expect(host).toHaveURL(/\/en\/rooms\/[A-Z2-9]{5}$/);
   await expect(host.getByTestId("room")).toHaveAttribute("data-status", "lobby");
-  const link = await host.getByTestId("room-link").inputValue();
+  const link = (await host.getByTestId("room-link").getAttribute("data-url")) ?? "";
   expect(link).toMatch(/\/rooms\/[A-Z2-9]{5}$/);
   return link;
 }
@@ -79,7 +79,7 @@ test("two players race through the same boards, and the table shows who won", as
   expect(new URL(guest.url()).searchParams.get("seed")).toBe(new URL(host.url()).searchParams.get("seed"));
 
   // A round of a race: the strip says where the player is, the clock runs, and there is no "New" or "Try again".
-  await expect(host.getByTestId("race-round")).toHaveText("Round 1 of 2");
+  await expect(host.getByTestId("race-round")).toHaveText("Round 1/2");
   await expect(host.getByTestId("race-clock")).toBeVisible();
   await expect(host.getByTestId("race-player")).toHaveCount(1);
   await expect(host.getByTestId("game-new")).toHaveCount(0);
@@ -89,7 +89,7 @@ test("two players race through the same boards, and the table shows who won", as
   await solveZipRound(host, 2);
   await expect(host).toHaveURL(/\/en\/rooms\/[A-Z2-9]{5}$/);
   await expect(host.getByTestId("room-standing").first()).toHaveAttribute("data-state", "finished");
-  await expect(host.getByTestId("room-standing").first()).toContainText("2 of 2 solved");
+  await expect(host.getByTestId("room-standing").first()).toContainText("2/2 solved");
 
   // The guest is told, without anything covering the board, and may keep going.
   const toast = guest.getByTestId("race-toast");
@@ -101,7 +101,7 @@ test("two players race through the same boards, and the table shows who won", as
   // The guest solves one round, then gives up on the second.
   await solveZipRound(guest, 1);
   await expect(guest).toHaveURL(/round=2$/);
-  await expect(guest.getByTestId("race-round")).toHaveText("Round 2 of 2");
+  await expect(guest.getByTestId("race-round")).toHaveText("Round 2/2");
   await guest.getByTestId("race-give-up").click();
   await guest.getByTestId("race-confirm").getByRole("button", { name: "Give up" }).click();
   await expect(guest).toHaveURL(/\/en\/rooms\/[A-Z2-9]{5}$/);
@@ -141,7 +141,7 @@ test("a race keeps its clock and its place through a reload, and a played round 
   // The clock is the server's. A reload does not reset it.
   await expect(host.getByTestId("race-clock")).toBeVisible();
   await host.reload();
-  await expect(host.getByTestId("race-round")).toHaveText("Round 2 of 2");
+  await expect(host.getByTestId("race-round")).toHaveText("Round 2/2");
   await expect(host.getByTestId("race-clock")).not.toHaveText("00:00");
 
   // Going back to the first round does not let it be played again: the player is sent on.
@@ -184,9 +184,9 @@ test("a hint costs time in a race, and a skipped round ranks below a solved one"
 
   const rows = host.getByTestId("room-standing");
   await expect(rows.nth(0)).toContainText("you");
-  await expect(rows.nth(0)).toContainText("1 of 1 solved");
-  await expect(rows.nth(0)).toContainText("includes 30 s for hints");
-  await expect(rows.nth(1)).toContainText("0 of 1 solved");
+  await expect(rows.nth(0)).toContainText("1/1 solved");
+  await expect(rows.nth(0)).toContainText("+30 s in hints");
+  await expect(rows.nth(1)).toContainText("0/1 solved");
   await host.context().close();
   await guest.context().close();
 });

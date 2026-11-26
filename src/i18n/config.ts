@@ -10,10 +10,11 @@ export type Locale = (typeof LOCALES)[number];
 
 export const DEFAULT_LOCALE: Locale = "en";
 
-export const LOCALE_META: Record<Locale, { htmlLang: string; ogLocale: string; hreflang: string; nativeLabel: string; shortLabel: string; flag: "us" | "br" }> = {
+export const LOCALE_META: Record<Locale, { htmlLang: string; ogLocale: string; hreflang: string; nativeLabel: string; languageLabel: string; shortLabel: string; flag: "us" | "br" }> = {
   // The URL segment is lower case. `htmlLang` and `hreflang` use the BCP 47 casing crawlers expect.
-  en: { htmlLang: "en", ogLocale: "en_US", hreflang: "en", nativeLabel: "English", shortLabel: "EN", flag: "us" },
-  "pt-br": { htmlLang: "pt-BR", ogLocale: "pt_BR", hreflang: "pt-BR", nativeLabel: "Português (Brasil)", shortLabel: "PT", flag: "br" },
+  // `nativeLabel` names the locale, region included. `languageLabel` names the language alone, for the narrow places that pick one: half a row on a phone.
+  en: { htmlLang: "en", ogLocale: "en_US", hreflang: "en", nativeLabel: "English", languageLabel: "English", shortLabel: "EN", flag: "us" },
+  "pt-br": { htmlLang: "pt-BR", ogLocale: "pt_BR", hreflang: "pt-BR", nativeLabel: "Português (Brasil)", languageLabel: "Português", shortLabel: "PT", flag: "br" },
 };
 
 /** The same cookie next-intl reads, so the proxy and the switcher agree on one name. */

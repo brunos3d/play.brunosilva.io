@@ -46,7 +46,7 @@
   },
   "dialog": {
     "close": "Close",
-    "keepPlaying": "Keep playing"
+    "cancel": "Cancel"
   },
   "result": {
     "title": "Result",
@@ -69,10 +69,10 @@
     "shared": "Shared",
     "copied": "Copied to clipboard",
     "shareFailed": "Could not share",
-    "keepPracticing": "Keep playing in Practice",
+    "keepPracticing": "Continue in Practice",
     "next": "Next puzzle",
     "tryAgain": "Try again",
-    "playToday": "Play today's {game}",
+    "playToday": "Today's {game}",
     "allGames": "All games",
     "otherGames": "See the other games",
     "nextIn": "Next puzzle in <time></time>"
@@ -89,7 +89,7 @@
     "sizeOption": "{size} by {size}",
     "language": "Language of the words",
     "seed": "Seed (optional)",
-    "seedPlaceholder": "A word, a number, or a shared {prefix}:… seed",
+    "seedPlaceholder": "A word, a number or a seed",
     "seedNoteSized": "The same seed, difficulty and size always build the same puzzle.",
     "seedNote": "The same seed and difficulty always build the same puzzle.",
     "random": "Random puzzle",

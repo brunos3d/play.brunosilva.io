@@ -12,8 +12,9 @@ import { useTicker } from "./use-room";
 
 /** How long the news of someone finishing stays on screen. Long enough to read and decide, short enough to leave the board alone. */
 const TOAST_MS = 9_000;
-/** Other players shown in the strip. The rest are one tap away, in the room's table. */
+/** Other players shown in the strip, on a wide screen and on a phone. The rest are counted beside them, and listed in the room's table. */
 const SHOWN_PLAYERS = 5;
+const SHOWN_PLAYERS_NARROW = 2;
 
 /**
  * The strip a round of a race puts above the game's header: the round, the
@@ -63,17 +64,21 @@ export function RaceBar({ race, onOpenChange }: { race: Race; onOpenChange?: (op
     <>
       <div className="mg-race" role="group" aria-label={t("label", { code: race.code })} data-testid="race-bar">
         <FlagIcon />
-        <span data-testid="race-round">{total > 0 ? t("round", { round: Math.min(race.round + 1, total), total }) : race.code}</span>
+        {/* "Round 1/3". On a narrow phone the word goes and the flag stands for it. */}
+        <span className="whitespace-nowrap" data-testid="race-round">
+          {total > 0 ? t.rich("round", { round: Math.min(race.round + 1, total), total, word: (chunks) => <span className="mg-race-word">{chunks}</span> }) : race.code}
+        </span>
         {mine?.timeMs !== null && mine?.timeMs !== undefined && (
           <span className="tabular-nums text-[var(--ink-soft)]" role="timer" aria-label={t("clock", { time: formatTime(mine.timeMs) })} data-testid="race-clock">
             {formatTime(mine.timeMs)}
           </span>
         )}
         <span className="mg-race-players">
-          {others.slice(0, SHOWN_PLAYERS).map((standing) => (
+          {others.slice(0, SHOWN_PLAYERS).map((standing, index) => (
             <span
               key={standing.player.id}
               className="mg-race-player"
+              data-extra={index >= SHOWN_PLAYERS_NARROW || undefined}
               data-state={standing.state}
               data-testid="race-player"
               role="img"
@@ -86,7 +91,17 @@ export function RaceBar({ race, onOpenChange }: { race: Race; onOpenChange?: (op
               </span>
             </span>
           ))}
-          {others.length > SHOWN_PLAYERS && <span className="ml-1.5 text-[var(--ink-soft)]">+{others.length - SHOWN_PLAYERS}</span>}
+          {/* How many are not shown. The strip shows fewer on a phone, so there are two counts and the stylesheet picks one. */}
+          {others.length > SHOWN_PLAYERS && (
+            <span className="mg-race-more" data-when="wide" aria-label={t("more", { count: others.length - SHOWN_PLAYERS })}>
+              +{others.length - SHOWN_PLAYERS}
+            </span>
+          )}
+          {others.length > SHOWN_PLAYERS_NARROW && (
+            <span className="mg-race-more" data-when="narrow" aria-label={t("more", { count: others.length - SHOWN_PLAYERS_NARROW })}>
+              +{others.length - SHOWN_PLAYERS_NARROW}
+            </span>
+          )}
         </span>
         <button type="button" className="mg-race-quit" onClick={() => setConfirming(true)} data-testid="race-give-up">
           {t("giveUp")}

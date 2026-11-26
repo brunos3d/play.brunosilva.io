@@ -6,9 +6,9 @@
   "notSolved": "Not solved",
   "revealed": "Solution revealed",
   "streak": "{count} day streak",
-  "seeResult": "See today's result",
-  "continue": "Continue playing",
-  "play": "Play today's puzzle",
+  "seeResult": "See result",
+  "continue": "Continue",
+  "play": "Play today",
   "practice": "Practice",
   "countdown": "New boards in <time></time>, at midnight Pacific Time.",
   "madeBy": "Made by"

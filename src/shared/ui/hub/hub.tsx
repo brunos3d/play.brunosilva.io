@@ -121,7 +121,8 @@ function GameCard({ game, daily, data, now }: { game: GameMeta; daily: DailyInfo
         </div>
       </div>
 
-      <div className="flex items-center justify-between gap-2 text-sm min-h-6" data-testid={`hub-today-${game.id}`}>
+      {/* Number and tier on the left, today's state on the right. On a narrow phone the state moves to a line of its own instead of breaking. */}
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-0.5 text-sm min-h-6 whitespace-nowrap" data-testid={`hub-today-${game.id}`}>
         <span className="font-semibold tabular-nums">{daily ? <>#{daily.number} · <span className="capitalize">{text.tier(game, daily.difficulty)}</span></> : " "}</span>
         {daily && <TodayLine today={data?.today} now={now} />}
       </div>
@@ -181,21 +182,22 @@ export function Hub() {
 
   return (
     <main className="mg-shell" style={{ gap: 18 }}>
-      <header className="mg-header w-full flex items-start justify-between gap-2 pt-2">
-        <div className="flex items-center gap-3 min-w-0">
-          <PlatformIcon className="w-11 h-11 flex-none rounded-[11px] shadow-[0_0_0_1.5px_var(--thread)]" />
-          <div className="min-w-0">
-            <h1 className="mg-display text-[30px] font-semibold leading-none">{PLATFORM_NAME}</h1>
-            <p className="text-sm text-[var(--ink-soft)] mt-1">{t("tagline")}</p>
+      {/* The tagline has the whole width under the name: next to the buttons it broke into three lines on a phone. */}
+      <header className="mg-header w-full flex flex-col gap-2 pt-2">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-3 min-w-0">
+            <PlatformIcon className="mg-hub-mark flex-none rounded-[11px] shadow-[0_0_0_1.5px_var(--thread)]" />
+            <h1 className="mg-display mg-hub-name font-semibold leading-none">{PLATFORM_NAME}</h1>
+          </div>
+          <div className="mg-header-actions flex items-center flex-none">
+            <ThemeToggle />
+            <LocaleSwitcher />
+            <button type="button" className="mg-icon-button" aria-label={header("settings")} onClick={() => setSettingsOpen(true)}>
+              <SettingsIcon />
+            </button>
           </div>
         </div>
-        <div className="mg-header-actions flex items-center flex-none">
-          <ThemeToggle />
-          <LocaleSwitcher />
-          <button type="button" className="mg-icon-button" aria-label={header("settings")} onClick={() => setSettingsOpen(true)}>
-            <SettingsIcon />
-          </button>
-        </div>
+        <p className="text-sm text-[var(--ink-soft)]">{t("tagline")}</p>
       </header>
 
       {GAME_LIST.map((game) => (

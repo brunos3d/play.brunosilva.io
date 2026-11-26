@@ -37,6 +37,8 @@ Rule 1 is what makes the race fair. Revealing every board is the fastest way to 
 
 Hints stay available because being stuck with no way forward is no fun in a party game. They cost more than thinking does, since a hint solves part of the puzzle.
 
+Each row of the table also shows the time of every round the player has played, one cell per round: `standingOf` returns them as `splitsMs`, measured from the end of the round before. A round that was not solved keeps its time, struck through, and the fastest solve of each round is marked. The cells form a grid of fixed columns, so the same round sits in the same place in every row.
+
 ## How the games take part
 
 No game knows about rooms. A round is played on the game's ordinary seeded route, with two more query parameters:
@@ -47,7 +49,7 @@ No game knows about rooms. A round is played on the game's ordinary seeded route
 
 The shared game frame (`src/shared/ui/game-frame.tsx`) reads them through `useRace`. In a race it:
 
-- shows the race strip above the header: the round, the race clock, the other players with the round each one is on, and "Give up";
+- shows the race strip above the header: the round, the race clock, the other players with the round each one is on, and "Give up". On a phone the strip shows two players and counts the rest;
 - tells the room when the board comes into view and when the round ends;
 - hides "New game" and "Try again", and skips the result screen, best times and the ranking;
 - opens the next round, or the table, about a second after the round ends.

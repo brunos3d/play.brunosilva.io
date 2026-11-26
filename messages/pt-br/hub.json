@@ -6,9 +6,9 @@
   "notSolved": "Não resolvido",
   "revealed": "Solução revelada",
   "streak": "{count, plural, one {# dia seguido} other {# dias seguidos}}",
-  "seeResult": "Ver o resultado de hoje",
-  "continue": "Continuar jogando",
-  "play": "Jogar o desafio de hoje",
+  "seeResult": "Ver resultado",
+  "continue": "Continuar",
+  "play": "Jogar hoje",
   "practice": "Prática",
   "countdown": "Novos tabuleiros em <time></time>, à meia-noite do horário do Pacífico.",
   "madeBy": "Feito por"

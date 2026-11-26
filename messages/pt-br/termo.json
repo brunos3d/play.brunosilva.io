@@ -51,9 +51,9 @@
   },
   "next": {
     "label": "Mais Termo",
-    "termo": "Jogar o Termo do dia",
-    "dueto": "Jogar o Dueto do dia",
-    "quarteto": "Jogar o Quarteto do dia",
+    "termo": "Termo do dia",
+    "dueto": "Dueto do dia",
+    "quarteto": "Quarteto do dia",
     "practice": "Prática"
   },
   "practice": {

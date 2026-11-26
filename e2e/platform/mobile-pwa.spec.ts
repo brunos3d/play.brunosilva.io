@@ -135,7 +135,7 @@ test("after one online visit the hub and every game load and play offline", asyn
   // The start URL and the shortcuts have no locale. Online the server redirects them. Offline the worker answers with the locale used last.
   await page.goto("/");
   await expect(page.getByTestId("hub-card-zip")).toBeVisible();
-  await expect(page.getByRole("link", { name: /Play today's puzzle/ }).first()).toBeVisible();
+  await expect(page.getByRole("link", { name: /Play today/ }).first()).toBeVisible();
 
   // Seeds never seen online: the page comes from cache and the puzzle is built on the device.
   await openZip(page, zip.url);

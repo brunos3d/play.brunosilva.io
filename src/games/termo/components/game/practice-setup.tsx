@@ -70,7 +70,7 @@ export function TermoPracticeSetup() {
             className="mg-field"
             value={seed}
             onChange={(event) => setSeed(event.target.value)}
-            placeholder={common("seedPlaceholder", { prefix: termoSeeds.prefix })}
+            placeholder={common("seedPlaceholder")}
             autoComplete="off"
             autoCapitalize="off"
             spellCheck={false}

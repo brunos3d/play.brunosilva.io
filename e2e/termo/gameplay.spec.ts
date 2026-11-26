@@ -356,14 +356,14 @@ test("the daily is always one board, and once it is over it offers the day's Due
   await guess(page, word);
   await expect(result(page)).toBeVisible();
   // The result screen itself leads on to the day's Dueto and Quarteto. They stand in for the list of other games.
-  await expect(result(page).getByTestId("termo-result-next").getByRole("link")).toHaveText(["Play the daily Dueto", "Play the daily Quarteto", "Practice"]);
+  await expect(result(page).getByTestId("termo-result-next").getByRole("link")).toHaveText(["Daily Dueto", "Daily Quarteto", "Practice"]);
   await expect(result(page).getByTestId("game-result-suggestion")).toHaveCount(0);
   await expect(result(page).getByRole("link", { name: "See the other games" })).toHaveAttribute("href", "/en");
   await result(page).getByRole("button", { name: "Close" }).click();
   await expect(keyboard(page)).toHaveCount(0);
   const next = page.getByTestId("termo-next");
   await expect(next).toHaveAccessibleName("More Termo");
-  await expect(next.getByRole("link")).toHaveText(["Play the daily Dueto", "Play the daily Quarteto", "Practice"]);
+  await expect(next.getByRole("link")).toHaveText(["Daily Dueto", "Daily Quarteto", "Practice"]);
   await expect(page.getByTestId("termo-next-practice")).toHaveAttribute("href", "/en/termo/practice");
 
   await page.getByTestId("termo-next-dueto").click();
@@ -378,7 +378,7 @@ test("the daily is always one board, and once it is over it offers the day's Due
   await guess(page, dueto.answers[1]);
   await expect(result(page)).toBeVisible();
   await result(page).getByRole("button", { name: "Close" }).click();
-  await expect(page.getByTestId("termo-next").getByRole("link")).toHaveText(["Play the daily Termo", "Play the daily Quarteto", "Practice"]);
+  await expect(page.getByTestId("termo-next").getByRole("link")).toHaveText(["Daily Termo", "Daily Quarteto", "Practice"]);
 
   await page.getByTestId("termo-next-quarteto").click();
   await expect(board(page)).toHaveAttribute("data-boards", "4");

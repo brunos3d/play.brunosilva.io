@@ -102,11 +102,10 @@ export function RoomSetup() {
             const sizes = Array.from({ length: codec.maxSize - codec.minSize + 1 }, (_, offset) => codec.minSize + offset);
             return (
               <li key={index} className="mg-card" style={{ gap: 10, padding: 14 }} data-testid={`room-round-${index + 1}`}>
+                {/* Two lines per round: the game next to the round's number, then its difficulty and size. Three selects on one line cut their own text on a phone. */}
                 <div className="flex items-center gap-2.5">
                   <GameIcon game={row.game} className="w-8 h-8 flex-none rounded-[8px] shadow-[0_0_0_1.5px_var(--thread)]" />
-                  <span className="font-semibold">{t("round", { number: index + 1 })}</span>
-                </div>
-                <div className={`grid gap-2 ${game.hasSizes ? "grid-cols-[1.3fr_1fr_0.8fr]" : "grid-cols-[1.3fr_1fr]"}`}>
+                  <span className="font-semibold flex-none whitespace-nowrap">{t("round", { number: index + 1 })}</span>
                   <select className="mg-select" value={row.game} onChange={(event) => setRow(index, { game: event.target.value as GameId })} aria-label={t("game")} data-testid="room-game">
                     {GAME_LIST.map((option) => (
                       <option key={option.id} value={option.id}>
@@ -114,6 +113,8 @@ export function RoomSetup() {
                       </option>
                     ))}
                   </select>
+                </div>
+                <div className={`grid gap-2 ${game.hasSizes ? "grid-cols-2" : "grid-cols-1"}`}>
                   <select className="mg-select capitalize" value={row.difficulty} onChange={(event) => setRow(index, { difficulty: event.target.value as Difficulty })} aria-label={t(game.difficultyLabels ? "mode" : "difficulty")} data-testid="room-difficulty">
                     {tiersOf(row.game).map((tier) => (
                       <option key={tier} value={tier}>

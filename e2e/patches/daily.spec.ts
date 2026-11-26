@@ -32,7 +32,7 @@ test("finishing the daily records a streak, and the result comes back after a re
   const result = page.getByTestId("game-result");
   await expect(result).toBeVisible();
   await expect(result).toContainText("Patches #188");
-  await expect(result.getByRole("link", { name: /Play today's Zip/ })).toBeVisible();
+  await expect(result.getByRole("link", { name: /Today's Zip/ })).toBeVisible();
   await expect(page.getByTestId("game-streak")).toHaveText("1");
   await expect(result).toContainText("Next puzzle in");
   const time = await page.getByTestId("game-result-time").innerText();

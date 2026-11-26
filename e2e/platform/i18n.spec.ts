@@ -59,7 +59,7 @@ test.describe("a path without a locale", () => {
       await expect(page.locator("html")).toHaveAttribute("lang", "pt-BR");
       await expect(page.getByTestId("hub-today-zip")).toContainText("Ainda não jogado");
       await expect(page.getByTestId("hub-card-chess").getByRole("heading")).toHaveText("Xadrez");
-      await expect(page.getByTestId("hub-card-zip").getByRole("link", { name: /Jogar o desafio de hoje/ })).toBeVisible();
+      await expect(page.getByTestId("hub-card-zip").getByRole("link", { name: /Jogar hoje/ })).toBeVisible();
     });
   });
 });

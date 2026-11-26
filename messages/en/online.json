@@ -6,7 +6,7 @@
   "offline": "No connection. Trying again.",
   "profile": {
     "label": "Your name",
-    "placeholder": "A name the others will see",
+    "placeholder": "Public name",
     "newAvatar": "Another avatar",
     "save": "Save",
     "saved": "Saved",
@@ -16,7 +16,7 @@
   },
   "race": {
     "label": "Race, room {code}",
-    "round": "Round {round} of {total}",
+    "round": "<word>Round</word> {round}/{total}",
     "clock": "Race time {time}",
     "giveUp": "Give up",
     "giveUpTitle": "Give up the race?",
@@ -33,7 +33,8 @@
     "alreadyPlayed": "You already played this round.",
     "progress": "{name}, round {round} of {total}",
     "done": "{name}, finished",
-    "out": "{name}, gave up"
+    "out": "{name}, gave up",
+    "more": "{count, plural, one {and # more player} other {and # more players}}"
   },
   "room": {
     "title": "Challenge room",
@@ -70,16 +71,19 @@
     "tableTitle": "Table",
     "finalTitle": "Final table",
     "winner": "{name} wins",
-    "solved": "{solved} of {total} solved",
+    "solved": "{solved}/{total} solved",
     "stateRacing": "round {round} of {total}",
     "stateWaiting": "not started",
     "stateGaveUp": "gave up",
-    "penalty": "includes {seconds} s for hints",
+    "penalty": "+{seconds} s in hints",
     "rematch": "Race again",
     "rematchOpen": "{host} opened a new room.",
     "rematchJoin": "Join the new room",
     "newRoom": "Open another room",
-    "home": "All games"
+    "home": "All games",
+    "splits": "Time per round",
+    "splitSolved": "Round {round}, {game}: solved in {time}",
+    "splitMissed": "Round {round}, {game}: not solved, {time}"
   },
   "setup": {
     "title": "Challenge friends",
@@ -119,7 +123,7 @@
     "loading": "Loading the ranking.",
     "hubTitle": "Ranking of the week",
     "hubEmpty": "No scores this week yet. The first daily puzzle solved takes the lead.",
-    "see": "See the ranking",
+    "see": "See all",
     "earned": "+{points} points in today's ranking",
     "challengeTitle": "Challenge friends",
     "challengeBody": "Race the same puzzles against friends, live.",

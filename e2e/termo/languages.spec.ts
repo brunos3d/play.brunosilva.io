@@ -331,7 +331,7 @@ test("each language has its own daily: the settings switch between them, and one
   await guess(page, dueto.answers[1]);
   await expect(result(page)).toBeVisible();
   await result(page).getByRole("button", { name: "Close" }).click();
-  await expect(page.getByTestId("termo-next").getByRole("link")).toHaveText(["Play the daily Termo", "Play the daily Quarteto", "Practice"]);
+  await expect(page.getByTestId("termo-next").getByRole("link")).toHaveText(["Daily Termo", "Daily Quarteto", "Practice"]);
   await expect(page.getByTestId("termo-next-quarteto")).toHaveAttribute("href", new RegExp(`seed=TERMO%3A${date}-quarteto%3A1%3Aexpert%3Aen$`));
 });
 

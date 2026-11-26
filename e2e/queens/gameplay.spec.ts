@@ -131,7 +131,7 @@ test("solving shows the result, locks the board and offers the next puzzle", asy
   await expect(result(page)).toBeVisible();
   await expect(result(page)).toContainText("Flawless");
   await expect(result(page)).toContainText("Hints");
-  await expect(result(page).getByRole("link", { name: /Play today's Zip/ })).toBeVisible();
+  await expect(result(page).getByRole("link", { name: /Today's Zip/ })).toBeVisible();
 
   await result(page).getByRole("button", { name: "Next puzzle" }).click();
   await expect(page).toHaveURL(/seed=QUEENS%3A[a-z0-9]{8}%3A1%3Amedium%3A6/);
