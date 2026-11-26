@@ -1,45 +1,36 @@
 "use client";
 
+import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useState, useSyncExternalStore } from "react";
 import { GAMES, GAME_IDS, GAME_LIST, type GameId, dailyVariant } from "@/games/registry";
 import { Link } from "@/i18n/navigation";
 import { formatTime } from "@/shared/engine/clock";
 import { useGameLanguage } from "@/shared/hooks/use-game-language";
 import { useGameText } from "@/shared/hooks/use-game-text";
 import { GameIcon } from "@/shared/ui/game-icons";
-import { ArrowRightIcon, FlameIcon, TrophyIcon, UsersIcon } from "@/shared/ui/icons";
+import { ArrowRightIcon, FlameIcon, TrophyIcon, UserIcon, UsersIcon } from "@/shared/ui/icons";
 import { PageHeader } from "@/shared/ui/page-header";
+import { SiteFooter } from "@/shared/ui/site-footer";
 import { OnlineError, online } from "./api";
 import { PlayerAvatar } from "./player-avatar";
-import { ProfileEditor } from "./profile-editor";
-import type { Ranking, RankingEntry, RankingPeriod } from "./types";
+import { RANKING_PERIODS, type Ranking, type RankingEntry, type RankingPeriod } from "./types";
 import { OnlineUnavailable } from "./unavailable";
 import { usePlayer } from "./use-player";
 
 const noSubscription = () => () => undefined;
 
-type Loaded = { key: string; ranking: Ranking | null; error: string | null };
+/** A ranking on screen is asked for again this often, so a table left open follows the day. Only while the page is in view. */
+const RANKING_REFRESH_MS = 30_000;
 
-/** Loads a ranking, and again whenever what is asked for changes. `ranking` is null while the answer is on its way. */
+/**
+ * A ranking, kept fresh. `ranking` is null while the first answer for what is
+ * asked is on its way. A refresh that fails keeps the table already shown.
+ */
 export function useRanking(period: RankingPeriod, game: GameId | "all", variant = ""): { ranking: Ranking | null; error: string | null } {
-  const key = `${period}|${game}|${variant}`;
-  const [loaded, setLoaded] = useState<Loaded | null>(null);
-  useEffect(() => {
-    let cancelled = false;
-    online
-      .ranking(period, game, variant)
-      .then((ranking) => {
-        if (!cancelled) setLoaded({ key, ranking, error: null });
-      })
-      .catch((failure: unknown) => {
-        if (!cancelled) setLoaded({ key, ranking: null, error: failure instanceof OnlineError ? failure.code : "offline" });
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [game, key, period, variant]);
-  return loaded?.key === key ? { ranking: loaded.ranking, error: loaded.error } : { ranking: null, error: null };
+  const query = useQuery({ queryKey: ["ranking", period, game, variant], queryFn: () => online.ranking(period, game, variant), refetchInterval: RANKING_REFRESH_MS });
+  if (query.data) return { ranking: query.data, error: null };
+  return { ranking: null, error: query.error ? (query.error instanceof OnlineError ? query.error.code : "offline") : null };
 }
 
 export function RankingRow({ entry, you, byTime }: { entry: RankingEntry; you: boolean; byTime: boolean }) {
@@ -56,6 +47,8 @@ export function RankingRow({ entry, you, byTime }: { entry: RankingEntry; you: b
           {you && <span className="mg-tag">{t("you")}</span>}
         </div>
         <div className="flex flex-wrap items-center gap-x-2 text-xs text-[var(--ink-soft)] whitespace-nowrap">
+          {/* The nickname is the part of a player nobody else has: it tells apart two players with the same name. */}
+          <span className="mg-nickname" data-testid="ranking-nickname">@{entry.nickname}</span>
           {byTime ? <span>{t("hints", { count: entry.hints ?? 0 })}</span> : <span>{t("solved", { count: entry.solved })}</span>}
           {entry.streak > 1 && (
             <span className="flex items-center gap-0.5" aria-label={t("streak", { count: entry.streak })}>
@@ -79,9 +72,9 @@ function useRequestedGame(): GameId | "all" {
 }
 
 /**
- * The rankings: today or this week, for every game together or for one. One
- * game on one day is ranked by time, since everyone had the same puzzle.
- * Everything else is ranked by points.
+ * The rankings: today, this week, this month or all time, for every game
+ * together or for one. One game on one day is ranked by time, since everyone
+ * had the same puzzle. Everything else is ranked by points.
  */
 export function RankingScreen() {
   const t = useTranslations("online.ranking");
@@ -104,7 +97,7 @@ export function RankingScreen() {
       <PageHeader title={t("title")} />
 
       <div className="mg-segment w-full" role="group" aria-label={t("period")}>
-        {(["today", "week"] as const).map((option) => (
+        {RANKING_PERIODS.map((option) => (
           <button key={option} type="button" aria-pressed={period === option} onClick={() => setPeriod(option)} data-testid={`ranking-${option}`}>
             {t(option)}
           </button>
@@ -136,7 +129,7 @@ export function RankingScreen() {
       ) : (
         <>
           <p className="w-full flex items-center justify-between text-xs text-[var(--ink-faint)]">
-            <span>{ranking.from === ranking.to ? ranking.to : t("range", { from: ranking.from, to: ranking.to })}</span>
+            <span>{ranking.from === ranking.to ? ranking.to : period === "all" ? t("since", { from: ranking.from }) : t("range", { from: ranking.from, to: ranking.to })}</span>
             <span>{t("players", { count: ranking.players })}</span>
           </p>
           <ol className="w-full flex flex-col gap-2" data-testid="ranking-list">
@@ -154,13 +147,23 @@ export function RankingScreen() {
         </Link>
       )}
 
-      <section className="mg-card w-full" data-testid="ranking-profile">
-        <ProfileEditor />
-      </section>
+      {/* Who the player is in these tables, and the way to the page where that is changed. */}
+      <Link href="/profile" prefetch={false} className="mg-row w-full" data-testid="ranking-profile">
+        {me ? <PlayerAvatar seed={me.avatar} size={36} /> : <UserIcon className="w-6 h-6 flex-none text-[var(--ink-soft)]" />}
+        <span className="min-w-0 flex-1">
+          <span className="mg-player-line">
+            <span className="mg-player-name">{me ? me.name : t("profile")}</span>
+          </span>
+          <span className="mg-nickname block text-xs text-[var(--ink-soft)]">{me ? `@${me.nickname} · ${t("profile")}` : t("profileHint")}</span>
+        </span>
+        <ArrowRightIcon className="w-4 h-4 flex-none text-[var(--ink-soft)]" />
+      </Link>
 
       <Link href="/rooms/new" prefetch={false} className="mg-button w-full">
         <UsersIcon /> {t("challenge")}
       </Link>
+
+      <SiteFooter current="ranking" />
     </main>
   );
 }
@@ -201,6 +204,9 @@ export function HubOnline() {
           <UsersIcon /> {t("challengeTitle")}
         </Link>
       </div>
+      <Link href="/profile" prefetch={false} className="mg-text-link self-center text-sm text-[var(--ink-soft)]" data-testid="hub-profile">
+        {me ? t("profileOf", { nickname: me.nickname }) : t("profileSignIn")}
+      </Link>
     </section>
   );
 }

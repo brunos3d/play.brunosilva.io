@@ -28,7 +28,19 @@
     },
     "ranking": {
       "title": "Ranking",
-      "description": "Who solved today's daily puzzles fastest, and who scored the most this week."
+      "description": "Who solved today's daily puzzles fastest, and who scored the most this week, this month and of all time."
+    },
+    "profile": {
+      "title": "Profile",
+      "description": "Your display name, nickname and avatar, and your account: sign in with a passkey to play as the same player on every device."
+    },
+    "privacy": {
+      "title": "Privacy policy",
+      "description": "What Minigames stores on your device and on its server, why, and how to delete it."
+    },
+    "terms": {
+      "title": "Terms of use",
+      "description": "The rules of Minigames: fair play, names, accounts and what the site does not promise."
     }
   }
 }

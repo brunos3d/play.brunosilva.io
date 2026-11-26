@@ -100,7 +100,10 @@
     "allGames": "All games",
     "play": "Play {game}",
     "github": "GitHub",
-    "ranking": "Ranking"
+    "ranking": "Ranking",
+    "privacy": "Privacy",
+    "terms": "Terms",
+    "profile": "Profile"
   },
   "loading": {
     "badSeed": "This seed cannot be played",
@@ -120,5 +123,15 @@
     "title": "This page does not exist",
     "body": "The link may be old, or the address may have a typo.",
     "home": "See all games"
+  },
+  "consent": {
+    "label": "Cookies and privacy",
+    "text": "This site uses cookies and your browser's storage only to work: your language, your settings, your progress and your player. No ads, no tracking.",
+    "more": "Read the <privacy>privacy policy</privacy> and the <terms>terms of use</terms>.",
+    "accept": "Accept"
+  },
+  "legal": {
+    "updated": "Last updated on {date}",
+    "issues": "Open an issue on GitHub"
   }
 }

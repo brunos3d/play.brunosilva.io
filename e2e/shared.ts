@@ -1,6 +1,8 @@
 import type { Page } from "@playwright/test";
 
 export const SETTINGS_KEY = "minigames:settings:v1";
+/** Where the answer to the cookie notice is kept. playwright.config.ts starts every test with it answered. */
+export const CONSENT_KEY = "minigames:consent:v1";
 
 export type TestSettings = { gameLanguage?: "en" | "pt-br" | null; theme?: "system" | "light" | "dark" };
 

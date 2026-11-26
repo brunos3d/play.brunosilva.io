@@ -23,7 +23,7 @@ const SELECT_ROOM = `
   select r.code, r.status, r.host_id, r.rounds, r.created_at, r.started_at, r.finished_at, r.rematch_code, now() as now,
     coalesce((
       select jsonb_agg(jsonb_build_object(
-        'id', p.id, 'name', p.name, 'avatar', p.avatar,
+        'id', p.id, 'name', p.name, 'nickname', p.nickname, 'avatar', p.avatar,
         'joinedAt', rp.joined_at, 'seenAt', rp.last_seen_at, 'startedAt', rp.started_at,
         'results', rp.results, 'finishedAt', rp.finished_at, 'gaveUp', rp.gave_up
       ) order by rp.joined_at, p.id)

@@ -1,6 +1,6 @@
 import type { GameId } from "@/games/registry";
 import type { RoundDraft } from "./rooms";
-import type { Me, Ranking, RankingPeriod, RoomProgress, RoomState, ScoreSubmission } from "./types";
+import type { Account, Me, Ranking, RankingPeriod, RoomProgress, RoomState, ScoreSubmission } from "./types";
 
 /**
  * The client's side of the route handlers under src/app/api. Every call
@@ -41,7 +41,20 @@ export type PlayerHint = { name?: string; avatar?: string; locale?: string };
 export const online = {
   me: () => call<{ player: Me | null }>("/api/session").then((body) => body.player),
   ensureMe: (hint: PlayerHint = {}) => call<{ player: Me }>("/api/session", { method: "POST", body: hint }).then((body) => body.player),
-  updateMe: (patch: { name?: string; avatar?: string }) => call<{ player: Me }>("/api/session", { method: "PATCH", body: patch }).then((body) => body.player),
+  updateMe: (patch: { name?: string; nickname?: string; avatar?: string }) => call<{ player: Me }>("/api/session", { method: "PATCH", body: patch }).then((body) => body.player),
+
+  /** The profile page's view of the device: its player, the account's passkeys, and a device player that could join the account. */
+  account: () => call<Account>("/api/account"),
+  /** The two halves of adding a passkey. `options` and `response` are WebAuthn's own JSON, passed through untouched. */
+  passkeyOptions: (hint: PlayerHint = {}) => call<{ options: unknown }>("/api/account/register", { method: "POST", body: { ...hint, action: "options" } }).then((body) => body.options),
+  passkeyVerify: (response: unknown, label: string) => call<Account>("/api/account/register", { method: "POST", body: { action: "verify", response, label } }),
+  /** The two halves of signing in with a passkey. */
+  loginOptions: () => call<{ options: unknown }>("/api/account/login", { method: "POST", body: { action: "options" } }).then((body) => body.options),
+  loginVerify: (response: unknown) => call<Account>("/api/account/login", { method: "POST", body: { action: "verify", response } }),
+  removePasskey: (id: string) => call<Account>(`/api/account/passkeys/${encodeURIComponent(id)}`, { method: "DELETE" }),
+  signOut: () => call<{ ok: true }>("/api/account/logout", { method: "POST", body: {} }),
+  mergeDevice: () => call<Account>("/api/account/merge", { method: "POST", body: {} }),
+  deleteAccount: () => call<{ ok: true }>("/api/account", { method: "DELETE" }),
 
   createRoom: (rounds: readonly RoundDraft[], hint: PlayerHint = {}, rematchOf?: string) => call<{ room: RoomState }>("/api/rooms", { method: "POST", body: { ...hint, rounds, ...(rematchOf ? { rematchOf } : {}) } }).then((body) => body.room),
   room: (code: string) => call<{ room: RoomState }>(`/api/rooms/${code}`).then((body) => body.room),

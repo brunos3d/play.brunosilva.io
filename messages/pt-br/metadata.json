@@ -28,7 +28,19 @@
     },
     "ranking": {
       "title": "Ranking",
-      "description": "Quem resolveu os desafios diários de hoje mais rápido, e quem pontuou mais na semana."
+      "description": "Quem resolveu os desafios diários de hoje mais rápido, e quem mais pontuou na semana, no mês e desde sempre."
+    },
+    "profile": {
+      "title": "Perfil",
+      "description": "Seu nome de exibição, seu apelido e seu avatar, e a sua conta: entre com uma passkey para ser o mesmo jogador em todos os aparelhos."
+    },
+    "privacy": {
+      "title": "Política de privacidade",
+      "description": "O que o Minigames guarda no seu aparelho e no servidor, por quê, e como apagar."
+    },
+    "terms": {
+      "title": "Termos de uso",
+      "description": "As regras do Minigames: jogo limpo, nomes, contas e o que o site não promete."
     }
   }
 }

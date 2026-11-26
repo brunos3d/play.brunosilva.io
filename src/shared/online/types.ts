@@ -7,11 +7,31 @@ import type { Difficulty } from "@/shared/engine/difficulty";
  * Timestamps are ISO strings from the database's clock.
  */
 
-/** A player as others see them. There is nothing personal in it: a name they picked and the seed of a generated avatar. */
-export type PublicPlayer = { id: string; name: string; avatar: string };
+/**
+ * A player as others see them. There is nothing personal in it: a display name
+ * they picked, a nickname nobody else has, and the seed of a generated avatar.
+ */
+export type PublicPlayer = { id: string; name: string; nickname: string; avatar: string };
 
-/** The player behind the request, from the session cookie. */
-export type Me = PublicPlayer & { streak: number; bestStreak: number };
+/** The player behind the request, from its cookies. `account` is true once the player has a passkey, and so can be reached from another device. */
+export type Me = PublicPlayer & { streak: number; bestStreak: number; account: boolean };
+
+/** A passkey of the account, as its owner sees it. The key itself never leaves the server. */
+export type PasskeyInfo = {
+  id: string;
+  /** Where it was made, as the browser described itself: "Chrome on Android". */
+  label: string;
+  createdAt: string;
+  lastUsedAt: string | null;
+  /** True when the passkey is kept by a password manager that syncs it, false when it lives on one device or key. */
+  synced: boolean;
+};
+
+/** The player this device had before someone signed in on it, when that player has scores that could join the account. */
+export type DevicePlayer = PublicPlayer & { solved: number; points: number };
+
+/** What the profile page shows. */
+export type Account = { player: Me | null; passkeys: PasskeyInfo[]; device: DevicePlayer | null };
 
 /** One puzzle of a challenge. The host picks the first four fields. The server adds the token, which makes the seed. */
 export type RoundConfig = {
@@ -81,7 +101,9 @@ export type RankingEntry = PublicPlayer & {
   streak: number;
 };
 
-export type RankingPeriod = "today" | "week";
+/** "week" is Monday to Sunday and "month" the calendar month, both on the Pacific calendar. "all" has no start. */
+export type RankingPeriod = "today" | "week" | "month" | "all";
+export const RANKING_PERIODS: readonly RankingPeriod[] = ["today", "week", "month", "all"];
 
 export type Ranking = {
   period: RankingPeriod;

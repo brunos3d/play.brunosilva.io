@@ -14,8 +14,8 @@ export const GAME_HOSTS: Record<string, GameId> = {
   "patches.brunosilva.io": "patches",
 };
 
-/** Pages that are not games: challenge rooms and the ranking. */
-const PLATFORM_ROOTS = ["rooms", "ranking"] as const;
+/** Pages that are not games: challenge rooms, the ranking, the player's profile and the two legal pages. */
+const PLATFORM_ROOTS = ["rooms", "ranking", "profile", "privacy", "terms"] as const;
 
 const KNOWN_ROOTS = new Set<string>([...Object.values(GAMES).map((game) => game.path.slice(1)), ...DIFFICULTIES, ...LOCALES, ...PLATFORM_ROOTS]);
 

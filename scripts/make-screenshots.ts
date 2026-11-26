@@ -14,7 +14,7 @@ import { getZipDailyPuzzle } from "@/games/zip/engine";
 import { chessPuzzle, coach, openChess, tapMove } from "../e2e/chess/helpers";
 import { draw, openPuzzle, practicePuzzle, targetsOf } from "../e2e/patches/helpers";
 import { openQueens, placeQueen, queensPuzzle } from "../e2e/queens/helpers";
-import { SETTINGS_KEY } from "../e2e/shared";
+import { CONSENT_KEY, SETTINGS_KEY } from "../e2e/shared";
 import { openSumbreak, playMerges, sumbreakPuzzle } from "../e2e/sumbreak/helpers";
 import { guess, openTermo, row as termoRow, termoPuzzle, wrongWords } from "../e2e/termo/helpers";
 import { dragPath, foundTrails, openWend, wendPuzzle } from "../e2e/wend/helpers";
@@ -26,10 +26,12 @@ const PHONE = { width: 390, height: 720 };
 
 async function newPage(browser: Browser, colorScheme: "light" | "dark", height = PHONE.height): Promise<Page> {
   const context = await browser.newContext({ baseURL: BASE_URL, viewport: { width: PHONE.width, height }, deviceScaleFactor: 2, colorScheme, locale: "en-US" });
-  await context.addInitScript(([key]) => {
+  await context.addInitScript(([key, consent]) => {
     // English throughout, like the README: the interface by the browser's language, the games by this setting.
     localStorage.setItem(key, JSON.stringify({ sound: false, haptics: false, theme: "system", gameLanguage: "en", tutorials: { zip: true, patches: true, chess: true, queens: true, sumbreak: true, wend: true, termo: true } }));
-  }, [SETTINGS_KEY]);
+    // A visitor who has answered the cookie notice: it would cover the bottom of every picture.
+    localStorage.setItem(consent, JSON.stringify({ accepted: "2026-01-01T00:00:00.000Z" }));
+  }, [SETTINGS_KEY, CONSENT_KEY]);
   return context.newPage();
 }
 

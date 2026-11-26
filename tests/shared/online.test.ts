@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { SEED_CODECS } from "@/games/codecs";
 import { GAME_IDS } from "@/games/registry";
-import { cleanAvatarSeed, cleanPlayerName, randomAvatarSeed, randomPlayerName } from "@/shared/online/names";
+import { cleanAvatarSeed, cleanNickname, cleanPlayerName, nicknameFromName, randomAvatarSeed, randomPlayerName } from "@/shared/online/names";
+import { relyingPartyFor } from "@/shared/online/relying-party";
 import { HINT_PENALTY_MS, MAX_ROUNDS, isRaceOver, nextRound, normalizeRoomCode, randomRoomCode, rankRoom, roomPath, roundPath, roundSpec, standingOf, validateRounds } from "@/shared/online/rooms";
 import { PAR_MS, parseScore, scorePoints } from "@/shared/online/scores";
 import type { RoomPlayer, RoundConfig } from "@/shared/online/types";
@@ -16,6 +17,7 @@ function player(id: string, overrides: Partial<RoomPlayer> & { rounds?: [number,
   return {
     id,
     name: id,
+    nickname: id,
     avatar: "seed",
     joinedAt: at(-60),
     seenAt: at(0),
@@ -200,11 +202,56 @@ describe("player names and avatars", () => {
   });
 });
 
+describe("nicknames", () => {
+  it("are lower case letters, digits and underscores, 3 to 20 long", () => {
+    expect(cleanNickname("sabia_175")).toBe("sabia_175");
+    // What people type: an "@" in front, capitals, spaces around.
+    expect(cleanNickname("  @Bruno3D ")).toBe("bruno3d");
+    for (const refused of ["ab", "a".repeat(21), "sabiá", "two words", "dot.ted", "dash-ed", "", 42, null]) expect(cleanNickname(refused), String(refused)).toBeNull();
+  });
+
+  it("cannot pass for the site itself", () => {
+    for (const reserved of ["admin", "Minigames", "@moderator", "support"]) expect(cleanNickname(reserved), reserved).toBeNull();
+  });
+
+  it("start from the display name, without accents or spaces", () => {
+    expect(nicknameFromName("Sabiá 175")).toBe("sabia175");
+    expect(nicknameFromName("Onça 7")).toBe("onca7");
+    expect(nicknameFromName("João Açaí da Silva Sauro")).toBe("joaoacaidasilva");
+    // Too little left to be a nickname: it gets a body.
+    expect(nicknameFromName("Li")).toBe("playerli");
+    expect(nicknameFromName("😀")).toBe("player");
+    expect(nicknameFromName("Admin")).toBe("admin_");
+    // Whatever the name, the result is a nickname a player may have.
+    for (const name of ["Sabiá 175", "Li", "😀", "Admin", "x".repeat(40), "Wolf 280"]) expect(cleanNickname(nicknameFromName(name)), name).not.toBeNull();
+  });
+});
+
+describe("the relying party of a passkey", () => {
+  it("is the site's own address, a preview deployment or a local server", () => {
+    expect(relyingPartyFor("https://play.brunosilva.io", "play.brunosilva.io")).toEqual({ origin: "https://play.brunosilva.io", rpID: "play.brunosilva.io" });
+    expect(relyingPartyFor("https://play-git-main-bruno.vercel.app", "play-git-main-bruno.vercel.app")).toEqual({ origin: "https://play-git-main-bruno.vercel.app", rpID: "play-git-main-bruno.vercel.app" });
+    expect(relyingPartyFor("http://localhost:3100", "localhost:3100")).toEqual({ origin: "http://localhost:3100", rpID: "localhost" });
+  });
+
+  it("refuses a request from another site's page, a plain http origin, or an unknown host", () => {
+    // The page and the API do not share an origin.
+    expect(relyingPartyFor("https://evil.example", "play.brunosilva.io")).toBeNull();
+    expect(relyingPartyFor("https://play.brunosilva.io.evil.example", "play.brunosilva.io.evil.example")).toBeNull();
+    expect(relyingPartyFor("http://play.brunosilva.io", "play.brunosilva.io")).toBeNull();
+    expect(relyingPartyFor("https://zip.brunosilva.io", "zip.brunosilva.io")).toBeNull();
+    for (const missing of [null, undefined, "", "not a url"]) expect(relyingPartyFor(missing, "play.brunosilva.io")).toBeNull();
+    expect(relyingPartyFor("https://play.brunosilva.io", null)).toBeNull();
+  });
+});
+
 describe("the database schema", () => {
   it("is a list of statements that can run again, in a schema with a safe name", () => {
     const statements = schemaStatements("play_e2e");
     expect(statements[0]).toBe('create schema if not exists "play_e2e"');
-    for (const statement of statements) expect(statement).toMatch(/if not exists/);
+    // A statement either creates what is missing, or fills in rows that lack a value and leaves the rest alone.
+    for (const statement of statements) expect(statement).toMatch(/if not exists|where nickname is null/);
+    expect(statements.join("\n")).toMatch(/create unique index if not exists players_nickname .* \(lower\(nickname\)\)/);
     expect(() => schemaStatements('play"; drop schema public; --')).toThrow();
   });
 });

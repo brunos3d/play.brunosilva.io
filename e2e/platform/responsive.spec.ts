@@ -153,6 +153,13 @@ for (const locale of LOCALES) {
       await expect(page.locator("h1")).toBeVisible();
       await expectToFit(page, "not found");
 
+      await page.goto(inLocale(locale, "/privacy"));
+      await expect(page.getByTestId("legal-privacy")).toBeVisible();
+      await expectToFit(page, "privacy policy");
+      await page.goto(inLocale(locale, "/terms"));
+      await expect(page.getByTestId("legal-terms")).toBeVisible();
+      await expectToFit(page, "terms of use");
+
       await page.goto(inLocale(locale, "/zip/play?seed=nonsense"));
       await expect(page.locator(".mg-shell")).toBeVisible();
       await expectToFit(page, "seed that cannot be played");
@@ -175,18 +182,49 @@ for (const locale of LOCALES) {
       await page.getByTestId("ranking-week").click();
       await expect(page.getByTestId("ranking-row").first()).toBeVisible();
       await expectToFit(page, "ranking of the week");
+      await page.getByTestId("ranking-all").click();
+      await expect(page.getByTestId("ranking-row").first()).toBeVisible();
+      await expectToFit(page, "ranking of all time");
       await page.getByTestId("ranking-today").click();
       await page.getByTestId("ranking-game-zip").click();
       await expect(page.getByTestId("ranking-row").first()).toBeVisible();
       await expectToFit(page, "ranking of one game");
 
-      await page.getByTestId("profile-name").fill("Capivara Sonolenta 9");
-      await expect(page.getByTestId("profile-save")).toBeVisible();
-      await expectToFit(page, "profile being edited");
-
       await page.goto(inLocale(locale, "/"));
       await expect(page.getByTestId("hub-online").getByTestId("ranking-row").first()).toBeVisible();
       await expectToFit(page, "hub with a ranking");
+    });
+
+    test("the profile, as a device player and as an account", async ({ page }) => {
+      test.skip(!(await hasDatabase(page)), "the site runs without a database");
+      // An authenticator that approves by itself stands in for the password manager.
+      const client = await page.context().newCDPSession(page);
+      await client.send("WebAuthn.enable");
+      await client.send("WebAuthn.addVirtualAuthenticator", { options: { protocol: "ctap2", transport: "internal", hasResidentKey: true, hasUserVerification: true, isUserVerified: true, automaticPresenceSimulation: true } });
+
+      await page.goto(inLocale(locale, "/profile"));
+      await expect(page.getByTestId("profile")).toHaveAttribute("data-ready", "true");
+      await expect(page.getByTestId("account-create")).toBeVisible();
+      await expectToFit(page, "profile of a new visitor");
+
+      // The longest name and nickname the site accepts, and a nickname it refuses.
+      await page.getByTestId("profile-name").fill("Capivara Sonolenta 9");
+      await page.getByTestId("profile-nickname").fill("no");
+      await expect(page.getByTestId("profile-error")).toBeVisible();
+      await expectToFit(page, "profile with a nickname that cannot be");
+      await page.getByTestId("profile-nickname").fill(`w${Math.random().toString(36).slice(2, 12)}_wwwwwwwww`.slice(0, 20));
+      await page.getByTestId("profile-save").click();
+      await expect(page.getByTestId("profile-save")).not.toHaveAttribute("data-variant", "primary");
+      await expectToFit(page, "profile saved");
+
+      await page.getByTestId("account-create").click();
+      await expect(page.getByTestId("profile")).toHaveAttribute("data-account", "true");
+      await expect(page.getByTestId("passkey")).toHaveCount(1);
+      await expectToFit(page, "profile of an account");
+
+      await page.getByTestId("account-delete").click();
+      await expect(page.getByTestId("account-delete-confirm")).toBeVisible();
+      await expectToFit(page, "delete confirmation");
     });
 
     test("a challenge room, from the setup to the final table", async ({ page, browser }) => {
@@ -289,6 +327,24 @@ for (const locale of LOCALES) {
     });
   });
 }
+
+test.describe("phone layout, first visit", () => {
+  // Nothing answered yet: the cookie notice is on screen.
+  test.use({ storageState: { cookies: [], origins: [] } });
+
+  for (const locale of LOCALES) {
+    test(`the cookie notice, ${locale}`, async ({ page }) => {
+      await skipTutorials(page, { gameLanguage: locale });
+      await page.goto(inLocale(locale, "/"));
+      await expect(page.getByTestId("consent")).toBeVisible();
+      await expectToFit(page, "hub with the cookie notice");
+      await page.goto(inLocale(locale, "/zip"));
+      await expect(page.locator('[data-control="hint"]')).toBeEnabled({ timeout: 30_000 });
+      await expect(page.getByTestId("consent")).toBeVisible();
+      await expectToFit(page, "game with the cookie notice");
+    });
+  }
+});
 
 /** Another player on another device, past the tutorials. */
 async function visitor(browser: Browser, locale: Locale): Promise<Page> {

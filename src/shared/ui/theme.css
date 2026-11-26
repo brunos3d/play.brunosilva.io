@@ -605,6 +605,8 @@ button.mg-chip[data-active] { color: var(--linen); background: var(--ink); }
   .mg-rank { width: 18px; }
   .mg-player-name { font-size: 15px; }
 }
+/* A nickname shows whole, like a name. A long one breaks where it has to instead of running out of its row. */
+.mg-nickname { min-width: 0; white-space: normal; overflow-wrap: anywhere; }
 /*
  * The name and the tags after it ("you", "host"). The tags move under the
  * name when the two do not fit on one line, so they never squeeze it.
@@ -692,6 +694,71 @@ button.mg-chip[data-active] { color: var(--linen); background: var(--ink); }
   cursor: pointer;
 }
 .mg-range { width: 100%; accent-color: var(--accent); min-height: 32px; cursor: pointer; }
+
+/* ---------- Text pages and the cookie notice ---------- */
+
+/* A page to be read: the privacy policy, the terms. Its text can be selected, unlike a game's. */
+.mg-prose {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--ink);
+  -webkit-user-select: text;
+  user-select: text;
+  overflow-wrap: break-word;
+}
+.mg-prose section { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
+.mg-prose h2 {
+  font-family: var(--font-display), ui-serif, Georgia, serif;
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1.25;
+}
+.mg-prose ul { display: flex; flex-direction: column; gap: 6px; padding-left: 20px; list-style: disc; }
+.mg-prose li::marker { color: var(--ink-faint); }
+.mg-prose a { text-decoration: underline; text-underline-offset: 2px; }
+.mg-prose-note { font-size: 13px; color: var(--ink-soft); }
+.mg-prose-title {
+  font-family: var(--font-display), ui-serif, Georgia, serif;
+  font-size: 26px;
+  font-weight: 600;
+  line-height: 1.2;
+  text-wrap: balance;
+}
+
+/*
+ * The cookie notice of a first visit. It sits at the bottom, over the page and
+ * under any dialog (a dialog is in the browser's top layer), and leaves the
+ * rest of the screen usable.
+ */
+.mg-consent {
+  position: fixed;
+  left: 50%;
+  bottom: calc(12px + env(safe-area-inset-bottom));
+  z-index: 35;
+  width: min(536px, calc(100vw - 24px));
+  transform: translateX(-50%);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px 14px;
+  padding: 14px 16px;
+  border-radius: 18px;
+  font-size: 13.5px;
+  line-height: 1.45;
+  color: var(--ink);
+  background: var(--surface);
+  box-shadow: 0 0 0 1.5px var(--thread), 0 18px 44px -14px rgb(0 0 0 / 0.5);
+  animation: toast-up 260ms cubic-bezier(0.2, 0.9, 0.3, 1.1) both;
+}
+.mg-consent p { flex: 1 1 260px; min-width: 0; }
+.mg-consent .mg-button { flex: 0 0 auto; min-height: 44px; }
+@media (max-width: 420px) {
+  .mg-consent .mg-button { flex: 1 1 100%; }
+}
 
 /* ---------- Status line ---------- */
 
@@ -795,6 +862,19 @@ button.mg-chip[data-active] { color: var(--linen); background: var(--ink); }
   text-overflow: ellipsis;
 }
 
+/* A field with a fixed sign in front of what is typed: the "@" of a nickname. */
+.mg-field-prefixed { position: relative; display: block; }
+.mg-field-prefixed > span {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 16px;
+  color: var(--ink-faint);
+  pointer-events: none;
+}
+.mg-field-prefixed > .mg-field { padding-left: 34px; }
+
 /* A link that has to be read and copied whole: it breaks anywhere instead of running out of its box, and one tap selects all of it. */
 .mg-link-box {
   width: 100%;
@@ -872,6 +952,7 @@ button.mg-chip[data-active] { color: var(--linen); background: var(--ink); }
 @keyframes dialog-in { from { opacity: 0; transform: translateY(14px) scale(0.97); } to { opacity: 1; transform: none; } }
 @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
 @keyframes toast-in { from { opacity: 0; transform: translate(-50%, -10px); } to { opacity: 1; transform: translate(-50%, 0); } }
+@keyframes toast-up { from { opacity: 0; transform: translate(-50%, 12px); } to { opacity: 1; transform: translate(-50%, 0); } }
 @keyframes loading-cell { 0%, 100% { opacity: 0.25; } 50% { opacity: 0.9; } }
 
 /* Reduced motion: keep state changes, drop movement. The hint stays visible without pulsing. */

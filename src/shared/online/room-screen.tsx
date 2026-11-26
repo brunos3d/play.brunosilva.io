@@ -12,6 +12,7 @@ import { LocaleFlag } from "@/shared/ui/flags";
 import { GameIcon } from "@/shared/ui/game-icons";
 import { ArrowRightIcon, CopyIcon, FlagIcon, ShareIcon, TrophyIcon, UsersIcon } from "@/shared/ui/icons";
 import { PageHeader } from "@/shared/ui/page-header";
+import { SiteFooter } from "@/shared/ui/site-footer";
 import { OnlineError, online } from "./api";
 import { PlayerAvatar } from "./player-avatar";
 import { ProfileFields, useProfileDraft } from "./profile-editor";
@@ -80,6 +81,7 @@ function StandingRow({ standing, place, rounds, fastest, you, host }: { standing
         </div>
         {/* Each piece stays whole. Together they take a second line when the row is narrow. */}
         <div className="flex flex-wrap gap-x-2.5 text-xs text-[var(--ink-soft)] whitespace-nowrap">
+          <span className="mg-nickname">@{player.nickname}</span>
           {progress && <span>{progress}</span>}
           {(standing.played > 0 || !progress) && <span>{t("solved", { solved: standing.solved, total })}</span>}
           {standing.penaltyMs > 0 && (
@@ -298,12 +300,15 @@ export function RoomScreen({ code }: { code: string }) {
               {room.players.map((player) => (
                 <li key={player.id} className="mg-row" data-you={player.id === room.you || undefined}>
                   <PlayerAvatar seed={player.avatar} size={36} />
-                  <div className="mg-player-line flex-1">
-                    <span className="mg-player-name" data-testid="room-player-name">
-                      {player.name}
-                    </span>
-                    {player.id === room.you && <span className="mg-tag">{t("you")}</span>}
-                    {player.id === room.hostId && <span className="mg-tag">{t("host")}</span>}
+                  <div className="min-w-0 flex-1">
+                    <div className="mg-player-line">
+                      <span className="mg-player-name" data-testid="room-player-name">
+                        {player.name}
+                      </span>
+                      {player.id === room.you && <span className="mg-tag">{t("you")}</span>}
+                      {player.id === room.hostId && <span className="mg-tag">{t("host")}</span>}
+                    </div>
+                    <div className="mg-nickname text-xs text-[var(--ink-soft)]">@{player.nickname}</div>
                   </div>
                 </li>
               ))}
@@ -382,11 +387,7 @@ export function RoomScreen({ code }: { code: string }) {
         </section>
       )}
 
-      <footer className="mg-footer w-full pt-2 flex flex-wrap items-center justify-center gap-x-2 text-xs text-[var(--ink-faint)]">
-        <Link href="/" prefetch={false} className="mg-text-link">
-          {t("home")}
-        </Link>
-      </footer>
+      <SiteFooter />
     </main>
   );
 }

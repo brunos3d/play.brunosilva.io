@@ -43,14 +43,25 @@ test("a solved daily puzzle earns points, and the player shows up in the ranking
   await page.getByTestId("ranking-game-queens").click();
   await expect(page.getByTestId("ranking-row").filter({ hasText: "you" })).toHaveCount(0);
 
-  // The player was created with a generated name, and can pick their own.
+  // The longer periods count the same solve: this month, and all time.
+  await page.getByTestId("ranking-game-all").click();
+  await page.getByTestId("ranking-month").click();
+  await expect(mine.getByTestId("ranking-score")).toHaveText(/^1[0-5]\d pts$/);
+  await page.getByTestId("ranking-all").click();
+  await expect(mine.getByTestId("ranking-score")).toHaveText(/^1[0-5]\d pts$/);
+  await expect(page.getByTestId("ranking-all")).toHaveAttribute("aria-pressed", "true");
+
+  // The player was created with a generated name and a nickname made from it. The ranking leads to the page where both are changed.
+  await expect(mine.getByTestId("ranking-nickname")).toHaveText(/^@[a-z]+\d{3}(_[0-9a-f]{4})?$/);
+  await page.getByTestId("ranking-profile").click();
+  await expect(page).toHaveURL(/\/en\/profile$/);
   const name = page.getByTestId("profile-name");
   await expect(name).toHaveValue(/^\w+ \d{3}$/);
   await name.fill("Bruno");
   await page.getByTestId("profile-avatar").click();
   await page.getByTestId("profile-save").click();
   await expect(page.getByTestId("profile-save")).toHaveText("Saved");
-  await page.getByTestId("ranking-game-zip").click();
+  await page.goto("/ranking?game=zip");
   await expect(page.getByTestId("ranking-row").filter({ hasText: "you" }).getByTestId("ranking-name")).toHaveText("Bruno");
 
   // The home screen shows the top of the week. Other tests score at the same time, so who is on it is not this test's to say.
@@ -96,7 +107,7 @@ test("the server only takes scores that can be true", async ({ request }) => {
 test("the ranking reads in Portuguese", async ({ page }) => {
   await page.goto("/pt-br/ranking");
   await expect(page.getByRole("heading", { name: "Ranking" })).toBeVisible();
-  await expect(page.getByTestId("ranking-week")).toHaveText("Esta semana");
+  await expect(page.getByTestId("ranking").getByRole("group", { name: "Período" }).getByRole("button")).toHaveText(["Hoje", "Semana", "Mês", "Geral"]);
   await expect(page.getByTestId("ranking")).toContainText("100 pontos por resolver");
   await page.getByTestId("ranking-game-chess").click();
   await expect(page.getByTestId("ranking")).toContainText("As soluções mais rápidas do desafio de hoje");

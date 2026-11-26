@@ -1,6 +1,7 @@
 import { defineConfig, devices } from "@playwright/test";
 
 const PORT = Number(process.env.E2E_PORT ?? 3100);
+const ORIGIN = `http://localhost:${PORT}`;
 export const E2E_DB_SCHEMA = "play_e2e";
 
 export default defineConfig({
@@ -12,8 +13,11 @@ export default defineConfig({
   retries: process.env.CI ? 1 : 0,
   reporter: [["list"]],
   use: {
-    baseURL: `http://localhost:${PORT}`,
+    baseURL: ORIGIN,
     trace: "retain-on-failure",
+    // Every test starts as a visitor who has answered the cookie notice: it sits over the bottom of the page, where the controls are.
+    // The notice's own tests ask for an empty storage state. The key is CONSENT_KEY in e2e/shared.ts.
+    storageState: { cookies: [], origins: [{ origin: ORIGIN, localStorage: [{ name: "minigames:consent:v1", value: JSON.stringify({ accepted: "2026-01-01T00:00:00.000Z" }) }] }] },
   },
   projects: [
     { name: "desktop", use: { ...devices["Desktop Chrome"], viewport: { width: 1280, height: 720 } } },

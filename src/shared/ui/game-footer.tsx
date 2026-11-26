@@ -30,6 +30,12 @@ export function GameFooter({ current }: { current?: GameId }) {
       <a href={REPOSITORY_URL} target="_blank" rel="noopener noreferrer" className="mg-text-link">
         {t("github")}
       </a>
+      <Link href="/privacy" prefetch={false} className="mg-text-link">
+        {t("privacy")}
+      </Link>
+      <Link href="/terms" prefetch={false} className="mg-text-link">
+        {t("terms")}
+      </Link>
     </footer>
   );
 }

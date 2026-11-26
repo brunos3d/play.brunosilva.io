@@ -24,3 +24,6 @@ export const FlagIcon = (p: IconProps) => (<svg {...base} {...p}><path d="M5 21V
 export const UsersIcon = (p: IconProps) => (<svg {...base} {...p}><circle cx="9" cy="8" r="3.5" /><path d="M2.5 20a6.5 6.5 0 0 1 13 0" /><path d="M16 4.6a3.5 3.5 0 0 1 0 6.8M18 14.4a6.5 6.5 0 0 1 3.5 5.6" /></svg>);
 export const TrophyIcon = (p: IconProps) => (<svg {...base} {...p}><path d="M8 4h8v5a4 4 0 0 1-8 0V4Z" /><path d="M8 6H5a3 3 0 0 0 3 4M16 6h3a3 3 0 0 1-3 4" /><path d="M12 13v4M8.5 20h7M10 17h4" /></svg>);
 export const CopyIcon = (p: IconProps) => (<svg {...base} {...p}><rect x="8" y="8" width="12" height="12" rx="2.5" /><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2" /></svg>);
+export const KeyIcon = (p: IconProps) => (<svg {...base} {...p}><circle cx="8" cy="15" r="4.5" /><path d="m11.2 11.8 8.3-8.3M16 7l3 3M13.5 9.5l2 2" /></svg>);
+export const UserIcon = (p: IconProps) => (<svg {...base} {...p}><circle cx="12" cy="8" r="4" /><path d="M4.5 20.5a7.5 7.5 0 0 1 15 0" /></svg>);
+export const SignOutIcon = (p: IconProps) => (<svg {...base} {...p}><path d="M10 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h4" /><path d="M15 8l4 4-4 4M19 12H9" /></svg>);

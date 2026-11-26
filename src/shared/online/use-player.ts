@@ -72,7 +72,7 @@ export function usePlayer(): {
   suggestion: () => { name: string; avatar: string; locale: string };
   /** The player, created now if the device has none. */
   ensure: () => Promise<Me>;
-  update: (patch: { name?: string; avatar?: string }) => Promise<Me>;
+  update: (patch: { name?: string; nickname?: string; avatar?: string }) => Promise<Me>;
 } {
   const locale = useLocale();
   const state = useSyncExternalStore(subscribe, () => store, () => SERVER);
@@ -87,7 +87,7 @@ export function usePlayer(): {
     rememberPlayer(me);
     return me;
   }, [suggestion]);
-  const update = useCallback(async (patch: { name?: string; avatar?: string }) => {
+  const update = useCallback(async (patch: { name?: string; nickname?: string; avatar?: string }) => {
     const me = await online.updateMe(patch);
     rememberPlayer(me);
     return me;

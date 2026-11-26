@@ -6,9 +6,11 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 import type { ReactNode } from "react";
 import { PLATFORM_NAME } from "@/games/registry";
 import { LOCALES, LOCALE_META, isLocale } from "@/i18n/config";
+import { QueryProvider } from "@/shared/online/query-provider";
 import { localizedAlternates, openGraphLocales } from "@/shared/platform/metadata";
 import { ServiceWorker } from "@/shared/platform/service-worker";
 import { SITE_ORIGIN } from "@/shared/platform/site";
+import { ConsentBanner } from "@/shared/ui/consent-banner";
 import { ThemeScript } from "@/shared/ui/theme-script";
 import { ThemeSync } from "@/shared/ui/theme-sync";
 import "../globals.css";
@@ -84,7 +86,10 @@ export default async function LocaleLayout({ children, params }: Props) {
       </head>
       <body className={`${display.variable} ${body.variable} antialiased`}>
         <NextIntlClientProvider>
-          <div className="mg-root">{children}</div>
+          <QueryProvider>
+            <div className="mg-root">{children}</div>
+            <ConsentBanner />
+          </QueryProvider>
           <ThemeSync />
           <ServiceWorker />
         </NextIntlClientProvider>

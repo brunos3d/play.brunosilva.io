@@ -143,6 +143,7 @@ function GameCard({ game, daily, data, now }: { game: GameMeta; daily: DailyInfo
 export function Hub() {
   const t = useTranslations("hub");
   const header = useTranslations("common.header");
+  const footer = useTranslations("common.footer");
   const { playing: today } = useDailyDate();
   const { language } = useGameLanguage();
   const { settings, update } = useSettings();
@@ -219,6 +220,14 @@ export function Hub() {
         <a href={REPOSITORY_URL} target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:text-[var(--ink-soft)]">
           GitHub
         </a>
+        <span className="mx-2">·</span>
+        <Link href="/privacy" prefetch={false} className="underline underline-offset-2 hover:text-[var(--ink-soft)]">
+          {footer("privacy")}
+        </Link>
+        <span className="mx-2">·</span>
+        <Link href="/terms" prefetch={false} className="underline underline-offset-2 hover:text-[var(--ink-soft)]">
+          {footer("terms")}
+        </Link>
       </footer>
 
       <SettingsDialog open={settingsOpen} settings={settings} onChange={update} onClose={() => setSettingsOpen(false)} showGameLanguage />

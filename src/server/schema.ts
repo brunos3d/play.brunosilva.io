@@ -69,5 +69,56 @@ export function schemaStatements(schema: string): string[] {
       primary key (player_id, game, variant, date)
     )`,
     `create index if not exists daily_scores_date_game on ${s}.daily_scores (date, game)`,
+
+    // A nickname nobody else has. Players from before it existed get one made from their name, with a piece of their id when the plain one is taken.
+    `alter table ${s}.players add column if not exists nickname text`,
+    `with todo as (
+       select id, created_at,
+         regexp_replace(translate(lower(name), 'áàâãäåéèêëíìîïóòôõöúùûüçñ', 'aaaaaaeeeeiiiiooooouuuucn'), '[^a-z0-9]+', '', 'g') as clean
+       from ${s}.players where nickname is null
+     ), based as (
+       select id, created_at, case when length(clean) >= 3 then left(clean, 15) else 'player' || clean end as base from todo
+     ), numbered as (
+       select id, base, row_number() over (partition by base order by created_at, id) as place from based
+     )
+     update ${s}.players p set nickname = case
+       when n.place = 1 and not exists (select 1 from ${s}.players taken where lower(taken.nickname) = n.base) then n.base
+       else n.base || '_' || left(replace(p.id::text, '-', ''), 4)
+     end
+     from numbered n where p.id = n.id`,
+    `create unique index if not exists players_nickname on ${s}.players (lower(nickname))`,
+
+    // A passkey: the public half of a key pair that lives in the player's password manager, phone or security key. `id` is the credential id.
+    `create table if not exists ${s}.passkeys (
+      id text primary key,
+      player_id uuid not null references ${s}.players (id) on delete cascade,
+      public_key text not null,
+      counter bigint not null default 0,
+      transports jsonb not null default '[]'::jsonb,
+      synced boolean not null default false,
+      label text not null default '',
+      created_at timestamptz not null default now(),
+      last_used_at timestamptz
+    )`,
+    `create index if not exists passkeys_player on ${s}.passkeys (player_id)`,
+
+    // A device signed in to an account with a passkey. Like a player's own secret, only its hash is kept.
+    `create table if not exists ${s}.sessions (
+      id uuid primary key,
+      player_id uuid not null references ${s}.players (id) on delete cascade,
+      secret_hash text not null,
+      created_at timestamptz not null default now(),
+      last_seen_at timestamptz not null default now()
+    )`,
+    `create index if not exists sessions_player on ${s}.sessions (player_id)`,
+
+    // The random value a passkey has to sign, kept between the two requests of a ceremony and used once.
+    `create table if not exists ${s}.challenges (
+      id uuid primary key,
+      challenge text not null,
+      kind text not null check (kind in ('register', 'login')),
+      player_id uuid references ${s}.players (id) on delete cascade,
+      created_at timestamptz not null default now()
+    )`,
   ];
 }

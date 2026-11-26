@@ -100,7 +100,10 @@
     "allGames": "Todos os jogos",
     "play": "Jogar {game}",
     "github": "GitHub",
-    "ranking": "Ranking"
+    "ranking": "Ranking",
+    "privacy": "Privacidade",
+    "terms": "Termos",
+    "profile": "Perfil"
   },
   "loading": {
     "badSeed": "Esta seed não pode ser jogada",
@@ -120,5 +123,15 @@
     "title": "Esta página não existe",
     "body": "O link pode ser antigo, ou o endereço pode ter um erro de digitação.",
     "home": "Ver todos os jogos"
+  },
+  "consent": {
+    "label": "Cookies e privacidade",
+    "text": "Este site usa cookies e o armazenamento do navegador só para funcionar: seu idioma, suas configurações, seu progresso e seu jogador. Sem anúncios, sem rastreamento.",
+    "more": "Leia a <privacy>política de privacidade</privacy> e os <terms>termos de uso</terms>.",
+    "accept": "Aceitar"
+  },
+  "legal": {
+    "updated": "Atualizado em {date}",
+    "issues": "Abrir uma issue no GitHub"
   }
 }

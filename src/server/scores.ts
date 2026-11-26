@@ -1,7 +1,7 @@
 import "server-only";
 import { GAME_IDS, type GameId } from "@/games/registry";
 import { RANKING_HINT_MS, parseScore, scorePoints } from "@/shared/online/scores";
-import type { Me, Ranking, RankingEntry, RankingPeriod } from "@/shared/online/types";
+import { type Me, RANKING_PERIODS, type Ranking, type RankingEntry, type RankingPeriod } from "@/shared/online/types";
 import { type Row, query, t } from "./db";
 import { ApiFailure } from "./http";
 
@@ -16,6 +16,13 @@ import { ApiFailure } from "./http";
  * more, and this is the place to add it if one day it does.
  */
 const PACIFIC_TODAY = "(now() at time zone 'America/Los_Angeles')::date";
+/** The first day each period counts, as SQL. */
+const FROM: Record<RankingPeriod, string> = {
+  today: PACIFIC_TODAY,
+  week: `date_trunc('week', ${PACIFIC_TODAY}::timestamp)::date`,
+  month: `date_trunc('month', ${PACIFIC_TODAY}::timestamp)::date`,
+  all: "'-infinity'::date",
+};
 const TOP = 50;
 
 /** Records a finished daily puzzle and moves the player's streak. `recorded` is false when this puzzle already had a score, or is not today's. */
@@ -52,6 +59,7 @@ export async function submitScore(player: Me, body: Record<string, unknown>): Pr
 const toEntry = (row: Row, byTime: boolean): RankingEntry => ({
   id: row.id as string,
   name: row.name as string,
+  nickname: row.nickname as string,
   avatar: row.avatar as string,
   rank: Number(row.rank),
   points: Number(row.points),
@@ -61,7 +69,8 @@ const toEntry = (row: Row, byTime: boolean): RankingEntry => ({
 });
 
 export function parseRankingQuery(params: URLSearchParams): { period: RankingPeriod; game: GameId | "all"; variant: string } {
-  const period: RankingPeriod = params.get("period") === "week" ? "week" : "today";
+  const asked = params.get("period");
+  const period: RankingPeriod = RANKING_PERIODS.find((known) => known === asked) ?? "today";
   const requested = params.get("game");
   const game = requested && (GAME_IDS as readonly string[]).includes(requested) ? (requested as GameId) : "all";
   const variant = params.get("variant") ?? "";
@@ -76,11 +85,12 @@ export function parseRankingQuery(params: URLSearchParams): { period: RankingPer
  *   counts as 30 seconds. For a game with one daily per language, `variant`
  *   picks the language, since each has its own puzzle.
  * - Everything else: by points, summed over the games and days in range. A
- *   week runs from Monday to Sunday.
+ *   week runs from Monday to Sunday, a month is the calendar month, and "all"
+ *   starts with the first score ever recorded.
  */
 export async function readRanking(me: Me | null, period: RankingPeriod, game: GameId | "all", variant: string): Promise<Ranking> {
   const byTime = period === "today" && game !== "all";
-  const from = period === "week" ? `date_trunc('week', ${PACIFIC_TODAY}::timestamp)::date` : PACIFIC_TODAY;
+  const from = FROM[period];
   const params: unknown[] = [me?.id ?? null, TOP];
   const filters = [`s.date between ${from} and ${PACIFIC_TODAY}`];
   if (game !== "all") {
@@ -106,13 +116,15 @@ export async function readRanking(me: Me | null, period: RankingPeriod, game: Ga
        select totals.*, rank() over (order by ${order}) as rank, row_number() over (order by ${order}, reached asc) as position, count(*) over () as players
        from totals
      )
-     select p.id, p.name, p.avatar, ${streak} as streak, ranked.rank, ranked.points, ranked.solved, ranked.elapsed_ms, ranked.hints, ranked.players, ranked.position
+     select p.id, p.name, p.nickname, p.avatar, ${streak} as streak, ranked.rank, ranked.points, ranked.solved, ranked.elapsed_ms, ranked.hints, ranked.players, ranked.position
      from ranked join ${t("players")} p on p.id = ranked.player_id
      where ranked.position <= $2 or p.id = $1::uuid
      order by ranked.position`,
     params,
   );
-  const [range] = await query(`select ${from}::text as range_from, ${PACIFIC_TODAY}::text as range_to`);
+  // "All" starts where the scores do, so the page can say since when.
+  const first = period === "all" ? `coalesce((select min(date) from ${t("daily_scores")}), ${PACIFIC_TODAY})` : from;
+  const [range] = await query(`select ${first}::text as range_from, ${PACIFIC_TODAY}::text as range_to`);
 
   const entries = rows.filter((row) => Number(row.position) <= TOP).map((row) => toEntry(row, byTime));
   const mine = rows.find((row) => row.id === me?.id && Number(row.position) > TOP);
