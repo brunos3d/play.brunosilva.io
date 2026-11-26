@@ -25,6 +25,8 @@ export type DailyResult = {
   revealed: boolean;
   /** The game was lost. Only games that can be lost set it, and `revealed` is true with it. */
   failed?: boolean;
+  /** Points in the ranking, once the server has answered. */
+  points?: number;
 };
 
 export type BestTime = { key: string; elapsedMs: number; seed: string };
@@ -55,8 +57,26 @@ export async function saveDailyResult(result: DailyResult): Promise<DailyResult>
   return result;
 }
 
+/**
+ * Writes a result whatever is there. Only for the result the server holds for
+ * the player: the first close on any of their devices, which is the one that
+ * counts everywhere.
+ */
+export function putDailyResult(result: DailyResult): Promise<void> {
+  return idbSet(STORES.daily, dailyKey(result.game, result.date, result.variant), result);
+}
+
+export function deleteDailyResult(game: GameId, date: DateKey, variant?: string): Promise<void> {
+  return idbDelete(STORES.daily, dailyKey(game, date, variant));
+}
+
 export function loadDailyResult(game: GameId, date: DateKey, variant?: string): Promise<DailyResult | undefined> {
   return idbGet<DailyResult>(STORES.daily, dailyKey(game, date, variant));
+}
+
+/** Every stored result, of every game. The sync compares them with the server's in one pass. */
+export function loadAllDailyResults(): Promise<DailyResult[]> {
+  return idbGetAll<DailyResult>(STORES.daily);
 }
 
 /** Every stored result of a game, in all of its languages. */

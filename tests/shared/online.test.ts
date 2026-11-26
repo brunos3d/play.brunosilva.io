@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { SEED_CODECS } from "@/games/codecs";
-import { GAME_IDS } from "@/games/registry";
+import { DAILY_GAMES, dailyInfoOf } from "@/games/daily";
+import { getZipDailyPuzzle } from "@/games/zip/engine";
+import { GAME_IDS, type GameId, isDailyVariant } from "@/games/registry";
 import { cleanAvatarSeed, cleanNickname, cleanPlayerName, nicknameFromName, randomAvatarSeed, randomPlayerName } from "@/shared/online/names";
 import { relyingPartyFor } from "@/shared/online/relying-party";
 import { HINT_PENALTY_MS, MAX_ROUNDS, isRaceOver, nextRound, normalizeRoomCode, randomRoomCode, rankRoom, roomPath, roundPath, roundSpec, standingOf, validateRounds } from "@/shared/online/rooms";
-import { PAR_MS, parseScore, scorePoints } from "@/shared/online/scores";
+import { BOARD_MAX_BYTES, PAR_MS, parseBoard, parseScore, scorePoints } from "@/shared/online/scores";
 import type { RoomPlayer, RoundConfig } from "@/shared/online/types";
 import { schemaStatements } from "@/server/schema";
 
@@ -169,11 +171,70 @@ describe("points for a daily puzzle", () => {
 
   it("accepts a well-formed result and refuses the rest", () => {
     const score = { game: "zip", date: "2026-11-25", number: 618, difficulty: "medium", size: 6, elapsedMs: 95_000, hintsUsed: 1, mistakes: 2 };
-    expect(parseScore(score)).toEqual(score);
-    expect(parseScore({ ...score, variant: "en" })).toEqual({ ...score, variant: "en" });
-    for (const broken of [{ game: "tetris" }, { date: "25/11/2026" }, { date: "2026-13-40" }, { difficulty: "brutal" }, { elapsedMs: 200 }, { elapsedMs: 90_000_000 }, { elapsedMs: 1500.5 }, { hintsUsed: -1 }, { mistakes: "2" }, { variant: "EN; drop" }]) {
+    // What a solve looks like once parsed: no moves reported, not revealed, not lost.
+    const solved = { ...score, moves: 0, revealed: false, failed: false };
+    expect(parseScore(score)).toEqual(solved);
+    expect(parseScore({ ...score, moves: 12 })).toEqual({ ...solved, moves: 12 });
+    for (const broken of [{ game: "tetris" }, { date: "25/11/2026" }, { date: "2026-13-40" }, { difficulty: "brutal" }, { elapsedMs: 200 }, { elapsedMs: 90_000_000 }, { elapsedMs: 1500.5 }, { hintsUsed: -1 }, { mistakes: "2" }, { moves: -1 }, { variant: "EN; drop" }]) {
       expect(parseScore({ ...score, ...broken }), JSON.stringify(broken)).toBeNull();
     }
+  });
+
+  it("takes a variant only where a game has one daily per language", () => {
+    const score = { date: "2026-11-25", number: 1, difficulty: "medium", size: 5, elapsedMs: 95_000, hintsUsed: 0, mistakes: 0 };
+    // Termo and Wend have an English daily next to the Portuguese one, which has no variant.
+    expect(parseScore({ ...score, game: "termo", variant: "en" })).toMatchObject({ game: "termo", variant: "en" });
+    expect(parseScore({ ...score, game: "wend", variant: "en" })).toMatchObject({ game: "wend", variant: "en" });
+    expect(parseScore({ ...score, game: "termo" })).not.toHaveProperty("variant");
+    expect(parseScore({ ...score, game: "termo", variant: "" })).not.toHaveProperty("variant");
+    // Every other variant would be one more scored puzzle for the same day: a made-up language, the first language under its own name, a language for a game without words.
+    for (const [game, variant] of [["termo", "fr"], ["termo", "pt-br"], ["termo", "aa"], ["zip", "en"], ["chess", "en"], ["queens", "x"]]) {
+      expect(parseScore({ ...score, game, variant }), `${game} ${variant}`).toBeNull();
+      expect(isDailyVariant(game as GameId, variant), `${game} ${variant}`).toBe(false);
+    }
+    expect(parseScore({ ...score, game: "zip", variant: 7 })).toBeNull();
+  });
+
+  it("reads a reveal and a loss as closes without a solve", () => {
+    const score = { game: "termo", date: "2026-11-25", number: 1, difficulty: "medium", size: 5, elapsedMs: 5_000, hintsUsed: 0, mistakes: 6 };
+    expect(parseScore({ ...score, revealed: true })).toMatchObject({ revealed: true, failed: false });
+    // A lost game is stored like a revealed one, as on the device.
+    expect(parseScore({ ...score, failed: true })).toMatchObject({ revealed: true, failed: true });
+    // Only `true` closes without a solve. Anything else is a solve.
+    expect(parseScore({ ...score, revealed: "yes", failed: 1 })).toMatchObject({ revealed: false, failed: false });
+  });
+
+  it("takes a board only when it looks like a finished one", () => {
+    const score = { game: "zip", date: "2026-11-25", number: 618, difficulty: "medium", size: 6, elapsedMs: 95_000, hintsUsed: 0, mistakes: 0 };
+    const board = { snapshotVersion: 1, puzzleId: "zip-abc", path: [0, 1, 2], startedAt: 1, finishedMs: 95_000 };
+    expect(parseBoard(board)).toEqual(board);
+    expect(parseScore({ ...score, board })).toMatchObject({ board });
+    // Not finished, not an object, or far too big to be a board: the score still counts, without it.
+    for (const refused of [{ ...board, finishedMs: null }, { path: [0] }, [1, 2, 3], "board", 7, null, { finishedMs: 5, junk: "x".repeat(BOARD_MAX_BYTES) }]) {
+      expect(parseBoard(refused), JSON.stringify(refused).slice(0, 40)).toBeNull();
+      expect(parseScore({ ...score, board: refused })).not.toHaveProperty("board");
+    }
+  });
+});
+
+describe("the daily puzzles, as the server reads them", () => {
+  it("names the same puzzle the hub and the game do", () => {
+    for (const game of GAME_IDS) {
+      const info = dailyInfoOf(game, "2026-11-25", "");
+      expect(info.date).toBe("2026-11-25");
+      expect(info.variant).toBeUndefined();
+      expect(DAILY_GAMES[game].puzzleId(info.seed)).toMatch(new RegExp(`^${game}-`));
+      // The seed is this game's own, for this date: a row wired to another game's schedule would not parse here.
+      expect(info.seed.startsWith(`${SEED_CODECS[game].prefix}:`), game).toBe(true);
+      expect(SEED_CODECS[game].parse(info.seed)?.token, game).toBe("2026-11-25");
+    }
+    // And it is the puzzle the game's own page builds.
+    expect(DAILY_GAMES.zip.puzzleId(dailyInfoOf("zip", "2026-11-25", "").seed)).toBe(getZipDailyPuzzle("2026-11-25").puzzle.id);
+    // A word game's variant is its other language, with its own seed and its own board.
+    const termo = dailyInfoOf("termo", "2026-11-25", "en");
+    expect(termo.variant).toBe("en");
+    expect(termo.seed).not.toBe(dailyInfoOf("termo", "2026-11-25", "").seed);
+    expect(termo.number).toBe(dailyInfoOf("termo", "2026-11-25", "").number);
   });
 });
 

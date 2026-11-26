@@ -16,7 +16,7 @@ export const en: LegalContent = {
             list: [
               "You can play every game without an account and without giving any personal data.",
               "Your progress, your settings and your results stay in your browser.",
-              "The server stores something about you only when you finish a daily puzzle (for the ranking), join a challenge room, edit your profile or create an account: a display name, a nickname, an avatar and your scores.",
+              "The server stores something about you only when you solve a daily puzzle (for the ranking), join a challenge room, edit your profile or create an account: a display name, a nickname, an avatar and your daily results.",
               "The site never asks for an email address, a password, a phone number or your real name.",
               "You can delete your player and everything stored about it at any time, on the Profile page.",
             ],
@@ -35,7 +35,7 @@ export const en: LegalContent = {
               "An offline copy of the site (cache storage): the pages, scripts and word lists it needs to open without a connection.",
             ],
           },
-          "Clearing your browser's data for this site removes all of it. Progress is not copied between devices, with or without an account.",
+          "Clearing your browser's data for this site removes all of it. A board you are still playing is not copied between devices. The dailies you have closed are, once the server has a player for you: see the next sections.",
         ],
       },
       {
@@ -45,7 +45,7 @@ export const en: LegalContent = {
           {
             list: [
               "NEXT_LOCALE: the language you chose for the interface. Kept for 1 year.",
-              "play_player: the player of this device, as an id and a random secret. Set the first time you finish a daily puzzle, join a room or save your profile. Kept for 2 years. Scripts on the page cannot read it.",
+              "play_player: the player of this device, as an id and a random secret. Set the first time you solve a daily puzzle, join a room or save your profile. Kept for 2 years. Scripts on the page cannot read it.",
               "play_session: says this device is signed in to an account. Set when you sign in with a passkey. Kept for 2 years, or until you sign out.",
               "play_challenge: a one-time value used while a passkey is being created or checked. Kept for 5 minutes.",
             ],
@@ -60,7 +60,8 @@ export const en: LegalContent = {
           {
             list: [
               "Your player: a random id, your display name, your nickname, the seed your avatar is drawn from (a short random text), a hash of your device's secret, your streak, and the dates the player was created and last active.",
-              "Daily scores: for each daily puzzle you finish, the game, the date, the puzzle's number, difficulty and size, your time, the hints and mistakes, and the points.",
+              "Daily puzzles: for each daily puzzle you close, whether you solved it, revealed it or lost it, the game and, for a word game, its language, the date, the puzzle's number, difficulty and size, when you closed it, your time, the hints, mistakes and moves, the points, and the finished board. A daily counts once per player, and this is how your other devices know it is done and show the same result.",
+              "Open dailies: for a daily you opened, when you first opened it and how many hints you have used on it, so its clock and its hints are the same on every device.",
               "Challenge rooms: the rooms you open or join, their rounds, when you started and finished each round and whether you solved it. Rooms are deleted about 36 hours after they are created.",
               "Passkeys, if you create an account: the passkey's identifier and public key, a usage counter, how the authenticator connects, whether the passkey is synced, a label with the browser and system it was made on, and when it was created and last used.",
               "Sessions: for each device signed in to your account, a random id, a hash of a secret and two dates.",
@@ -109,6 +110,7 @@ export const en: LegalContent = {
               "On your device: until you clear your browser's data.",
               "Challenge rooms: about 36 hours.",
               "Unused passkey challenges: deleted when the next one is created, 10 minutes or more after they were made.",
+              "The record of a daily you opened, and the finished board of a daily you closed: about two days. After that the result stays and the board does not.",
               "Your player, scores, passkeys and sessions: until you delete your player.",
             ],
           },

@@ -6,10 +6,11 @@ import { GAMES } from "@/games/registry";
 import type { GameLanguage } from "@/i18n/game-language";
 import { useRouter } from "@/i18n/navigation";
 import { useGameLanguageChange } from "@/shared/hooks/use-game-language";
+import { useDailySeedRedirect } from "@/shared/hooks/use-daily-seed-redirect";
 import { buildPlayPath, specFromSearchParams } from "@/shared/platform/share-text";
 import { GameLoading } from "@/shared/ui/game-loading";
 import { randomSeedToken } from "@/shared/ui/random-seed";
-import { termoDailyVariantFromSpec, termoDailyVariantSpec } from "../../engine/daily";
+import { termoDailyDateFromSpec, termoDailyVariantFromSpec, termoDailyVariantSpec } from "../../engine/daily";
 import { TERMO_GENERATOR_VERSION, termoLanguage, termoSeeds } from "../../engine/seed";
 import { TermoGame } from "./termo-game";
 
@@ -28,6 +29,8 @@ export function TermoSeedGame() {
   useEffect(() => {
     if (!spec) router.replace(`${GAME.path}/practice`);
   }, [router, spec]);
+  // Today's daily is played on its own page, as the daily.
+  useDailySeedRedirect(GAME.path, spec ? termoDailyDateFromSpec(spec) : null);
 
   // The day's Dueto and Quarteto are one puzzle each, like the daily, in each language.
   const ofTheDay = spec ? termoDailyVariantFromSpec(spec) : null;

@@ -1,4 +1,4 @@
-import { LEGACY_WORD_LANGUAGE } from "@/i18n/game-language";
+import { LEGACY_WORD_LANGUAGE, isGameLanguage } from "@/i18n/game-language";
 import type { Difficulty } from "@/shared/engine/difficulty";
 
 /** Every game on the platform. The hub, the headers and the footers are built from this list. */
@@ -43,6 +43,17 @@ export const difficultyLabel = (game: GameMeta, difficulty: Difficulty): string 
  * language code otherwise. Only games made of words have one daily per language.
  */
 export const dailyVariant = (game: GameMeta, language: string): string | undefined => (game.language === "words" && language !== LEGACY_WORD_LANGUAGE ? language : undefined);
+
+/**
+ * True for a variant a daily of this game can have: none for most games, and
+ * a game language other than the first one for the games made of words. A
+ * daily is stored once per game, variant and date, so a made-up variant would
+ * be a second, third and hundredth puzzle of the same day.
+ */
+export function isDailyVariant(game: GameId, variant: string): boolean {
+  if (variant === "") return true;
+  return GAMES[game].language === "words" && variant !== LEGACY_WORD_LANGUAGE && isGameLanguage(variant);
+}
 
 export const PLATFORM_NAME = "Minigames";
 

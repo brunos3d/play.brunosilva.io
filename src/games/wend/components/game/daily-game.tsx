@@ -3,8 +3,10 @@
 import { GAMES } from "@/games/registry";
 import { useDailyDate } from "@/shared/hooks/use-daily-date";
 import { useGameLanguage } from "@/shared/hooks/use-game-language";
+import { DailyGate } from "@/shared/ui/daily-gate";
 import { GameLoading, NewDailyBanner } from "@/shared/ui/game-loading";
 import { getWendDailyInfo } from "../../engine/daily";
+import { wendPuzzleId } from "../../engine/seed";
 import { WendGame } from "./wend-game";
 
 /**
@@ -22,7 +24,10 @@ export function WendDailyGame() {
   return (
     <>
       {latest && latest !== playing && <NewDailyBanner onPlay={playLatest} />}
-      <WendGame spec={daily.spec} daily={daily} />
+      {/* One gate per daily: it asks how the day stands for the player before the board is built. */}
+      <DailyGate key={daily.seed} game={GAMES.wend} daily={daily} puzzleId={wendPuzzleId(daily.seed)}>
+        <WendGame spec={daily.spec} daily={daily} />
+      </DailyGate>
     </>
   );
 }

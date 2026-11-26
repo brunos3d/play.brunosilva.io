@@ -1,4 +1,4 @@
-import { GAME_IDS } from "@/games/registry";
+import { GAME_IDS, type GameId, isDailyVariant } from "@/games/registry";
 import { type Difficulty, isDifficulty } from "@/shared/engine/difficulty";
 import { isDateKey } from "@/shared/engine/pacific-time";
 import type { ScoreSubmission } from "./types";
@@ -8,7 +8,8 @@ import type { ScoreSubmission } from "./types";
  * the player, so the rule has to be simple enough to say in one sentence:
  * 100 points for solving, minus 10 per hint, plus up to 50 for speed.
  *
- * A revealed or lost puzzle is never submitted, so it scores nothing.
+ * A revealed or lost puzzle is submitted too. It closes the day for the player
+ * and scores nothing.
  */
 export const SOLVE_POINTS = 100;
 export const HINT_COST = 10;
@@ -37,10 +38,15 @@ export function parseScore(body: Record<string, unknown>): ScoreSubmission | nul
   if (!isCount(body.number, 100_000) || !isCount(body.size, 64) || !isCount(body.hintsUsed, 500) || !isCount(body.mistakes, 10_000)) return null;
   // A puzzle cannot be solved in under a second, and a clock left running for more than a day says nothing about the solve.
   if (!isCount(body.elapsedMs, 24 * 60 * 60 * 1000) || body.elapsedMs < 1_000) return null;
-  if (body.variant !== undefined && (typeof body.variant !== "string" || !/^[a-z-]{2,8}$/.test(body.variant))) return null;
+  // A variant is a language a word game has a daily in. Anything else would be one more scored puzzle for the same day.
+  const variant = body.variant === undefined || body.variant === null ? "" : body.variant;
+  if (typeof variant !== "string" || !isDailyVariant(body.game as GameId, variant)) return null;
+  if (body.moves !== undefined && !isCount(body.moves, 100_000)) return null;
+  const failed = body.failed === true;
+  const board = parseBoard(body.board);
   return {
     game: body.game as ScoreSubmission["game"],
-    ...(body.variant ? { variant: body.variant } : {}),
+    ...(variant ? { variant } : {}),
     date: body.date,
     number: body.number,
     difficulty: body.difficulty,
@@ -48,5 +54,29 @@ export function parseScore(body: Record<string, unknown>): ScoreSubmission | nul
     elapsedMs: body.elapsedMs,
     hintsUsed: body.hintsUsed,
     mistakes: body.mistakes,
+    moves: body.moves ?? 0,
+    // A lost game is stored like a revealed one, as on the device.
+    revealed: body.revealed === true || failed,
+    failed,
+    ...(board !== null ? { board } : {}),
   };
+}
+
+/** A board snapshot is small: a path, a list of rectangles, a few guesses. Anything bigger is not one. */
+export const BOARD_MAX_BYTES = 24_000;
+
+/**
+ * A finished board, as far as the server can tell without knowing the game:
+ * a plain object, small, with a final time. The game that opens it checks the
+ * rest, and falls back to a fresh board when it does not fit.
+ */
+export function parseBoard(input: unknown): Record<string, unknown> | null {
+  if (typeof input !== "object" || input === null || Array.isArray(input)) return null;
+  const board = input as Record<string, unknown>;
+  if (typeof board.finishedMs !== "number" || !Number.isFinite(board.finishedMs) || board.finishedMs < 0) return null;
+  try {
+    return new TextEncoder().encode(JSON.stringify(board)).length <= BOARD_MAX_BYTES ? board : null;
+  } catch {
+    return null;
+  }
 }

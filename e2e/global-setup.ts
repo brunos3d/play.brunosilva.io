@@ -21,5 +21,5 @@ export default async function globalSetup(): Promise<void> {
   if (!url) return;
   const sql = neon(url);
   for (const statement of schemaStatements(SCHEMA)) await sql.query(statement);
-  await sql.query(`truncate "${SCHEMA}".daily_scores, "${SCHEMA}".room_players, "${SCHEMA}".rooms, "${SCHEMA}".passkeys, "${SCHEMA}".sessions, "${SCHEMA}".challenges, "${SCHEMA}".players`);
+  await sql.query(`truncate "${SCHEMA}".daily_scores, "${SCHEMA}".daily_opens, "${SCHEMA}".room_players, "${SCHEMA}".rooms, "${SCHEMA}".passkeys, "${SCHEMA}".sessions, "${SCHEMA}".challenges, "${SCHEMA}".players`);
 }

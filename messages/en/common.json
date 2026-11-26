@@ -133,5 +133,14 @@
   "legal": {
     "updated": "Last updated on {date}",
     "issues": "Open an issue on GitHub"
+  },
+  "closed": {
+    "solvedTitle": "You already solved today's puzzle",
+    "revealedTitle": "You already revealed today's puzzle",
+    "failedTitle": "You already played today's puzzle",
+    "body": "This puzzle is closed for you. The daily {game} counts once per player, wherever you play it.",
+    "practice": "Play in Practice",
+    "ranking": "See the ranking",
+    "otherGames": "See the other games"
   }
 }

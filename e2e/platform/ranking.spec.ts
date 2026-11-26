@@ -97,7 +97,8 @@ test("the server only takes scores that can be true", async ({ request }) => {
     expect((await request.post("/api/scores", { data: { ...score, ...broken } })).status(), JSON.stringify(broken)).toBe(400);
   }
   // A well-formed one counts once.
-  expect(await (await request.post("/api/scores", { data: score })).json()).toEqual({ points: 150, recorded: true });
+  // Whatever today's difficulty is, a minute is within its par: the whole speed bonus.
+  expect(await (await request.post("/api/scores", { data: score })).json()).toMatchObject({ points: 150, recorded: true, record: { outcome: "solved", elapsedMs: 60_000, points: 150 } });
   expect(await (await request.post("/api/scores", { data: { ...score, elapsedMs: 5_000 } })).json()).toMatchObject({ recorded: false });
   // The cookie that says who the player is cannot be read by scripts on the page.
   const cookie = (await request.storageState()).cookies.find((entry) => entry.name === "play_player");

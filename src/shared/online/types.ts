@@ -129,4 +129,60 @@ export type ScoreSubmission = {
   elapsedMs: number;
   hintsUsed: number;
   mistakes: number;
+  moves?: number;
+  /** The player asked for the solution. The day closes without points. */
+  revealed?: boolean;
+  /** The game was lost. Comes with `revealed`. */
+  failed?: boolean;
+  /** The finished board as the game saved it. Each game owns the shape. */
+  board?: unknown;
+};
+
+export type DailyOutcome = "solved" | "revealed" | "failed";
+
+/**
+ * A closed daily of a player, as the server keeps it: the first way the
+ * puzzle ended for them, on any device. Number, difficulty and seed are the
+ * server's own, read from the game's daily schedule.
+ */
+export type DailyRecord = {
+  game: GameId;
+  variant: string;
+  date: string;
+  /** The id the game stores this puzzle's board under, so a device can find it without knowing the game. */
+  puzzleId: string;
+  number: number;
+  difficulty: Difficulty;
+  size: number;
+  seed: string;
+  outcome: DailyOutcome;
+  elapsedMs: number;
+  hints: number;
+  mistakes: number;
+  moves: number;
+  points: number;
+  /** Only sent for the days that can still be played, and null when no device has uploaded it. */
+  board: unknown;
+};
+
+/** A daily the player has opened and not closed. Time travels as "this long ago", since two devices do not share a clock. */
+export type DailyOpen = { game: GameId; variant: string; date: string; openedAgoMs: number; hints: number };
+
+/** Everything a device needs to show the player's dailies as they stand on the account. `player` is null for a device without one. */
+export type DailyState = {
+  player: string | null;
+  today: string;
+  records: DailyRecord[];
+  opens: DailyOpen[];
+  /** True on a site that runs without a database. Said in a normal answer, so a page that asks on every load does not log an error on every load. */
+  unavailable?: boolean;
+};
+
+/** The answer to a submission. `record` is how the daily stands for the player, which is not this submission when another device closed it first. */
+export type ScoreAnswer = {
+  points: number;
+  recorded: boolean;
+  record: DailyRecord | null;
+  /** Whose record it is: the player the request acted as, which a first solve has just created. Null when nobody was there to close the day for. */
+  player: string | null;
 };

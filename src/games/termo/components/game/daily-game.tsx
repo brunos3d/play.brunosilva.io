@@ -3,8 +3,10 @@
 import { GAMES } from "@/games/registry";
 import { useDailyDate } from "@/shared/hooks/use-daily-date";
 import { useGameLanguage } from "@/shared/hooks/use-game-language";
+import { DailyGate } from "@/shared/ui/daily-gate";
 import { GameLoading, NewDailyBanner } from "@/shared/ui/game-loading";
 import { getTermoDailyInfo } from "../../engine/daily";
+import { termoPuzzleId } from "../../engine/seed";
 import { TermoGame } from "./termo-game";
 
 /**
@@ -22,7 +24,10 @@ export function TermoDailyGame() {
   return (
     <>
       {latest && latest !== playing && <NewDailyBanner onPlay={playLatest} />}
-      <TermoGame key={daily.seed} spec={daily.spec} daily={daily} />
+      {/* One gate per daily: it asks how the day stands for the player before the board is built. */}
+      <DailyGate key={daily.seed} game={GAMES.termo} daily={daily} puzzleId={termoPuzzleId(daily.seed)}>
+        <TermoGame key={daily.seed} spec={daily.spec} daily={daily} />
+      </DailyGate>
     </>
   );
 }

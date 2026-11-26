@@ -166,11 +166,11 @@
     "removeBody": "Você não vai mais conseguir entrar com ela. Seu gerenciador de senhas pode manter a cópia dele, que você apaga por lá.",
     "removeConfirm": "Remover",
     "mergeTitle": "Este dispositivo tem pontos próprios",
-    "mergeBody": "Eles são do jogador que este dispositivo tinha antes de você entrar. Você pode juntá-los à sua conta. Onde os dois resolveram o mesmo desafio diário, vale a solução mais antiga. Depois disso, aquele jogador deixa de existir.",
+    "mergeBody": "Eles são do jogador que este dispositivo tinha antes de você entrar. Você pode juntá-los à sua conta. Onde os dois fecharam o mesmo desafio diário, vale o mais antigo. Depois disso, aquele jogador deixa de existir.",
     "merge": "Juntar à minha conta",
     "deleteLink": "Apagar meu jogador e meus dados",
     "deleteTitle": "Apagar tudo?",
-    "deleteBody": "Seu nome, apelido, pontuações, salas e passkeys são removidos do servidor de vez. O progresso salvo neste dispositivo fica até você limpar os dados do navegador.",
+    "deleteBody": "Seu nome, apelido, pontuações, salas e passkeys são removidos do servidor de vez. Os desafios diários que você fechou também saem deste dispositivo. Os tabuleiros em andamento e seus melhores tempos ficam até você limpar os dados do navegador.",
     "deleteConfirm": "Apagar",
     "done": {
       "created": "Conta criada. Use esta passkey para entrar nos seus outros aparelhos.",

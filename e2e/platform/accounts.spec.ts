@@ -1,6 +1,6 @@
-import { type Browser, type CDPSession, type Page, expect, test } from "@playwright/test";
-import { pacificDateKey } from "@/shared/engine/pacific-time";
+import { expect, test } from "@playwright/test";
 import { skipTutorials } from "../shared";
+import { authenticator, credentialsOf, device, openProfile, score } from "./passkeys";
 
 /**
  * Profiles and accounts, against the real server and the test schema of the
@@ -16,37 +16,8 @@ test.beforeEach(async ({ request }) => {
   test.skip(session.status() === 503, "the site runs without a database");
 });
 
-type Authenticator = { client: CDPSession; id: string };
-type Credential = { credentialId: string; isResidentCredential: boolean; rpId?: string; privateKey: string; userHandle?: string; signCount: number };
-
-/** Gives the page an authenticator that approves every request by itself, like a phone that is always unlocked. */
-async function authenticator(page: Page): Promise<Authenticator> {
-  const client = await page.context().newCDPSession(page);
-  await client.send("WebAuthn.enable");
-  const { authenticatorId } = await client.send("WebAuthn.addVirtualAuthenticator", {
-    options: { protocol: "ctap2", transport: "internal", hasResidentKey: true, hasUserVerification: true, isUserVerified: true, automaticPresenceSimulation: true },
-  });
-  return { client, id: authenticatorId };
-}
-
-const credentialsOf = async (device: Authenticator): Promise<Credential[]> => (await device.client.send("WebAuthn.getCredentials", { authenticatorId: device.id })).credentials as Credential[];
-
-/** A second device: its own cookies, its own storage, its own authenticator. */
-async function device(browser: Browser): Promise<Page> {
-  const page = await (await browser.newContext()).newPage();
-  await skipTutorials(page);
-  return page;
-}
-
-const score = (game: string, elapsedMs: number) => ({ game, date: pacificDateKey(new Date()), number: 1, difficulty: "medium", size: 6, elapsedMs, hintsUsed: 0, mistakes: 0 });
-
 /** A nickname no other test can have picked. */
 const nickname = (prefix: string): string => `${prefix}_${Math.random().toString(36).slice(2, 10)}`;
-
-async function openProfile(page: Page): Promise<void> {
-  await page.goto("/profile");
-  await expect(page.getByTestId("profile")).toHaveAttribute("data-ready", "true");
-}
 
 test("a device player becomes an account with a passkey, and a second device signs in and brings its scores", async ({ page, browser }) => {
   await skipTutorials(page);
@@ -224,8 +195,10 @@ test("deleting a player removes it and its scores, and its passkey opens nothing
 });
 
 test("passkeys are only offered to the site's own pages", async ({ request }) => {
-  // No Origin header, as from a script or another site's server: there is no relying party to name.
-  expect((await request.post("/api/account/login", { data: { action: "options" }, headers: { origin: "https://evil.example" } })).status()).toBe(400);
+  // A request another site's page set off is refused before it reaches anything.
+  expect((await request.post("/api/account/login", { data: { action: "options" }, headers: { origin: "https://evil.example" } })).status()).toBe(403);
+  // No Origin at all, as from a script: there is no relying party to name.
+  expect((await request.post("/api/account/login", { data: { action: "options" } })).status()).toBe(400);
   // A verification with no ceremony behind it has no challenge to answer.
   const origin = new URL((await request.get("/api/session")).url()).origin;
   expect((await request.post("/api/account/login", { data: { action: "verify", response: { id: "nope" } }, headers: { origin } })).status()).toBe(400);

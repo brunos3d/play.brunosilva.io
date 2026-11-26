@@ -2,22 +2,8 @@
 
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
-import { getChessDailyInfo } from "@/games/chess/engine/daily";
-import { chessPuzzleId } from "@/games/chess/engine/generator";
-import { getDailyInfo as getPatchesDaily } from "@/games/patches/engine/daily/schedule";
-import { patchesPuzzleId } from "@/games/patches/engine/generator/generate";
-import { getQueensDailyInfo } from "@/games/queens/engine/daily";
-import { queensPuzzleId } from "@/games/queens/engine/generator";
+import { DAILY_GAMES } from "@/games/daily";
 import { GAME_LIST, type GameId, type GameMeta, PLATFORM_NAME } from "@/games/registry";
-import { getSumbreakDailyInfo } from "@/games/sumbreak/engine/daily";
-import { sumbreakPuzzleId } from "@/games/sumbreak/engine/generator";
-import { getTermoDailyInfo } from "@/games/termo/engine/daily";
-import { termoPuzzleId } from "@/games/termo/engine/seed";
-import { getWendDailyInfo } from "@/games/wend/engine/daily";
-import { wendPuzzleId } from "@/games/wend/engine/seed";
-import { getZipDailyInfo } from "@/games/zip/engine/daily";
-import { zipPuzzleId } from "@/games/zip/engine/generator";
-import type { GameLanguage } from "@/i18n/game-language";
 import { Link } from "@/i18n/navigation";
 import { clockElapsed, formatTime, restoreClock } from "@/shared/engine/clock";
 import type { DailyInfo } from "@/shared/engine/daily";
@@ -27,6 +13,7 @@ import { useDailyDate } from "@/shared/hooks/use-daily-date";
 import { useGameLanguage } from "@/shared/hooks/use-game-language";
 import { useGameText } from "@/shared/hooks/use-game-text";
 import { useSettings } from "@/shared/hooks/use-settings";
+import { DAILY_SYNC_EVENT, syncDaily } from "@/shared/online/daily-sync";
 import { HubOnline } from "@/shared/online/ranking-screen";
 import { REPOSITORY_URL } from "@/shared/platform/site";
 import { loadBoard, loadDailyResult, loadDailyResults, streakDates } from "@/shared/storage/progress";
@@ -35,18 +22,6 @@ import { ArrowRightIcon, CheckIcon, ClockIcon, FlameIcon, RevealIcon, SettingsIc
 import { LocaleSwitcher } from "../locale-switcher";
 import { SettingsDialog } from "../settings-dialog";
 import { ThemeToggle } from "../theme-toggle";
-
-/** `info` takes the game language. Only the games made of words read it: they have one daily puzzle per language. */
-const DAILY: Record<GameId, { info: (date: string, language: GameLanguage) => DailyInfo; puzzleId: (seed: string) => string }> = {
-  zip: { info: (date) => getZipDailyInfo(date), puzzleId: zipPuzzleId },
-  patches: { info: (date) => getPatchesDaily(date), puzzleId: patchesPuzzleId },
-  chess: { info: (date) => getChessDailyInfo(date), puzzleId: chessPuzzleId },
-  queens: { info: (date) => getQueensDailyInfo(date), puzzleId: queensPuzzleId },
-  sumbreak: { info: (date) => getSumbreakDailyInfo(date), puzzleId: sumbreakPuzzleId },
-  // These two keep their word lists out of the hub: the daily schedule and the puzzle id live in modules that do not import the generator.
-  wend: { info: getWendDailyInfo, puzzleId: wendPuzzleId },
-  termo: { info: getTermoDailyInfo, puzzleId: termoPuzzleId },
-};
 
 type Today =
   | { state: "new" }
@@ -61,7 +36,7 @@ type CardData = { today: Today; streak: number };
 
 async function loadCard(game: GameId, daily: DailyInfo): Promise<CardData> {
   // Today's state is the puzzle's own, in its language. The streak counts every language of the game.
-  const [result, results, board] = await Promise.all([loadDailyResult(game, daily.date, daily.variant), loadDailyResults(game), loadBoard(game, DAILY[game].puzzleId(daily.seed))]);
+  const [result, results, board] = await Promise.all([loadDailyResult(game, daily.date, daily.variant), loadDailyResults(game), loadBoard(game, DAILY_GAMES[game].puzzleId(daily.seed))]);
   const streak = computeStreak(streakDates(results), daily.date).current;
   if (result) return { streak, today: result.failed ? { state: "failed" } : result.revealed ? { state: "revealed" } : { state: "solved", elapsedMs: result.elapsedMs } };
   const saved = (board ?? {}) as { startedAt?: unknown; finishedMs?: unknown };
@@ -166,7 +141,7 @@ export function Hub() {
     let cancelled = false;
     const refresh = () => {
       for (const game of GAME_LIST) {
-        void loadCard(game.id, DAILY[game.id].info(today, language)).then((data) => {
+        void loadCard(game.id, DAILY_GAMES[game.id].info(today, language)).then((data) => {
           if (!cancelled) setCards((current) => ({ ...current, [game.id]: data }));
         });
       }
@@ -174,9 +149,13 @@ export function Hub() {
     refresh();
     // Coming back from a game through the browser's back button restores this page without remounting it.
     window.addEventListener("pageshow", refresh);
+    // What the player did on another device arrives a moment after the page: the cards are read again when it lands.
+    window.addEventListener(DAILY_SYNC_EVENT, refresh);
+    void syncDaily();
     return () => {
       cancelled = true;
       window.removeEventListener("pageshow", refresh);
+      window.removeEventListener(DAILY_SYNC_EVENT, refresh);
     };
     // The game language picks which daily of Termo and Wend the cards follow.
   }, [today, language]);
@@ -202,7 +181,7 @@ export function Hub() {
       </header>
 
       {GAME_LIST.map((game) => (
-        <GameCard key={game.id} game={game} daily={today ? DAILY[game.id].info(today, language) : null} data={cards[game.id]} now={now ?? 0} />
+        <GameCard key={game.id} game={game} daily={today ? DAILY_GAMES[game.id].info(today, language) : null} data={cards[game.id]} now={now ?? 0} />
       ))}
 
       <HubOnline />

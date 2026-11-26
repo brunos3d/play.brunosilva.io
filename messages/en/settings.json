@@ -25,5 +25,5 @@
     "unsupported": "This device does not support vibration."
   },
   "replay": "Replay the tutorial",
-  "note": "These settings apply to every game. Progress, streaks and best times are stored on this device. A solved daily puzzle also sends its time to the ranking, under a generated name you can change there. Animations follow your system's reduced motion setting."
+  "note": "These settings apply to every game. Progress, streaks and best times are stored on this device. A solved daily puzzle also goes to the ranking, under a generated name you can change on your profile. From then on the server keeps the dailies you open and close, so each one counts once on every device you use. Animations follow your system's reduced motion setting."
 }

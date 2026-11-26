@@ -133,5 +133,14 @@
   "legal": {
     "updated": "Atualizado em {date}",
     "issues": "Abrir uma issue no GitHub"
+  },
+  "closed": {
+    "solvedTitle": "Você já resolveu o desafio de hoje",
+    "revealedTitle": "Você já revelou o desafio de hoje",
+    "failedTitle": "Você já jogou o desafio de hoje",
+    "body": "Este desafio já está fechado para você. O {game} do dia vale uma vez por jogador, onde quer que você jogue.",
+    "practice": "Jogar na Prática",
+    "ranking": "Ver o ranking",
+    "otherGames": "Ver os outros jogos"
   }
 }

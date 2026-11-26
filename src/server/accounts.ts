@@ -9,6 +9,7 @@ import type { Account, DevicePlayer, Me, PasskeyInfo } from "@/shared/online/typ
 import { query, t, transaction } from "./db";
 import { ApiFailure } from "./http";
 import { currentPlayer, devicePlayer, forgetDevicePlayer, forgetSession, openSession, playerById } from "./players";
+import { CLOCK_SLACK_MS, DAY_MS, pointsSql } from "./scores";
 
 /**
  * Accounts, which are players with a passkey. A passkey is a key pair made by
@@ -165,7 +166,7 @@ async function deviceToMerge(account: Me): Promise<DevicePlayer | null> {
   const device = await devicePlayer();
   if (!device || device.id === account.id || device.account) return null;
   const [totals] = await query(
-    `select (select count(*) from ${t("daily_scores")} where player_id = $1)::int as solved,
+    `select (select count(*) from ${t("daily_scores")} where player_id = $1 and outcome = 'solved')::int as solved,
             (select coalesce(sum(points), 0) from ${t("daily_scores")} where player_id = $1)::int as points,
             (select count(*) from ${t("room_players")} where player_id = $1)::int as rooms`,
     [device.id],
@@ -187,8 +188,11 @@ export async function readAccount(known?: Me | null): Promise<Account> {
  * Moves the device's own player into the account the device is signed in to,
  * and removes that player.
  *
- * - Scores: both may have solved the same daily puzzle. The earlier solve
+ * - Dailies: both may have closed the same daily puzzle. The earlier close
  *   stays, as it would have on one device, where only the first one counts.
+ *   A close that moves is timed from the account's own first open of that
+ *   puzzle, when it has one. Dailies one of them has open keep the earlier
+ *   start.
  * - Rooms: the account takes the device player's place, unless it is already
  *   in the same room.
  * - Streak: counted again from the days the merged scores cover.
@@ -202,17 +206,42 @@ export async function mergeDevice(account: Me): Promise<Account> {
   const ids = [account.id, device.id];
   const gone = [device.id];
   const scores = t("daily_scores");
+  const columns = "game, variant, date, number, difficulty, size, elapsed_ms, hints, mistakes, points, created_at, outcome, moves, seed, board";
   await transaction([
     {
-      text: `insert into ${scores} (player_id, game, variant, date, number, difficulty, size, elapsed_ms, hints, mistakes, points, created_at)
-             select $1, game, variant, date, number, difficulty, size, elapsed_ms, hints, mistakes, points, created_at from ${scores} where player_id = $2
+      // The rows leave the device player and reach the account in one statement, so two merges of the same player cannot both carry them.
+      // A daily both have closed keeps the earlier close, whichever way it ended: a reveal on one is not undone by a later solve on the other.
+      // A close that moves is held to the account's own clock and hints for that puzzle, as it would have been if the account had made it:
+      // thinking on the account and solving fast on a spare device player does not buy a better time.
+      text: `with moved as (delete from ${scores} where player_id = $2 returning ${columns}),
+               timed as (
+                 select m.*,
+                   case when o.opened_at is not null and extract(epoch from (m.created_at - o.opened_at)) * 1000 > m.elapsed_ms + ${CLOCK_SLACK_MS}
+                     then least(${DAY_MS}, (extract(epoch from (m.created_at - o.opened_at)) * 1000)::bigint)::int else m.elapsed_ms end as held_ms,
+                   greatest(m.hints, coalesce(o.hints, 0)) as held_hints
+                 from moved m
+                 left join ${t("daily_opens")} o on o.player_id = $1 and o.game = m.game and o.variant = m.variant and o.date = m.date
+               )
+             insert into ${scores} (player_id, ${columns})
+             select $1, game, variant, date, number, difficulty, size, held_ms, held_hints, mistakes,
+               case when outcome = 'solved' and (held_ms <> elapsed_ms or held_hints <> hints) then ${pointsSql("difficulty", "held_ms", "held_hints")} else points end,
+               created_at, outcome, moves, seed, board
+             from timed
              on conflict (player_id, game, variant, date) do update set
                number = excluded.number, difficulty = excluded.difficulty, size = excluded.size, elapsed_ms = excluded.elapsed_ms,
-               hints = excluded.hints, mistakes = excluded.mistakes, points = excluded.points, created_at = excluded.created_at
+               hints = excluded.hints, mistakes = excluded.mistakes, points = excluded.points, created_at = excluded.created_at,
+               outcome = excluded.outcome, moves = excluded.moves, seed = excluded.seed, board = excluded.board
              where excluded.created_at < ${scores}.created_at`,
       params: ids,
     },
-    { text: `delete from ${scores} where player_id = $1`, params: gone },
+    {
+      // Dailies either of them has open keep the earlier start and the higher count of hints.
+      text: `insert into ${t("daily_opens")} (player_id, game, variant, date, opened_at, hints)
+             select $1, game, variant, date, opened_at, hints from ${t("daily_opens")} where player_id = $2
+             on conflict (player_id, game, variant, date) do update set
+               opened_at = least(${t("daily_opens")}.opened_at, excluded.opened_at), hints = greatest(${t("daily_opens")}.hints, excluded.hints)`,
+      params: ids,
+    },
     {
       text: `update ${t("room_players")} mine set player_id = $1
              where mine.player_id = $2 and not exists (select 1 from ${t("room_players")} theirs where theirs.room_code = mine.room_code and theirs.player_id = $1)`,
@@ -222,7 +251,7 @@ export async function mergeDevice(account: Me): Promise<Account> {
     { text: `update ${t("rooms")} set host_id = $1 where host_id = $2`, params: ids },
     {
       // Runs of consecutive days: a date minus its place in the order is the same for every day of one run.
-      text: `with days as (select distinct date from ${scores} where player_id = $1),
+      text: `with days as (select distinct date from ${scores} where player_id = $1 and outcome = 'solved'),
                runs as (select date, date - (row_number() over (order by date))::int as run from days),
                streaks as (select max(date) as last_day, count(*)::int as length from runs group by run),
                latest as (select last_day, length from streaks order by last_day desc limit 1)

@@ -7,12 +7,17 @@ import { useRouter } from "@/i18n/navigation";
 import type { DailyInfo } from "@/shared/engine/daily";
 import type { Difficulty } from "@/shared/engine/difficulty";
 import { useHydrated, useSettings } from "@/shared/hooks/use-settings";
+import { online as api } from "@/shared/online/api";
+import { dailyUnavailable } from "@/shared/online/daily-sync";
 import { RaceBar } from "@/shared/online/race-bar";
+import type { ScoreSubmission } from "@/shared/online/types";
 import { useRace } from "@/shared/online/use-race";
 import { useScoreSubmission } from "@/shared/online/use-score";
 import { type FinishSummary, buildResult } from "@/shared/platform/results";
+import { loadBoard } from "@/shared/storage/progress";
 import type { Settings } from "@/shared/storage/settings";
 import { ConfirmDialog } from "./confirm-dialog";
+import { useDailyBoardId } from "./daily-gate";
 import { GameControls, type HiddenControl } from "./game-controls";
 import { GameFooter } from "./game-footer";
 import { GameHeader } from "./game-header";
@@ -76,6 +81,8 @@ const RESULT_DELAY_MS = 1_000;
 /** How often a confirmed reveal is asked again while the game is busy, and when to stop asking. */
 const REVEAL_RETRY_MS = 100;
 const REVEAL_GIVE_UP_MS = 5_000;
+/** How long a locked board is watched before its reveal is reported. Longer than the last step of any hint. */
+const REVEAL_REPORT_AFTER_MS = 600;
 
 /**
  * Everything around a board that is the same in every game: header, status
@@ -103,7 +110,11 @@ export function GameFrame({ game, daily, difficulty, size, seed, shareUrl, sessi
   const next = race ? undefined : onNext;
   const submitScore = useScoreSubmission();
 
-  const tutorialOpen = helpOpen || (hydrated && !settings.tutorials[game.id]);
+  const { summary, endedNow } = session;
+  // A board that is reopened finished has a result to show, not rules to explain. That happens on a device that has never
+  // seen the game, when the player closed the daily on another one.
+  // It waits for the board to be read, which is when a finished one is known to be finished.
+  const tutorialOpen = helpOpen || (hydrated && session.ready && !settings.tutorials[game.id] && !(summary && !endedNow));
   const closeTutorial = () => {
     setHelpOpen(false);
     markTutorialSeen(game.id);
@@ -118,8 +129,19 @@ export function GameFrame({ game, daily, difficulty, size, seed, shareUrl, sessi
     viewRace?.();
   }, [ready, hydrated, tutorialOpen, begin, viewRace]);
 
+  // The server hears that the daily is open, and of every hint taken on it. Its clock for the puzzle starts with the first
+  // such call from any device of the player, so thinking on one device and finishing on another counts the whole time.
+  const dailyOpen = Boolean(daily) && !race && ready && hydrated && !tutorialOpen && !summary;
+  const hintsUsed = session.hintsUsed;
+  useEffect(() => {
+    if (!dailyOpen || !daily || dailyUnavailable()) return;
+    void api.openDaily({ game: game.id, variant: daily.variant, date: daily.date, hints: hintsUsed }).catch(() => undefined);
+    // `daily` is a new object on every render of the game. Its seed says whether it is another puzzle.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dailyOpen, daily?.seed, game.id, hintsUsed]);
+
   // Result flow. A board that ended just now records its result. A reopened one only reads it.
-  const { summary, endedNow } = session;
+  const boardId = useDailyBoardId();
   useEffect(() => {
     // A round of a race has no result screen of its own: the room keeps the times, and the next board follows at once.
     if (!summary || race) return;
@@ -129,11 +151,20 @@ export function GameFrame({ game, daily, difficulty, size, seed, shareUrl, sessi
       if (cancelled) return;
       setResult(data);
       timeout = window.setTimeout(() => setResultOpen(true), endedNow ? RESULT_DELAY_MS : 0);
-      // A daily puzzle solved just now also goes to the ranking. The points show up on the result screen when the server answers.
-      if (daily && endedNow && !data.revealed) {
-        void submitScore({ game: game.id, variant: daily.variant, date: daily.date, number: daily.number, difficulty, size, elapsedMs: data.elapsedMs, hintsUsed: data.hintsUsed, mistakes: data.mistakes }).then((points) => {
-          if (!cancelled && points !== null) setResult((current) => (current ? { ...current, points } : current));
-        });
+      // A daily closed just now is reported to the server, however it ended, with the finished board. A solve goes to the
+      // ranking. A reveal or a loss only closes the day, on every device of the player.
+      if (daily && endedNow) {
+        void (async () => {
+          const board = boardId ? await loadBoard(game.id, boardId) : undefined;
+          const finished = typeof (board as { finishedMs?: unknown } | undefined)?.finishedMs === "number";
+          // The counts are the game's own. What is stored may already be the server's record of a reveal, which came before they were known.
+          const answer = await submitScore({ ...closing(data.elapsedMs, data.hintsUsed), mistakes: summary.mistakes, moves: summary.moves, revealed: data.revealed, failed: data.failed === true, ...(finished ? { board } : {}) });
+          if (cancelled || !answer?.record) return;
+          // The server's record is the result now: it has the points, and it is another device's close when one got there first.
+          const stored = await buildResult({ game: game.id, daily, difficulty, size, seed, summary, record: false, shareUrl: shareUrl() });
+          // A best time set a moment ago is still new, though the second look at storage finds it already there.
+          if (!cancelled) setResult((current) => (current?.best?.isNew && stored.best ? { ...stored, best: { ...stored.best, isNew: true } } : stored));
+        })();
       }
     });
     return () => {
@@ -170,12 +201,47 @@ export function GameFrame({ game, daily, difficulty, size, seed, shareUrl, sessi
   useEffect(() => {
     sessionRef.current = session;
   });
+  // The fields of a close that the frame knows before the game has ended.
+  const closing = (elapsedMs: number, hints: number): ScoreSubmission => ({
+    game: game.id,
+    variant: daily?.variant,
+    date: daily?.date ?? "",
+    number: daily?.number ?? 0,
+    difficulty,
+    size,
+    // The server takes no close under a second, and a reveal can be asked for the moment the board appears.
+    elapsedMs: Math.max(elapsedMs, 1_000),
+    hintsUsed: hints,
+    mistakes: 0,
+  });
+  /**
+   * A reveal of a daily closes the day a moment after the board locks, not when the solution has finished playing: a
+   * player who closes the tab halfway has seen it all the same. The finished board follows with the result.
+   */
+  const reportReveal = () => {
+    if (!daily || race) return;
+    void submitScore({ ...closing(sessionRef.current.elapsed, sessionRef.current.hintsUsed), revealed: true });
+  };
+  const reportRevealRef = useRef(reportReveal);
+  useEffect(() => {
+    reportRevealRef.current = reportReveal;
+  });
   useEffect(() => {
     if (!revealWanted) return;
     const stop = () => setRevealWanted(false);
+    let lockedAt: number | null = null;
     const interval = window.setInterval(() => {
-      if (sessionRef.current.locked) stop();
-      else sessionRef.current.reveal();
+      if (!sessionRef.current.locked) {
+        sessionRef.current.reveal();
+        return;
+      }
+      // The board locked. That is the reveal, unless the hint that was still playing solved the puzzle first: a game may
+      // lock on the last cell and only say "solved" a step later, so the report waits a moment for that.
+      lockedAt ??= Date.now();
+      const solved = sessionRef.current.summary?.revealed === false;
+      if (!solved && Date.now() - lockedAt < REVEAL_REPORT_AFTER_MS) return;
+      stop();
+      if (!solved) reportRevealRef.current();
     }, REVEAL_RETRY_MS);
     // No pause is this long. Past it the board is in a state the reveal does not apply to.
     const timeout = window.setTimeout(stop, REVEAL_GIVE_UP_MS);

@@ -6,9 +6,11 @@ import { GAMES } from "@/games/registry";
 import type { GameLanguage } from "@/i18n/game-language";
 import { useRouter } from "@/i18n/navigation";
 import { useGameLanguageChange } from "@/shared/hooks/use-game-language";
+import { useDailySeedRedirect } from "@/shared/hooks/use-daily-seed-redirect";
 import { buildPlayPath, specFromSearchParams } from "@/shared/platform/share-text";
 import { GameLoading } from "@/shared/ui/game-loading";
 import { randomSeedToken } from "@/shared/ui/random-seed";
+import { wendDailyDateFromSpec } from "../../engine/daily";
 import { WEND_GENERATOR_VERSION, wendLanguage, wendSeeds } from "../../engine/seed";
 import { WendGame } from "./wend-game";
 
@@ -27,6 +29,8 @@ export function WendSeedGame() {
   useEffect(() => {
     if (!spec) router.replace(`${GAME.path}/practice`);
   }, [router, spec]);
+  // Today's daily is played on its own page, as the daily.
+  useDailySeedRedirect(GAME.path, spec ? wendDailyDateFromSpec(spec) : null);
 
   /** A new random puzzle with this one's difficulty and size, in the given language. */
   const another = (language: GameLanguage) => {

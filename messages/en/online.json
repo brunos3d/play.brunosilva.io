@@ -166,11 +166,11 @@
     "removeBody": "You will not be able to sign in with it any more. Your password manager may keep its copy, which you can delete there.",
     "removeConfirm": "Remove",
     "mergeTitle": "This device has scores of its own",
-    "mergeBody": "They belong to the player this device had before you signed in. You can add them to your account. Where both solved the same daily puzzle, the earlier solve counts. That player then stops existing.",
+    "mergeBody": "They belong to the player this device had before you signed in. You can add them to your account. Where both closed the same daily puzzle, the earlier one counts. That player then stops existing.",
     "merge": "Add to my account",
     "deleteLink": "Delete my player and my data",
     "deleteTitle": "Delete everything?",
-    "deleteBody": "Your name, nickname, scores, rooms and passkeys are removed from the server for good. Progress saved on this device stays until you clear the browser's data.",
+    "deleteBody": "Your name, nickname, scores, rooms and passkeys are removed from the server for good. The dailies you closed are taken off this device too. Boards you are still playing and your best times stay until you clear the browser's data.",
     "deleteConfirm": "Delete",
     "done": {
       "created": "Account created. Use this passkey to sign in on your other devices.",

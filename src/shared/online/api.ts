@@ -1,6 +1,6 @@
 import type { GameId } from "@/games/registry";
 import type { RoundDraft } from "./rooms";
-import type { Account, Me, Ranking, RankingPeriod, RoomProgress, RoomState, ScoreSubmission } from "./types";
+import type { Account, DailyState, Me, Ranking, RankingPeriod, RoomProgress, RoomState, ScoreAnswer, ScoreSubmission } from "./types";
 
 /**
  * The client's side of the route handlers under src/app/api. Every call
@@ -17,7 +17,7 @@ export class OnlineError extends Error {
   }
 }
 
-async function call<T>(path: string, init?: { method: string; body?: unknown }): Promise<T> {
+async function call<T>(path: string, init?: { method: string; body?: unknown; keepalive?: boolean }): Promise<T> {
   let response: Response;
   try {
     response = await fetch(path, {
@@ -26,6 +26,8 @@ async function call<T>(path: string, init?: { method: string; body?: unknown }):
       body: init?.body === undefined ? undefined : JSON.stringify(init.body),
       credentials: "same-origin",
       cache: "no-store",
+      // A report that has to arrive even when the player closes the tab right after it.
+      ...(init?.keepalive ? { keepalive: true } : {}),
     });
   } catch {
     throw new OnlineError("offline", 0);
@@ -63,6 +65,10 @@ export const online = {
   startRoom: (code: string) => call<{ room: RoomState }>(`/api/rooms/${code}`, { method: "POST", body: { action: "start" } }).then((body) => body.room),
   progress: (code: string, progress: RoomProgress) => call<{ room: RoomState }>(`/api/rooms/${code}`, { method: "POST", body: { ...progress, action: "progress" } }).then((body) => body.room),
 
-  submitScore: (score: ScoreSubmission, hint: PlayerHint = {}) => call<{ points: number; recorded: boolean }>("/api/scores", { method: "POST", body: { ...hint, ...score } }),
+  submitScore: (score: ScoreSubmission, hint: PlayerHint = {}) => call<ScoreAnswer>("/api/scores", { method: "POST", body: { ...hint, ...score }, keepalive: true }),
+  /** How the player's dailies stand on the server: closed ones, and the open ones of today and yesterday. */
+  daily: () => call<DailyState>("/api/daily"),
+  /** Tells the server a daily is open on this device, and how many hints it has used. */
+  openDaily: (daily: { game: GameId; variant?: string; date: string; hints: number }) => call<{ openedAgoMs: number | null }>("/api/daily", { method: "POST", body: daily }),
   ranking: (period: RankingPeriod, game: GameId | "all", variant = "") => call<{ ranking: Ranking }>(`/api/ranking?period=${period}&game=${game}${variant ? `&variant=${variant}` : ""}`).then((body) => body.ranking),
 };

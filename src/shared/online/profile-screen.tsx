@@ -10,6 +10,7 @@ import { CheckIcon, CloseIcon, FlameIcon, KeyIcon, SignOutIcon } from "@/shared/
 import { PageHeader } from "@/shared/ui/page-header";
 import { SiteFooter } from "@/shared/ui/site-footer";
 import { OnlineError, online } from "./api";
+import { syncDaily } from "./daily-sync";
 import { PasskeyFailure, type PasskeyProblem, createPasskey, passkeysSupported, signInWithPasskey } from "./passkeys";
 import { PlayerAvatar } from "./player-avatar";
 import { ProfileEditor, useProfileDraft } from "./profile-editor";
@@ -81,6 +82,8 @@ export function ProfileScreen() {
     if (next.player) rememberPlayer(next.player);
     else refreshPlayer();
     void queryClient.invalidateQueries({ queryKey: ["ranking"] });
+    // Who the player is may have changed, and with it which dailies are closed on this device.
+    void syncDaily(true);
   };
 
   const run = async (what: Exclude<Busy, null>, work: () => Promise<Notice>) => {
@@ -117,6 +120,7 @@ export function ProfileScreen() {
       refreshPlayer();
       await queryClient.invalidateQueries({ queryKey: ACCOUNT_QUERY });
       void queryClient.invalidateQueries({ queryKey: ["ranking"] });
+      void syncDaily(true);
       return null;
     });
   const merge = () =>
@@ -135,6 +139,7 @@ export function ProfileScreen() {
       refreshPlayer();
       await queryClient.invalidateQueries({ queryKey: ACCOUNT_QUERY });
       void queryClient.invalidateQueries({ queryKey: ["ranking"] });
+      void syncDaily(true);
       return null;
     });
 

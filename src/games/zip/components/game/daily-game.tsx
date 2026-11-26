@@ -2,8 +2,10 @@
 
 import { GAMES } from "@/games/registry";
 import { useDailyDate } from "@/shared/hooks/use-daily-date";
+import { DailyGate } from "@/shared/ui/daily-gate";
 import { GameLoading, NewDailyBanner } from "@/shared/ui/game-loading";
 import { getZipDailyInfo } from "../../engine/daily";
+import { zipPuzzleId } from "../../engine/generator";
 import { ZipGame } from "./zip-game";
 
 /** Today's Zip. "Today" is the Pacific calendar date. */
@@ -14,7 +16,10 @@ export function ZipDailyGame() {
   return (
     <>
       {latest && latest !== playing && <NewDailyBanner onPlay={playLatest} />}
-      <ZipGame spec={daily.spec} daily={daily} />
+      {/* One gate per daily: it asks how the day stands for the player before the board is built. */}
+      <DailyGate key={daily.seed} game={GAMES.zip} daily={daily} puzzleId={zipPuzzleId(daily.seed)}>
+        <ZipGame spec={daily.spec} daily={daily} />
+      </DailyGate>
     </>
   );
 }

@@ -112,6 +112,29 @@ export function schemaStatements(schema: string): string[] {
     )`,
     `create index if not exists sessions_player on ${s}.sessions (player_id)`,
 
+    // A row of daily_scores is a closed daily, whichever way it ended. Only a solved one has points. The others close the day
+    // for the player on every device: a puzzle revealed on a phone cannot be solved for points on a computer.
+    `alter table ${s}.daily_scores add column if not exists outcome text not null default 'solved'`,
+    `alter table ${s}.daily_scores add column if not exists moves integer not null default 0`,
+    `alter table ${s}.daily_scores add column if not exists seed text`,
+    // The finished board as the device saved it, so another device of the player shows the same one.
+    `alter table ${s}.daily_scores add column if not exists board jsonb`,
+
+    // Boards are swept two days after their date. This index is the few rows that still have one, so the sweep reads nothing else.
+    `create index if not exists daily_scores_boards on ${s}.daily_scores (date) where board is not null`,
+
+    // The first time a player opened a daily, by the server's clock, and the most hints any of their devices used on it.
+    // A clock started on one device keeps running on the next, and a hint taken on one is counted on the other.
+    `create table if not exists ${s}.daily_opens (
+      player_id uuid not null references ${s}.players (id) on delete cascade,
+      game text not null,
+      variant text not null default '',
+      date date not null,
+      opened_at timestamptz not null default now(),
+      hints integer not null default 0,
+      primary key (player_id, game, variant, date)
+    )`,
+
     // The random value a passkey has to sign, kept between the two requests of a ceremony and used once.
     `create table if not exists ${s}.challenges (
       id uuid primary key,

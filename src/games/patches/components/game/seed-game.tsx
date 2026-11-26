@@ -4,9 +4,11 @@ import { useSearchParams } from "next/navigation";
 import { useEffect } from "react";
 import { GAMES } from "@/games/registry";
 import { useRouter } from "@/i18n/navigation";
+import { useDailySeedRedirect } from "@/shared/hooks/use-daily-seed-redirect";
 import { buildPlayPath, specFromSearchParams } from "@/shared/platform/share-text";
 import { GameLoading } from "@/shared/ui/game-loading";
 import { randomSeedToken } from "@/shared/ui/random-seed";
+import { dailyDateFromSpec } from "../../engine/daily/schedule";
 import { GENERATOR_VERSION, patchesSeeds } from "../../engine/seed/spec";
 import { PatchesGame } from "./patches-game";
 
@@ -21,6 +23,8 @@ export function SeedGame() {
   useEffect(() => {
     if (!spec) router.replace(`${GAME.path}/practice`);
   }, [router, spec]);
+  // Today's daily is played on its own page, as the daily.
+  useDailySeedRedirect(GAME.path, spec ? dailyDateFromSpec(spec) : null);
 
   if (!spec) return <GameLoading game={GAME} />;
 

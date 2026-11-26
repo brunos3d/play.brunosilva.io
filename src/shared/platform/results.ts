@@ -41,12 +41,15 @@ type Input = {
 export async function buildResult({ game, daily, difficulty, size, seed, summary, record, shareUrl }: Input): Promise<ResultData> {
   let shown = summary;
   let streak: ResultData["streak"];
+  let points: number | undefined;
 
   if (daily) {
     const stored = record
       ? await saveDailyResult({ game, ...(daily.variant ? { variant: daily.variant } : {}), date: daily.date, number: daily.number, difficulty: daily.difficulty, seed: daily.seed, ...summary })
       : await loadDailyResult(game, daily.date, daily.variant);
     if (stored) shown = { elapsedMs: stored.elapsedMs, hintsUsed: stored.hintsUsed, mistakes: stored.mistakes, moves: stored.moves, revealed: stored.revealed, ...(stored.failed ? { failed: true } : {}) };
+    // Known once the server has answered, and on every later look at the result, on any device of the player.
+    points = stored?.points;
     streak = computeStreak(streakDates(await loadDailyResults(game)), pacificDateKey(new Date()));
   }
 
@@ -59,5 +62,5 @@ export async function buildResult({ game, daily, difficulty, size, seed, summary
         : await loadBestTime(game, difficulty, size).then((entry) => (entry ? { elapsedMs: entry.elapsedMs, isNew: false } : undefined));
   }
 
-  return { ...shown, dailyNumber: daily?.number, difficulty, size, streak, best, shareUrl, ...(replay ? { replay: true } : {}) };
+  return { ...shown, dailyNumber: daily?.number, difficulty, size, streak, best, shareUrl, ...(replay ? { replay: true } : {}), ...(points !== undefined && !shown.revealed ? { points } : {}) };
 }

@@ -16,7 +16,7 @@ export const ptBr: LegalContent = {
             list: [
               "Você pode jogar todos os jogos sem conta e sem informar nenhum dado pessoal.",
               "Seu progresso, suas configurações e seus resultados ficam no seu navegador.",
-              "O servidor só guarda algo sobre você quando você termina um desafio diário (para o ranking), entra em uma sala de desafio, edita seu perfil ou cria uma conta: um nome de exibição, um apelido, um avatar e suas pontuações.",
+              "O servidor só guarda algo sobre você quando você resolve um desafio diário (para o ranking), entra em uma sala de desafio, edita seu perfil ou cria uma conta: um nome de exibição, um apelido, um avatar e seus resultados diários.",
               "O site nunca pede e-mail, senha, telefone nem o seu nome verdadeiro.",
               "Você pode apagar seu jogador e tudo o que está guardado sobre ele a qualquer momento, na página Perfil.",
             ],
@@ -35,7 +35,7 @@ export const ptBr: LegalContent = {
               "Uma cópia offline do site (cache storage): as páginas, os scripts e as listas de palavras necessários para abrir sem conexão.",
             ],
           },
-          "Limpar os dados deste site no navegador remove tudo isso. O progresso não é copiado entre aparelhos, com ou sem conta.",
+          "Limpar os dados deste site no navegador remove tudo isso. Um tabuleiro que você ainda está jogando não é copiado entre aparelhos. Os desafios diários que você fechou são, desde que o servidor tenha um jogador para você: veja as próximas seções.",
         ],
       },
       {
@@ -45,7 +45,7 @@ export const ptBr: LegalContent = {
           {
             list: [
               "NEXT_LOCALE: o idioma que você escolheu para a interface. Dura 1 ano.",
-              "play_player: o jogador deste aparelho, na forma de um identificador e um segredo aleatório. É criado na primeira vez que você termina um desafio diário, entra em uma sala ou salva seu perfil. Dura 2 anos. Os scripts da página não conseguem lê-lo.",
+              "play_player: o jogador deste aparelho, na forma de um identificador e um segredo aleatório. É criado na primeira vez que você resolve um desafio diário, entra em uma sala ou salva seu perfil. Dura 2 anos. Os scripts da página não conseguem lê-lo.",
               "play_session: indica que este aparelho está conectado a uma conta. É criado quando você entra com uma passkey. Dura 2 anos, ou até você sair.",
               "play_challenge: um valor de uso único, usado enquanto uma passkey é criada ou conferida. Dura 5 minutos.",
             ],
@@ -60,7 +60,8 @@ export const ptBr: LegalContent = {
           {
             list: [
               "Seu jogador: um identificador aleatório, seu nome de exibição, seu apelido, a semente de que o avatar é desenhado (um texto curto e aleatório), um hash do segredo do seu aparelho, sua sequência e as datas de criação e de última atividade.",
-              "Pontuações diárias: para cada desafio diário que você termina, o jogo, a data, o número, a dificuldade e o tamanho do desafio, seu tempo, as dicas e os erros, e os pontos.",
+              "Desafios diários: para cada desafio diário que você fecha, seja resolvendo, revelando ou perdendo, o jogo e, nos jogos de palavras, o idioma, a data, o número, a dificuldade e o tamanho do desafio, quando você o fechou, seu tempo, as dicas, os erros e as jogadas, os pontos e o tabuleiro final. Um desafio diário vale uma vez por jogador, e é assim que seus outros aparelhos sabem que ele já foi feito e mostram o mesmo resultado.",
+              "Desafios em aberto: para um desafio diário que você abriu, quando o abriu pela primeira vez e quantas dicas já usou, para que o relógio e as dicas sejam os mesmos em todos os aparelhos.",
               "Salas de desafio: as salas que você abre ou em que entra, as rodadas, quando você começou e terminou cada rodada e se a resolveu. As salas são apagadas cerca de 36 horas depois de criadas.",
               "Passkeys, se você criar uma conta: o identificador e a chave pública da passkey, um contador de uso, como o autenticador se conecta, se a passkey é sincronizada, um rótulo com o navegador e o sistema em que foi criada, e quando foi criada e usada pela última vez.",
               "Sessões: para cada aparelho conectado à sua conta, um identificador aleatório, o hash de um segredo e duas datas.",
@@ -109,6 +110,7 @@ export const ptBr: LegalContent = {
               "No seu aparelho: até você limpar os dados do navegador.",
               "Salas de desafio: cerca de 36 horas.",
               "Desafios de passkey não usados: apagados quando o próximo é criado, 10 minutos ou mais depois de feitos.",
+              "O registro de um desafio diário que você abriu e o tabuleiro final de um que você fechou: cerca de dois dias. Depois disso o resultado fica e o tabuleiro não.",
               "Seu jogador, suas pontuações, passkeys e sessões: até você apagar seu jogador.",
             ],
           },
