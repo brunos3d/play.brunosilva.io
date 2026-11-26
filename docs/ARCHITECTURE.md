@@ -13,9 +13,10 @@ src/
       page.tsx            hub
       zip/ patches/ chess/ queens/ sumbreak/ wend/ termo/   daily (index), play (seeded), practice (setup)
       rooms/new/ rooms/[code]/ ranking/                     challenge rooms and the ranking
+      profile/ privacy/ terms/                              the player's profile and account, and the legal pages
       [...rest]/          old Zip links, and the 404 of everything else
-    api/                  route handlers: session, rooms, scores, ranking
-  server/                 database access, players, rooms, scores (server only)
+    api/                  route handlers: session, account, rooms, scores, ranking
+  server/                 database access, players, accounts (passkeys), rooms, scores (server only)
   games/
     registry.ts           id, route and shape of every game
     codecs.ts             the seed format of every game, by id
@@ -31,7 +32,8 @@ src/
     storage/              IndexedDB wrapper, settings, progress (boards, daily results, best times)
     platform/             audio, haptics, share, result builder, service worker registration
     hooks/                settings store, game clock, daily date, deferred generation, game language, game text
-    online/               challenge rooms, ranking and player profile: rules, client, screens
+    online/               challenge rooms, ranking, profile and account: rules, client, screens
+    legal/                the privacy policy and the terms of use, one module per language
     ui/                   theme.css, icons, dialogs, header, controls, status line, result, practice setup, hub
 messages/                 en/ and pt-br/, one JSON file per namespace
 public/                   sw.js, manifest.webmanifest, icons/

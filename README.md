@@ -111,7 +111,9 @@ Every page lives under a locale, `/en` or `/pt-br`. The table leaves it out.
 | `/zip/play?seed=ZIP:lucky:1:hard:8` | an exact puzzle. The same seed always builds the same board, so links are shareable |
 | `/rooms/new` | set up a challenge: the rounds, and the game, difficulty and size of each |
 | `/rooms/NM73Y` | a challenge room: the invitation, the lobby, and the table of the race |
-| `/ranking` | today's and this week's ranking, for all games or for one |
+| `/ranking` | the ranking of today, the week, the month and all time, for all games or for one |
+| `/profile` | your display name, nickname and avatar, and your account: create one with a passkey, or sign in |
+| `/privacy`, `/terms` | what the site stores and why, and the rules of the site |
 
 A path without a locale is redirected to the visitor's language: the one they chose before, or the one of their country and browser. So `/zip` and every link shared before the site had languages still work, and a shared link opens in the language of whoever opens it.
 
@@ -133,7 +135,15 @@ Each player's clock starts when their first board appears and only stops when th
 
 ## Ranking
 
-A solved daily puzzle scores 100 points, minus 10 per hint, plus up to 50 for speed. The ranking shows today and this week, for all games together or for one. One game on one day is ranked by time, since everyone had the same puzzle. Practice and challenge rooms do not count.
+A solved daily puzzle scores 100 points, minus 10 per hint, plus up to 50 for speed. The ranking shows today, this week, this month and all time, for all games together or for one. One game on one day is ranked by time, since everyone had the same puzzle. Practice and challenge rooms do not count.
+
+## Profile and accounts
+
+A player needs no account: the first score or the first room creates one, tied to the browser. Each player has a display name, free to pick, and a nickname that nobody else can have.
+
+To be the same player on a phone and on a computer, create an account on the profile page. It uses a passkey: no password and no email. Any authenticator works, from Google Password Manager and iCloud Keychain to a security key. Signing in on a device that already has scores offers to add them to the account. The same page deletes the player and everything stored about it.
+
+A first visit gets a short notice about cookies. The site sets only the ones it needs, and has no ads and no trackers. The [privacy policy](https://play.brunosilva.io/privacy) lists what is stored.
 
 ## How the games work
 
@@ -187,7 +197,7 @@ docs/         architecture, languages, online features, seeds, and one folder pe
 
 A game imports `shared` and never another game. Each `engine/` folder is pure TypeScript with no React or DOM, so it also runs from the command line. `docs/ARCHITECTURE.md` explains the layers and lists the steps to add a game.
 
-The stack is Next.js 16, React 19, TypeScript and Tailwind CSS 4. The games themselves have no dependencies beyond React and Next.js. That includes chess: the move generator, the search and the board are written here. Three libraries serve the platform around them: [next-intl](https://next-intl.dev) for translations, the [Neon](https://neon.tech) serverless driver for the database, and [DiceBear](https://www.dicebear.com) for the players' avatars (the "Thumbs" style, CC0). Icons are hand-drawn SVG, sounds are synthesized with Web Audio, and the boards are DOM and SVG. The chess pieces are the Cburnett set from Wikimedia Commons, used under its BSD licence (notice in `docs/chess/CHESS.md`). Termo's Portuguese word lists are built from [fserb/pt-br](https://github.com/fserb/pt-br), used under its MIT licence. Its English lists are built from SCOWL, the public-domain ENABLE list and Google Books Ngram counts (CC BY 3.0). The notices are in the generated files and in `docs/termo/TERMO.md`. Wend's themed word banks, one per language, were written for this project.
+The stack is Next.js 16, React 19, TypeScript and Tailwind CSS 4. The games themselves have no dependencies beyond React and Next.js. That includes chess: the move generator, the search and the board are written here. Five libraries serve the platform around them: [next-intl](https://next-intl.dev) for translations, the [Neon](https://neon.tech) serverless driver for the database, [DiceBear](https://www.dicebear.com) for the players' avatars (the "Thumbs" style, CC0), [SimpleWebAuthn](https://simplewebauthn.dev) for passkeys, and [TanStack Query](https://tanstack.com/query) for the data the pages keep fresh. Icons are hand-drawn SVG, sounds are synthesized with Web Audio, and the boards are DOM and SVG. The chess pieces are the Cburnett set from Wikimedia Commons, used under its BSD licence (notice in `docs/chess/CHESS.md`). Termo's Portuguese word lists are built from [fserb/pt-br](https://github.com/fserb/pt-br), used under its MIT licence. Its English lists are built from SCOWL, the public-domain ENABLE list and Google Books Ngram counts (CC BY 3.0). The notices are in the generated files and in `docs/termo/TERMO.md`. Wend's themed word banks, one per language, were written for this project.
 
 ## Getting started
 
@@ -267,7 +277,7 @@ The e2e tests need Chromium once: `npx playwright install chromium`.
 - [Architecture](docs/ARCHITECTURE.md): layers, the shared game frame, the clock, persistence, the visual system, PWA
 - [Languages](docs/I18N.md): locales and how a visitor gets one, messages, the game language, seeds with a language
 - [Challenge rooms](docs/MULTIPLAYER.md): how a race works, who wins, why polling and not WebSockets or WebRTC
-- [Online features](docs/ONLINE.md): the database, players without accounts, the ranking and its points
+- [Online features](docs/ONLINE.md): the database, players, nicknames, accounts with passkeys, the ranking and its points, the cookie notice and the legal pages
 - [Seeds and daily puzzles](docs/SEEDS.md): determinism, seed format, versioning, Pacific time, streaks
 - [Zip](docs/zip/ZIP.md): rules, solver, generator, tiers, interaction, benchmark
 - [Chess](docs/chess/CHESS.md): engine, generator, recipes per tier, the coach, the board, benchmark
